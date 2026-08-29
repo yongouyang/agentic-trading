@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quant System Architecture — Core Building Blocks | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+  border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-data { --accent: #1d4ed8; } .c-ind { --accent: #15803d; } .c-strat { --accent: #ea580c; }
+  .c-port { --accent: #7e22ce; } .c-broker { --accent: #0369a1; } .c-risk { --accent: #dc2626; }
+  .c-bt { --accent: #3730a3; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+  flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+  .loop-note {
+    text-align: center; margin-top: -6px; color: var(--blue); font-size: 13.5px; font-weight: 600;
+  }
+  .loop-note::before { content: "↺ "; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; }
+
+  .tree {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 18px 22px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7;
+    white-space: pre; overflow-x: auto; margin: 12px  0;
+  }
+  .tree .dir { color: #7dd3fc; } .tree .cm { color: #64748b; }
+
+  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,  1fr)); gap: 14px; margin: 18px 0; }
+  .role { border-radius: var(--radius); padding: 16px; background: #fff; border: 1.5px solid var(--line); border-top: 4px solid var(--accent, var(--blue)); }
+  .role h4 { color: var(--accent, var(--blue)); font-size: 15.5px; }
+  .role .decides { font-weight: 700; font-size: 14px; margin: 4px 0 8px; }
+  .role p { font-size: 13px; color: var(--muted); }
+  .role .focus { display: inline-block; margin-top: 8px; font-size: 12.5px; background: var(--orange-bg); color: var(--orange); border-radius: 6px; padding: 2px 10px; }
+
+  ol.roadmap { padding-left: 22px; font-size: 14.5px; }
+  ol.roadmap li { margin-bottom: 10px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Architecture Foundations</div>
+  <h1>Quant Trading System — Core Building Blocks</h1>
+  <p>Break a complex trading system into modules with clear responsibilities, each doing one thing, collaborating through stable interfaces. (把复杂的交易系统，拆成职责清晰的模块，各司其职，协同工作。)</p>
+  <div class="src">Source: knowledge-base/day_6 (page_1–page_8), "30天学习量化投资 · Day 6: 量化系统架构" · Extracted 2026-08-30</div>
+</header>
+
+<!-- ============ 1. Why modularize ============ -->
+<section>
+  <h2><span class="num">1</span>Why Split Into Modules?</h2>
+  <p class="subtitle">Splitting a system into single-responsibility modules makes it clearer, more stable, and more extensible.</p>
+
+  <div class="quote">
+    <strong>"One person can walk fast; a group can walk far. One module can be written fast; only a well-structured system goes far."</strong><br>
+    (一个人可以走得很快，一群人可以走得很远；一个模块可以写得很快，一套系统才能走得很远。)
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ If you don't modularize (Monolith — not recommended)</h4>
+      <ul>
+        <li><b>Severe code coupling</b> — market data, indicators, trading and account logic mixed together; changing one place can break everything.</li>
+        <li><b>Hard to debug</b> — when one part fails, locating the problem is painful.</li>
+        <li><b>Hard to test</b> — cannot unit-test indicators, strategies, or risk rules in isolation.</li>
+        <li><b>Hard to extend</b> — swapping a strategy or adding risk control requires rewriting the whole system.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Benefits  of modularization (recommended)</h4>
+      <ul>
+        <li><b>Single responsibility</b> — each module does one thing; code is easier to understand.</li>
+        <li><b>Low coupling, high cohesion</b> — modules collaborate through stable interfaces, not implementation details.</li>
+        <li><b>Testable</b> — indicators, strategies, and risk rules can be unit-tested independently.</li>
+        <li><b>Extensible</b> — new strategies, risk rules, or instruments extend one module without touching others.</li>
+        <li><b>Reusable</b> — indicators, risk, and the backtest framework are reused across strategies.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>Modularization is not about "looking sophisticated" — it is the prerequisite for long-term stable evolution and iteration of the system.</div>
+</section>
+
+<!-- ============ 2. System overview ============ -->
+<section>
+  <h2><span class="num">2</span>System Overview — 7 Core Modules</h2>
+  <p class="subtitle">The building blocks of this project, mapped to top-level packages.</p>
+
+  <div class="modules">
+    <div class="mod c-data"><div class="tag">data/</div><h4>Data / Market</h4><p>Only provides market data (只提供行情数据) — no computation, no decisions.</p></div>
+    <div class="mod c-ind"><div class="tag">indicator/</div><h4>Indicator</h4><p>Only computes indicators (只计算指标) — MA, MACD, RSI, ATR, Bollinger Bands.</p></div>
+    <div class="mod c-strat"><div class="tag">strategy/</div><h4>Strategy</h4><p>Only produces trade signals (只产生交易信号) — buy / sell / hold.</p></div>
+    <div class="mod c-port"><div class="tag">portfolio/</div><h4>Portfolio</h4><p>Maintains account state (维护账户状态) — cash, positions, cost, market value, equity.</p></div>
+    <div class="mod c-broker"><div class="tag">broker/</div><h4>Broker</h4><p>Handles order submission, fills, commissions and slippage (订单提交、成交、手续费和滑点).</p></div>
+    <div class="mod c-risk"><div class="tag">risk/</div><h4>Risk</h4><p>Gatekeeper (风控守门员) — decides whether an order is allowed to execute.</p></div>
+    <div class="mod c-bt"><div class="tag">backtest/</div><h4>Backtest</h4><p>Orchestrates the whole flow (编排整个流程) — drives data, strategy, trading and evaluation.</p></div>
+  </div>
+
+  <h3>Module Collaboration — the Backtest Loop (模块协作流程)</h3>
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="icon">🗄️</div><div class="name">Data</div><div class="cn">行情数据</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-ind" style="--stepbg:var(--green-bg)"><div class="icon">📈</div><div class="name">Indicator</div><div class="cn">计算指标</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="icon">💡</div><div class="name">Strategy</div><div class="cn">产生信号</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="icon">🛡️</div><div class="name">Risk</div><div class="cn">风控检查</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="icon">🛒</div><div class="name">Broker</div><div class="cn">下单成交</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">Portfolio</div><div class="cn">更新账户</div></div>
+  </div>
+  <div class="loop-note">Loop until the backtest ends (循环执行，直到回测结束) — Portfolio feeds the next bar's decisions.</div>
+
+  <div class="takeaway"><span class="star">★</span>A clear architecture is the cornerstone  of a stable system, and the precondition for long-term iteration and optimization.</div>
+</section>
+
+<!-- ============  3  . Module specs ============ -->
+<section>
+  <h2><span class="num">3</span>Module Specifications</h2>
+  <p class="subtitle">Responsibilities, input/output contracts, and worked examples for each building block.</p>
+
+  <!-- Data -->
+  <div class="spec c-data">
+    <h3><span class="tag">data/</span>Data / Market — the raw-material layer</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Provides raw, clean market data: OHLCV bars, tick data, fundamentals.</li>
+          <li>Ensures data accuracy and completeness.</li>
+          <li>Does <b>no</b> computation and <b>no</b> decision-making.</li>
+        </ul>
+        <div class="keypoint">💡 Output of the Data module = <b>raw data stream</b> (原始数据流).</div>
+      </div>
+      <div>
+        <table>
+          <tr><th>Time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr>
+          <tr><td>2024-01-01</td><td class="num">10.00</td><td class="num">10.50</td><td class="num">9.80</td><td class="num">10.30</td><td class="num">1000</td></tr>
+          <tr><td>2024-01-02</td><td class="num">10.30</td><td class="num">10.80</td><td class="num">10.20</td><td class="num">10.60</td><td class="num">1200</td></tr>
+          <tr><td>2024-01-03</td><td class="num">10.60</td><td class="num">11.00</td><td class="num">10.50</td><td class="num">10.90</td><td class="num">1100</td></tr>
+          <tr><td>…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicator -->
+  <div class="spec c-ind">
+    <h3><span class="tag">indicator/</span>Indicator — the signal-processing layer</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Computes technical indicators from market data.</li>
+          <li>Does <b>not</b> produce trade signals (不产生交易信号).</li>
+          <li>Reusable by many strategies (可被多个策略复用).</li>
+        </ul>
+        <p style="font-size:13.5px; margin-top:8px;"><b>Common indicators:</b> MA (moving average), MACD, RSI, ATR, Bollinger Bands, …</p>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Example: MA5 over closes</b>
+          Closes: 10.30, 10.60, 10.90, 11.20, 11.50, 11.80, 12.10 …<br>
+          MA5: –, –, –, –, 10.90, 11.20, 11.50 …
+        </div>
+        <div class="keypoint">💡 Output of the Indicator module = <b>indicator value series</b> (指标值序列, e.g. MA values, MACD values).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy -->
+  <div class="spec c-strat">
+    <h3><span class="tag">strategy/</span>Strategy — the decision layer</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Consumes indicator values and produces trade signals per its logic.</li>
+          <li>Signal types: <b>buy / sell / hold</b> (+ suggested quantity).</li>
+          <li>Does <b>not</b> manage cash or positions, does <b>not</b> care about fills.</li>
+        </ul>
+        <div class="keypoint">💡 Output of the Strategy module = <b>signal stream</b> (信号流: buy / sell / hold + quantity suggestion).</div>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Example strategy: MA golden-cross (均线多头策略)</b>
+          MA5 crosses <b>above</b> MA20 → <b>buy</b> (金叉)<br>
+          MA5 crosses <b>below</b> MA20 → <b>sell</b> (死叉)
+        </div>
+      </div>
+    </div>
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Data provides the "raw material", Indicator refines it into "indicator values", Strategy turns values into "signals" — but never executes trades itself.</div>
+  </div>
+
+  <!-- Portfolio -->
+  <div class="spec c-port">
+    <h3><span class="tag">portfolio/</span>Portfolio — the account ledger (账户的"账本")</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Records all current positions and cash.</li>
+          <li>Updates positions, cost and equity on each fill.</li>
+          <li>Provides query interfaces for funds and positions.</li>
+          <li>Does <b>not</b> place orders or handle fills (decoupled from Broker).</li>
+        </ul>
+        <table>
+          <tr><th>Item</th><th>Meaning</th></tr>
+          <tr><td>Cash (现金)</td><td>Available funds</td></tr>
+          <tr><td>Position (持仓)</td><td>Quantity held per instrument</td></tr>
+          <tr><td>Cost (成本)</td><td>Average cost of the position</td></tr>
+          <tr><td>Market Value (市值)</td><td>Current market value of positions</td></tr>
+          <tr><td>Equity (总权益)</td><td>Cash + market value</td></tr>
+          <tr><td>Buying Power (可用资金)</td><td>Funds usable for orders (after holds)</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Example: portfolio update after one fill</b>
+          Before: cash 100,000 · position AAPL 0 · equity 100,000<br>
+          Fill: <b>buy AAPL 100 @ 150.00, fee 15.00</b><br>
+          After: cash = 100,000 − 150×100 − 15 = <b>84,985</b> · position AAPL 100 @ cost 150.00 · market value = 15,000 · equity = 84,985 + 15,000 = <b>99,985</b>
+        </div>
+        <div class="keypoint">💡 Portfolio only records and computes — it never decides whether to buy, and never handles order/fill details. It is the account's "ledger".</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Broker -->
+  <div class="spec c-broker">
+    <h3><span class="tag">broker/</span>Broker — the execution layer (交易的"执行者")</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Receives orders (from Strategy, via Risk).</li>
+          <li>Checks liquidity & market conditions and attempts to match/fill.</li>
+          <li>Computes and deducts commission and slippage.</li>
+          <li>Generates fill reports and notifies Portfolio.</li>
+          <li>Does <b>not</b> care about account funds or position logic.</li>
+        </ul>
+        <div class="flow" style="margin-top:10px; padding:14px 10px">
+          <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">Receive order</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">Check liquidity</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">Slippage &amp; fees</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">Fill report</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name" style="font-size:12.5px">Notify Portfolio</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Example: order execution with fees &amp; slippage</b>
+          Order: buy AAPL 100, limit 150.00 · market last 150.10, est. slippage 0.02, fee rate 0.03%<br>
+          Fill price = 150.10 + 0.02 = <b>150.12</b> · qty 100 · fee = 150.12 × 100 × 0.03% = <b>4.50</b> · total = 15,012 + 4.50 = <b>15,016.50</b>
+        </div>
+        <div class="keypoint">💡 Broker cares about <b>"how to fill"</b>, not "how the book changes afterwards". <b>The fill report is the only source of truth (成交回报才是唯一真相).</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk -->
+  <div class="spec c-risk">
+    <h3><span class="tag">risk/</span>Risk — the gatekeeper (最后一道防线)</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Checks whether an order violates risk rules.</li>
+          <li>Controls position size, leverage, and drawdown.</li>
+          <li>Protects principal against extreme situations.</li>
+          <li>Only orders that pass risk checks may reach the Broker.</li>
+        </ul>
+        <div class="flow" style="margin-top:10px; padding:14px 10px">
+          <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="name" style="font-size:12.5px">Signal → Order</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px">Risk check</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">Pass → Broker</div></div>
+        </div>
+        <p style="font-size:13px; color:var(--muted); margin-top:6px;">…or <b style="color:var(--red)">reject</b> and record the reason (拒绝执行并记录原因).</p>
+      </div>
+      <div>
+        <table>
+          <tr><th>Common risk rule</th><th>Example limit</th></tr>
+          <tr><td>Max position per instrument (单标的最大仓位)</td><td>≤ 20%</td></tr>
+          <tr><td>Max portfolio drawdown (组合最大回撤)</td><td>≤ 15%</td></tr>
+          <tr><td>Leverage limit (杠杆限制)</td><td>≤ 1.0×</td></tr>
+          <tr><td>Max daily loss (单日最大亏损)</td><td>≤ 5%</td></tr>
+          <tr><td>Min order amount / quantity (订单最小金额/数量)</td><td>≥ threshold</td></tr>
+        </table>
+        <div class="keypoint">💡 Risk is the last line of defense — <b>an order that fails risk checks must never trade.</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backtest -->
+  <div class="spec c-bt">
+    <h3><span class="tag">backtest/</span>Backtest — the orchestrator (总控调度)</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Loads historical data.</li>
+          <li>Drives all modules in time order, bar by bar.</li>
+          <li>Records every step's results.</li>
+          <li>Generates the backtest report and performance metrics.</li>
+        </ul>
+        <div class="keypoint">💡 Backtest is the strategy's touchstone (试金石) — <b>without backtesting, there is no evidence a strategy works.</b></div>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Key metrics in the backtest report (回测报告关键指标):</b>
+        <table>
+          <tr><td>Annualized return (年化收益率)</td><td>Max drawdown (最大回撤)</td><td>Sharpe ratio (夏普比率)</td></tr>
+          <tr><td>Win rate (胜率)</td><td>Profit factor (盈亏比)</td><td>Number of trades (交易次数)</td></tr>
+        </table>
+        <p style="font-size:13.5px; margin-top:8px;">Loop: load data → compute indicators → generate signals → risk check → execute → update account → next bar.</p>
+      </div>
+    </div>
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Risk controls risk and decides "can we do it"; Backtest orchestrates and decides "how well did we do". Both are indispensable: risk control first for long-term survival; backtest validation first for long-term returns.</div>
+  </div>
+</section>
+
+<!-- ============ 4. Design principles ============ -->
+<section>
+  <h2><span class="num">4</span>Core Design Principles</h2>
+  <p class="subtitle">A running quant system is essentially the collaboration of four roles.</p>
+
+  <div class="roles">
+    <div class="role c-strat"><h4>Strategy</h4><div class="decides">Decides what it wants to do (决定想做什么)</div><p>Generates buy / sell / hold signals from indicators and logic. Doesn't care about funds, positions, or fill details.</p><span class="focus">Focus: reading the market (判断市场)</span></div>
+    <div class="role c-risk"><h4>Risk</h4><div class="decides">Decides whether it's allowed (决定是否允许)</div><p>Checks risk rules and limits, controls exposure and drawdown. Only approved orders reach the Broker.</p><span class="focus">Focus: controlling risk (控制风险)</span></div>
+    <div class="role c-broker"><h4>Broker</h4><div class="decides">Decides how to fill (决定如何成交)</div><p>Handles execution details: slippage, commissions, volume constraints. Returns real fill results.</p><span class="focus">Focus: executing trades (执行交易)</span></div>
+    <div class="role c-port"><h4>Portfolio</h4><div class="decides">Records the results (记录成交结果)</div><p>Updates account state and positions; computes cost, equity, P&amp;L — the real data for future decisions.</p><span class="focus">Focus: managing the account (管理账户)</span></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>These four roles each do their own job; none is dispensable. Together they form a stable, efficient, and extensible trading system.</div>
+
+  <h3>Decoupling: collaborate through stable interfaces (低耦合协作)</h3>
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ High coupling (not recommended)</h4>
+      <p style="font-size:14px">Strategy, Data, Broker, Indicator, Portfolio and Risk all call each other directly — a tangled mesh. <b>Any module change ripples through the others; testing and extension become painful.</b></p>
+    </div>
+    <div class="panel good">
+      <h4>✓ Low coupling (recommended)</h4>
+      <p style="font-size:14px">Every module talks only to a <b>stable interface</b> at the center. Modules depend on interfaces, not concrete implementations — easy to test, swap, and extend.</p>
+    </div>
+  </div>
+
+  <h3>Interface contract example (接口定义依赖)</h3>
+  <pre><span class="cm">// Strategy interface — modules communicate through interfaces, not direct calls</span>
+<span class="kw">type</span> <span class="ty">Strategy</span> <span class="kw">interface</span> {
+    OnBar(bar market.Bar) Signal  <span class="cm">// on each new bar, return a signal</span>
+    OnInit(ctx context.Context) error
+    OnFinish()
+}</pre>
+  <ul class="duty">
+    <li>Strategy depends only on <code>market.Bar</code> and <code>Signal</code>.</li>
+    <li>It doesn't care where data comes from or how it's stored.</li>
+    <li>It doesn't care how orders are placed or how equity is computed.</li>
+    <li>It only cares: <b>given a bar, what signal should I produce?</b></li>
+  </ul>
+
+  <h3>Dependency Inversion Principle (依赖倒置原则, DIP)</h3>
+  <p style="font-size:14.5px">High-level modules (e.g. Strategy) do not depend on low-level modules (e.g. Broker, Portfolio) — both depend on abstractions (interfaces). Example: to switch from an MA strategy to an RSI strategy — ① keep the <code>Strategy</code> interface unchanged → ② write a new <code>RSIStrategy</code> implementation → ③ plug it into Backtest. No other module changes; the new strategy is live immediately.</p>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Wrong: Strategy mutates the account directly (强耦合)</h4>
+      <pre><span class="cm">// Strategy touches the account directly</span>
+<span class="kw">if</span> close &gt; upperBand {
+    portfolio.Cash += price * qty
+    portfolio.Position -= qty
+}</pre>
+      <ul>
+        <li>Mixed responsibilities — strategy shouldn't care how the account updates.</li>
+        <li>Untestable — can't test strategy logic alone.</li>
+        <li>Unreusable — changing execution venue means rewriting the strategy.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Right: Strategy only emits signals (解耦合)</h4>
+      <pre><span class="cm">// Strategy only produces a signal</span>
+<span class="kw">if</span> close &gt; upperBand {
+    <span class="kw">return</span> Signal{
+        Type:  SignalSell,
+        Price: close,
+        Qty:   positionQty,
+    }
+}</pre>
+      <ul>
+        <li>Single responsibility — strategy only decides "what I want to do".</li>
+  <li>Low coupling — no dependency on account implementation.</li>
+        <li>Testable — feed data in, assert signals out.</li>
+        <li>Extensible — works with any account or execution venue.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>Collaborating through interfaces is the key design idea that makes a quant system maintainable, testable, and extensible. Clear design is the cornerstone of long-term stability and iteration.</div>
+</section>
+
+<!-- ============ 5. Project skeleton ============ -->
+<section>
+  <h2><span class="num">5</span>Proposed Repository Skeleton</h2>
+  <p class="subtitle">Translating the seven modules into the initial building blocks  of the <b>agentic-trading</b> project. (Interface sketch follows the Go-style contract from the source material; the final language can be decided when implementation starts.)</p>
+
+  <div class="tree">agentic-trading/
+├── <span class="dir">data/</span>            <span class="cm"># Market data: OHLCV bars, ticks, fundamentals — raw data stream only</span>
+├── <span class="dir">indicator/</span>       <span class="cm"># Technical indicators: MA, MACD, RSI, ATR, Bollinger Bands</span>
+├── <span class="dir">strategy/</span>        <span class="cm"># Strategies: consume bars/indicators, emit buy/sell/hold signals</span>
+├── <span class="dir">risk/</span>            <span class="cm"># Risk gate: position limits, drawdown, leverage, daily loss</span>
+├── <span class="dir">broker/</span>          <span class="cm"># Execution: order matching, slippage, commissions, fill reports</span>
+├── <span class="dir">portfolio/</span>       <span class="cm"># Ledger: cash, positions, cost, market value, equity, buying power</span>
+├── <span class="dir">backtest/</span>        <span class="cm"># Orchestrator: drives the loop, records results, reports metrics</span>
+├── <span class="dir">knowledge-base/</span>  <span class="cm"># Learning materials (source of this document)</span>
+└── <span class="dir">docs/</span>            <span class="cm"># Architecture &amp; design documents (this file)</span></div>
+
+  <h3>Data contracts between modules</h3>
+  <table>
+    <tr><th>Producer → Consumer</th><th>Contract</th><th>Contents</th></tr>
+    <tr><td>Data → Indicator / Strategy</td><td><code>Bar</code> stream</td><td>time, open, high, low, close, volume</td></tr>
+    <tr><td>Indicator → Strategy</td><td>Indicator series</td><td>MA, MACD, RSI, ATR, Bollinger values</td></tr>
+    <tr><td>Strategy → Risk</td><td><code>Signal</code> / order</td><td>direction (buy/sell/hold), price, quantity</td></tr>
+    <tr><td>Risk → Broker</td><td>Approved order / rejection</td><td>pass to Broker, or reject with reason</td></tr>
+    <tr><td>Broker → Portfolio</td><td>Fill report (唯一真相)</td><td>fill price, quantity, commission, slippage</td></tr>
+    <tr><td>Portfolio → all</td><td>Account snapshot</td><td>cash, positions, cost, market value, equity, buying power</td></tr>
+    <tr><td>Backtest → report</td><td>Performance metrics</td><td>return, max drawdown, Sharpe, win rate, profit factor, trades</td></tr>
+  </table>
+</section>
+
+<!-- ============ 6. Practice roadmap ============ -->
+<section>
+  <h2><span class="num">6</span>Practice Roadmap (练习建议)</h2>
+  <p class="subtitle">Scenario exercise from the source material: <b>Bollinger Band breakout sell (布林带突破上轨卖出)</b>.</p>
+
+  <div class="flow">
+    <div class="step c-ind" style="--stepbg:var(--green-bg)"><div class="name">1 · Indicator</div><div class="cn">Compute BB(20,2): upper / mid / lower bands</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="name">2 · Strategy</div><div class="cn">Close &gt; upper band → sell signal</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name">3 · Portfolio/Risk</div><div class="cn">Position exists? Enough to sell?</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name">4 · Broker</div><div class="cn">Submit sell, deduct fees &amp; slippage</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name">5 · Portfolio</div><div class="cn">Update cash, position, cost, equity</div></div>
+  </div>
+
+  <h3>Suggested next steps</h3>
+  <ol class="roadmap">
+    <li><b>Indicator</b> — implement Bollinger Bands BB(20,2).</li>
+    <li><b>Strategy</b> — emit a sell signal when the close breaks above the upper band.</li>
+    <li><b>Portfolio / Broker</b> — implement the insufficient-balance / insufficient-position check.</li>
+    <li><b>Backtest</b> — run one simple strategy end-to-end through the loop and produce a report.</li>
+  </ol>
+
+  <h3>Day 6 summary</h3>
+  <ul class="duty">
+    <li>A quant system is not one big function — it is a set of modules with clear responsibilities.</li>
+    <li><b>Strategy</b> decides what to do, <b>Risk</b> decides whether it's allowed, <b>Broker</b> decides how to fill, <b>Portfolio</b> records the results.</li>
+    <li>Modules collaborate through stable interfaces with low coupling — that is what makes the system stable, testable, and extensible.</li>
+    <li>Clear responsibility boundaries are the key to a sustainable quant system.</li>
+    <li>The only source of truth for account state is the <b>fill report</b> — not your assumptions (账户状态的唯一来源是成交回报，而不是你的假设).</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>Good architecture turns a strategy from an "idea" into an "executable system" — the foundation for the agentic layer to build upon.</div>
+</section>
+
+<footer>
+  agentic-trading · docs/quant-system-architecture.html · Distilled from knowledge-base/day_6 (30天学习量化投资 · Day 6 量化系统架构) · 2026-08-30
+</footer>
+
+</div>
+</body>
+</html>
