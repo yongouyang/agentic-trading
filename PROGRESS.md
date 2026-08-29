@@ -5,6 +5,44 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-30 — Landscape research: existing agentic trading platforms (web + GitHub)
+
+### What was done
+- Ran a web + GitHub survey (GitHub API star counts fetched live) of platforms
+  similar to our goal; compiled into
+  `docs/research-agentic-trading-landscape.md`.
+- Landscape splits into four layers: (A) multi-agent LLM decision frameworks
+  — TradingAgents (~102k★), ai-hedge-fund (~63k★), TradingAgents-CN (~31k★);
+  (B) agent-native trading harnesses — HKUDS Vibe-Trading (~32k★, shadow
+  account), HKUDS AI-Trader (~22k★), LangAlpha ("Claude Code for markets");
+  (C) classic engines — OpenBB, freqtrade, Lean, Hummingbot, Qlib (+RD-Agent),
+  FinRL; (D) agent-to-market infra — Alpaca MCP, financial-datasets MCP,
+  Kraken CLI.
+- Academic layer is thin: TradingAgents paper (arXiv 2412.20138), FinMem
+  (layered memory), early 2026 benchmarks (AlphaForgeBench, FinPersona-Bench);
+  recurring warning across sources is backtest overfitting + no accepted
+  live-trading benchmark.
+
+### Key decisions
+- **Gap identified**: no OSS project combines LLM agents + a trusted quant core
+  (our seven modules) + hard non-LLM risk gates + paper→live broker path for
+  personal investing — that is our defensible build target.
+- Patterns to adopt: agents-proposes/engine-disposes risk gate, shadow (paper)
+  account before live, MCP as the broker/data seam, persistent research
+  workspace.
+- All major decision-layer projects are "educational only" — code reuse needs
+  license checks (TradingAgents-CN is hybrid-licensed; clones/scams exist).
+
+### What's next (proposed)
+1. Decide first market/broker target (Alpaca paper trading is the obvious
+   default) and agent decision frequency.
+2. Decide: reuse an engine (Lean/freqtrade) as backtest backend vs. grow our
+   own seven-module core from `docs/quant-system-architecture.html`.
+3. Skim-read candidates: TradingAgents paper, FinMem, RD-Agent; track
+   `LLMQuant/awesome-trading-agents` for new entrants.
+
+---
+
 ## 2026-08-30 — Day 6 knowledge extraction → architecture doc
 
 ### What was done
