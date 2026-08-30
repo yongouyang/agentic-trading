@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sliding Window &amp; Incremental SMA | agentic-trading</title>
+<style>
+  :root { --blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-naive{--accent:#dc2626} .c-sliding{--accent:#15803d} .c-ring{--accent:#7e22ce} .c-iface{--accent:#c2410c} .c-cross{--accent:#1d4ed8}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel.warn{border-top:4px solid var(--orange)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}.panel.warn h4{color:var(--orange)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:16px 18px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;overflow-x:auto;margin:12px 0;line-height:1.55}
+  pre .cm{color:#64748b}pre .kw{color:#7dd3fc}pre .ty{color:#fbbf24}pre .fn{color:#a5f3fc}pre .st{color:#86efac}
+  .formula{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin:16px 0;font-size:16px}
+  .formula .term{background:var(--blue-bg);color:var(--navy);border-radius:8px;padding:6px 14px;font-weight:700}
+  .formula .term.green{background:var(--green-bg);color:var(--green)}
+  .formula .term.orange{background:var(--orange-bg);color:var(--orange)}
+  .formula .term.red{background:var(--red-bg);color:var(--red)}
+  .formula .op{font-size:20px;font-weight:700;color:var(--muted)}
+  /* ring buffer visual */
+  .ring{display:flex;gap:6px;align-items:center;justify-content:center;margin:14px 0;flex-wrap:wrap}
+  .ring .cell{width:52px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:8px;font-weight:700;font-size:16px;background:#fff;color:var(--ink);position:relative}
+  .ring .cell.active{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+  .ring .cell.old{border-color:var(--red);background:var(--red-bg);color:var(--red);opacity:.6}
+  .ring .cell .idx{position:absolute;top:-10px;font-size:10px;color:var(--muted);font-weight:400}
+  .ring .lbl{font-size:12px;color:var(--muted);min-width:60px;text-align:right}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Indicator Engineering</div>
+  <h1>Sliding Window &amp; Incremental SMA</h1>
+  <p>Do you need to recalculate the entire moving average every time a new price arrives? (每来一个价格，都要重新算一遍均线吗？) The key to optimizing SMA isn't "calculating faster" — it's reusing what you already computed last time, and only updating what changed.</p>
+  <div class="src">Source: knowledge-base/day_18 (IMG_6615–IMG_6622), "30天学习量化投资 · Day 18: 滑动窗口与增量SMA" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. Naive SMA Problem ============ -->
+<section>
+  <h2><span class="num">1</span>The Problem with Naive SMA — O(N) Every Time</h2>
+  <p class="subtitle">Standard SMA recalculates by iterating over the last N prices every time a new price arrives. Time complexity: O(N).</p>
+
+  <div class="spec c-naive">
+    <h3><span class="tag">problem</span>How naive SMA works</h3>
+    <div class="flow">
+      <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">①</div><div class="name">New price arrives</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">②</div><div class="name">Take last N prices</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">③</div><div class="name">Sum all N values</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">④</div><div class="name">Divide by N</div></div>
+    </div>
+
+    <h3>Example: SMA(3) with prices [10, 11, 12]</h3>
+    <table>
+      <tr><th>Step</th><th>Window</th><th>Calculation</th><th>Result</th></tr>
+      <tr><td>Initial</td><td>[10, 11, 12]</td><td>(10+11+12) / 3</td><td class="num">11.00</td></tr>
+      <tr><td>Price 13 arrives</td><td>[11, 12, <b>13</b>]</td><td>(11+12+13) / 3</td><td class="num">12.00</td></tr>
+    </table>
+    <p style="font-size:14px; color:var(--red)">Every new price → re-iterate all N values → O(N) per update.</p>
+
+    <h3>Why this matters at scale</h3>
+    <table>
+      <tr><th>N (window size)</th><th>Additions per update</th></tr>
+      <tr><td class="num">10</td><td class="num">10</td></tr>
+      <tr><td class="num">100</td><td class="num">100</td></tr>
+      <tr><td class="num">1,000</td><td class="num">1,000</td></tr>
+      <tr><td class="num">10,000</td><td class="num">10,000</td></tr>
+    </table>
+    <p style="font-size:14px">With millions of bars, multiple instruments, and multiple parameter combinations — O(N) repeated computation becomes a serious bottleneck.</p>
+  </div>
+</section>
+
+<!-- ============ 2. Sliding Window ============ -->
+<section>
+  <h2><span class="num">2</span>Sliding Window — Subtract Old, Add New → O(1)</h2>
+  <p class="subtitle">Instead of recalculating from scratch, maintain the running sum and only update the two changed values. (不用重新算！)</p>
+
+  <div class="spec c-sliding">
+    <h3><span class="tag">solution</span>Core idea</h3>
+    <div class="formula">
+      <span class="term green">new_sum</span><span class="op">=</span>
+      <span class="term">old_sum</span><span class="op">−</span>
+      <span class="term red">oldest value</span><span class="op">+</span>
+      <span class="term green">newest value</span>
+    </div>
+    <div class="formula">
+      <span class="term">new_SMA</span><span class="op">=</span>
+      <span class="term green">new_sum</span><span class="op">÷</span>
+      <span class="term">N</span>
+    </div>
+
+    <h3>Worked example: SMA(3)</h3>
+    <table>
+      <tr><th>Step</th><th>Old sum</th><th>Subtract oldest</th><th>Add newest</th><th>New sum</th><th>SMA</th></tr>
+      <tr><td>Initial [10,11,12]</td><td class="num">33</td><td>—</td><td>—</td><td class="num">33</td><td class="num">11.00</td></tr>
+      <tr><td>13 arrives</td><td class="num">33</td><td class="num">−10</td><td class="num">+13</td><td class="num">36</td><td class="num">12.00</td></tr>
+      <tr><td>14 arrives</td><td class="num">36</td><td class="num">−11</td><td class="num">+14</td><td class="num">39</td><td class="num">13.00</td></tr>
+    </table>
+
+    <p style="font-size:14px; color:var(--green)">Each update: exactly 2 arithmetic operations (one subtraction, one addition) → <b>O(1)</b>.</p>
+
+    <h3>Complexity comparison</h3>
+    <table>
+      <tr><th>Method</th><th>Per-update ops</th><th>Complexity</th><th>1,000,000 updates (N=100)</th></tr>
+      <tr><td>Naive SMA (re-iterate)</td><td>N additions</td><td style="color:var(--red)">O(N)</td><td class="num">~100 million additions</td></tr>
+      <tr><td>Incremental SMA (sliding window)</td><td>2 operations</td><td style="color:var(--green)"><b>O(1)</b></td><td class="num">~2 million operations</td></tr>
+    </table>
+
+    <div class="keypoint">💡 <b>One order of magnitude reduction in complexity = one order of magnitude improvement in performance.</b> The bigger the data, the more instruments, and the more parameters — the more dramatic the advantage. (复杂度降一阶，性能提升一个数量级！)</div>
+  </div>
+</section>
+
+<!-- ============ 3. Circular Buffer ============ -->
+<section>
+  <h2><span class="num">3</span>Circular Buffer — Fixed Memory, In-Place Overwrite</h2>
+  <p class="subtitle">Use a fixed-size array with a write pointer that wraps around. New data overwrites the oldest data. No allocation, no copying.</p>
+
+  <div class="spec c-ring">
+    <h3><span class="tag">structure</span>How it works</h3>
+    <p>A circular buffer (环形缓冲区) uses a fixed-size array of length N plus a write pointer (index). When new data arrives, it overwrites the oldest value at the current index, then advances the pointer modulo N.</p>
+
+    <h3>Visual: SMA(3) ring buffer</h3>
+    <div style="margin:18px 0">
+      <div style="font-size:13px; color:var(--muted); margin-bottom:4px">① Write 10, 11, 12 → sum=33, SMA=11.00</div>
+      <div class="ring">
+        <div class="cell active"><span class="idx">[0]</span>10</div>
+        <div class="cell active"><span class="idx">[1]</span>11</div>
+        <div class="cell active"><span class="idx">[2]</span>12</div>
+        <div class="lbl">idx → 0</div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin:10px 0 4px">② Price 13: overwrite [0], sum = 33−10+13 = 36, SMA=12.00</div>
+      <div class="ring">
+        <div class="cell" style="border-color:var(--green);background:var(--green-bg)"><span class="idx">[0]</span><b>13</b></div>
+        <div class="cell active"><span class="idx">[1]</span>11</div>
+        <div class="cell active"><span class="idx">[2]</span>12</div>
+        <div class="lbl">idx → 1</div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin:10px 0 4px">③ Price 14: overwrite [1], sum = 36−11+14 = 39, SMA=13.00</div>
+      <div class="ring">
+        <div class="cell active"><span class="idx">[0]</span>13</div>
+        <div class="cell" style="border-color:var(--green);background:var(--green-bg)"><span class="idx">[1]</span><b>14</b></div>
+        <div class="cell active"><span class="idx">[2]</span>12</div>
+        <div class="lbl">idx → 2</div>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin:10px 0 4px">④ Price 15: overwrite [2], sum = 39−12+15 = 42, SMA=14.00</div>
+      <div class="ring">
+        <div class="cell active"><span class="idx">[0]</span>13</div>
+        <div class="cell active"><span class="idx">[1]</span>14</div>
+        <div class="cell" style="border-color:var(--green);background:var(--green-bg)"><span class="idx">[2]</span><b>15</b></div>
+        <div class="lbl">idx → 0</div>
+      </div>
+    </div>
+    <p style="font-size:13px">Physical order is scrambled — but the 3 values in the window are always the latest 3. Sum is always correct. SMA = sum / N.</p>
+
+    <h3>Go struct design</h3>
+<pre><span class="kw">type</span> <span class="ty">SMA</span> <span class="kw">struct</span> {
+    period <span class="ty">int</span>       <span class="cm">// window size N</span>
+    window []<span class="ty">float64</span> <span class="cm">// circular buffer, len = N</span>
+    sum    <span class="ty">float64</span>   <span class="cm">// running sum within window</span>
+    index  <span class="ty">int</span>       <span class="cm">// next write position</span>
+    count  <span class="ty">int</span>       <span class="cm">// elements written so far (≤ N)</span>
+}</pre>
+
+    <h3>Update() — O(1) core steps</h3>
+<pre><span class="kw">func</span> (s *<span class="ty">SMA</span>) <span class="fn">Update</span>(value <span class="ty">float64</span>) <span class="ty">float64</span> {
+    old := s.window[s.index]     <span class="cm">// ① get oldest value</span>
+    s.sum -= old                 <span class="cm">// ② subtract oldest</span>
+    s.window[s.index] = value    <span class="cm">// ③ overwrite with new</span>
+    s.sum += value               <span class="cm">// ④ add new value</span>
+    s.index = (s.index+1) % s.period <span class="cm">// ⑤ advance pointer (wrap)</span>
+    <span class="kw">if</span> s.count &lt; s.period {
+        s.count++                <span class="cm">// ⑥ track valid elements</span>
+    }
+    <span class="kw">return</span> s.sum / <span class="ty">float64</span>(s.count)
+}</pre>
+
+    <h3>Why not <code>append(window[1:], value)</code>?</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>append approach</h4>
+        <ul>
+          <li><b>Element shifting</b> — moves N−1 elements each time</li>
+          <li><b>Array reallocation</b> — capacity overflow triggers copy</li>
+          <li><b>Memory allocation</b> — frequent alloc/dealloc</li>
+          <li><b>GC pressure</b> — many temporary objects</li>
+          <li><b>Performance jitter</b> — worse with larger data</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>Circular buffer</h4>
+        <ul>
+          <li><b>In-place overwrite</b> — only modifies one position</li>
+          <li><b>Fixed memory</b> — allocated once, reused forever</li>
+          <li><b>No allocation</b> — almost zero temporary objects</li>
+          <li><b>Low GC pressure</b> — fewer garbage objects</li>
+          <li><b>Stable performance</b> — O(1) with minimal variance</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 The circular buffer isn't "showing off" — it ensures the quant system remains stable, controllable, and efficient during long-running, high-frequency, large-scale computation. (环形缓冲区是为了让量化系统在长时间、高频率、大规模运行时依然稳定、可控、高效！)</div>
+  </div>
+</section>
+
+<!-- ============ 4. Reset ============ -->
+<section>
+  <h2><span class="num">4</span>Reset &amp; Reuse</h2>
+  <p class="subtitle">A good indicator implementation must be resettable and reusable.</p>
+
+  <div class="spec c-ring">
+    <h3><span class="tag">design</span>Reset() clears state for reuse</h3>
+<pre><span class="kw">func</span> (s *<span class="ty">SMA</span>) <span class="fn">Reset</span>() {
+    s.sum   = 0
+    s.index = 0
+    s.count = 0
+    <span class="cm">// window doesn't need clearing — will be overwritten</span>
+}</pre>
+
+    <h3>Use cases for Reset</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-ring"><h4>Re-running data</h4><p>Same indicator instance, new dataset.</p></div>
+      <div class="mod c-ring"><h4>Unit testing</h4><p>Clean state between test cases.</p></div>
+      <div class="mod c-ring"><h4>Parameter backtesting</h4><p>One SMA instance, many parameter runs.</p></div>
+      <div class="mod c-ring"><h4>Indicator reuse</h4><p>Same instance across different instruments.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Don't Prematurely Abstract ============ -->
+<section>
+  <h2><span class="num">5</span>Don't Prematurely Unify the Indicator Interface</h2>
+  <p class="subtitle">Different indicators have very different inputs and outputs. Satisfy real needs first, then abstract commonalities later.</p>
+
+  <div class="spec c-iface">
+    <h3><span class="tag">design</span>Input/output diversity across indicators</h3>
+    <table>
+      <tr><th>Indicator</th><th>Input</th><th>Output</th></tr>
+      <tr><td>SMA</td><td>Close</td><td>1 value (SMA)</td></tr>
+      <tr><td>ATR</td><td>High, Low, Close</td><td>1 value (ATR)</td></tr>
+      <tr><td>MACD</td><td>Close</td><td>3 values (DIF, DEA, Histogram)</td></tr>
+      <tr><td>Bollinger Bands</td><td>Close</td><td>3 values (Upper, Mid, Lower)</td></tr>
+    </table>
+
+    <div class="compare">
+      <div class="panel bad">
+        <h4>✗ Premature unification</h4>
+<pre><span class="kw">type</span> <span class="ty">Indicator</span> <span class="kw">interface</span> {
+    <span class="fn">Update</span>(bar <span class="ty">Bar</span>) <span class="cm">// all take Bar?</span>
+    <span class="fn">Values</span>() <span class="kw">map</span>[<span class="ty">string</span>]<span class="ty">float64</span>
+    <span class="fn">Reset</span>()
+}</pre>
+        <ul>
+          <li>Forces unnecessary input parameters</li>
+          <li>Unnatural output structure</li>
+          <li>Sacrifices usability and performance</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>✓ Implement first, abstract later</h4>
+<pre><span class="cm">// SMA: natural, clean, performant</span>
+<span class="kw">type</span> <span class="ty">SMA</span> <span class="kw">struct</span> { ... }
+<span class="kw">func</span> (s *<span class="ty">SMA</span>) <span class="fn">Update</span>(v <span class="ty">float64</span>) <span class="ty">float64</span>
+<span class="kw">func</span> (s *<span class="ty">SMA</span>) <span class="fn">Value</span>() (<span class="ty">float64</span>, <span class="ty">bool</span>)
+<span class="kw">func</span> (s *<span class="ty">SMA</span>) <span class="fn">Reset</span>()</pre>
+        <ul>
+          <li>Each indicator only cares about its own I/O</li>
+          <li>API is concise, intuitive, performant</li>
+          <li>Not constrained by premature abstractions</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 <b>Abstraction should emerge from real-world commonalities, not from imagined uniformity.</b> Let each indicator run naturally in real scenarios first, then extract truly valuable common patterns from practice. (抽象应该来自于真实世界的共性，而不是来自我们想象中的整齐划一。)</div>
+  </div>
+</section>
+
+<!-- ============ 6. Golden Cross = Edge Trigger ============ -->
+<section>
+  <h2><span class="num">6</span>Golden Cross Is an Edge Trigger, Not a Level!</h2>
+  <p class="subtitle">The signal is not "short MA &gt; long MA" — it's the moment of transition from "below" to "above". (金叉不是短均线&gt;长均线，而是边沿触发！)</p>
+
+  <div class="spec c-cross">
+    <h3><span class="tag">signal</span>Level trigger vs Edge trigger</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>✗ Level trigger (continuous)</h4>
+        <p>"Whenever short MA &gt; long MA → BUY"</p>
+        <p style="color:var(--red)">Result: BUY signal fires every bar while short MA stays above long MA — massive duplicate signals!</p>
+      </div>
+      <div class="panel good">
+        <h4>✓ Edge trigger (one-shot)</h4>
+        <p>"Only when short MA crosses from ≤ to &gt; long MA → BUY"</p>
+        <p style="color:var(--green)">Result: BUY signal fires exactly once at the crossover moment.</p>
+      </div>
+    </div>
+
+    <h3>Crossover conditions</h3>
+    <table>
+      <tr><th>Signal</th><th>Yesterday</th><th>Today</th><th>Condition</th></tr>
+      <tr><td style="color:var(--green)"><b>Golden cross (BUY)</b></td><td>short MA ≤ long MA</td><td>short MA &gt; long MA</td><td>Crossed upward at this bar</td></tr>
+      <tr><td style="color:var(--red)"><b>Death cross (SELL)</b></td><td>short MA ≥ long MA</td><td>short MA &lt; long MA</td><td>Crossed downward at this bar</td></tr>
+    </table>
+
+    <h3>State machine to prevent duplicate signals</h3>
+<pre><span class="kw">const</span> (
+    IN_DOWN <span class="ty">State</span> = <span class="kw">iota</span> <span class="cm">// short MA ≤ long MA (waiting for golden cross)</span>
+    IN_UP                <span class="cm">// short MA > long MA (waiting for death cross)</span>
+)
+
+<span class="kw">type</span> <span class="ty">DualMAStrategy</span> <span class="kw">struct</span> {
+    fast, slow *<span class="ty">SMA</span>
+    state      <span class="ty">State</span>
+}
+
+<span class="kw">func</span> (s *<span class="ty">DualMAStrategy</span>) <span class="fn">OnBar</span>(bar <span class="ty">Bar</span>) []<span class="ty">Signal</span> {
+    prevFast, prevSlow := s.fast.<span class="fn">Value</span>(), s.slow.<span class="fn">Value</span>()
+    s.fast.<span class="fn">Update</span>(bar.Close)
+    s.slow.<span class="fn">Update</span>(bar.Close)
+    fast, slow := s.fast.<span class="fn">Value</span>(), s.slow.<span class="fn">Value</span>()
+
+    <span class="kw">var</span> sigs []<span class="ty">Signal</span>
+    <span class="kw">switch</span> s.state {
+    <span class="kw">case</span> IN_DOWN:
+        <span class="kw">if</span> prevFast &lt;= prevSlow && fast > slow {
+            sigs = append(sigs, <span class="fn">NewSignal</span>(BUY, bar.Time))
+            s.state = IN_UP
+        }
+    <span class="kw">case</span> IN_UP:
+        <span class="kw">if</span> prevFast >= prevSlow && fast &lt; slow {
+            sigs = append(sigs, <span class="fn">NewSignal</span>(SELL, bar.Time))
+            s.state = IN_DOWN
+        }
+    }
+    <span class="kw">return</span> sigs
+}</pre>
+
+    <div class="takeaway"><span class="star">★</span><b>We care about the moment of change, not the current state.</b> "Now above" is not a signal; "just crossed above" is the signal. (我们关心的不是现在在不在上方，而是这一刻发生了什么变化！)<br><br>State machines effectively prevent duplicate signals, ensuring correct trading logic.</div>
+  </div>
+</section>
+
+<!-- ============ Summary ============ -->
+<section>
+  <h2><span class="num">★</span>Day 18 Summary</h2>
+  <table>
+    <tr><th>Concept</th><th>Key insight</th></tr>
+    <tr><td><b>Naive SMA</b></td><td>O(N) per update — re-iterates all N values. Bottleneck at scale.</td></tr>
+    <tr><td><b>Sliding window</b></td><td>O(1) — subtract oldest, add newest. new_sum = old_sum − old + new.</td></tr>
+    <tr><td><b>Circular buffer</b></td><td>Fixed memory, in-place overwrite, no GC pressure. Ideal for long-running backtests.</td></tr>
+    <tr><td><b>Reset &amp; reuse</b></td><td>Good indicators must be resettable for testing, parameter sweeps, and reuse.</td></tr>
+    <tr><td><b>No premature abstraction</b></td><td>Implement real needs first; abstract commonalities from practice, not imagination.</td></tr>
+    <tr><td><b>Edge-triggered signals</b></td><td>Golden cross = state transition (≤ → &gt;), not a level. Use state machines to prevent duplicates.</td></tr>
+  </table>
+
+  <div class="takeaway"><span class="star">★</span><b>Optimizing SMA isn't about "calculating faster" — it's about reusing the previously computed state and only updating what changed.</b> (优化SMA的关键，不是"算得更快"，而是利用上一时刻已经计算过的状态，只更新发生变化的部分！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_18_sliding-window-incremental-sma.html · Distilled from knowledge-base/day_18 (30天学习量化投资 · Day 18) · 2025-08-30
+</footer>
+</div>
+</body>
+</html>

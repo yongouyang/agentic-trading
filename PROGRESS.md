@@ -5,6 +5,55 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-30 — Day 18, 19, 20 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_18/` (IMG_6615–6622, 8 slides),
+  `day_19/` (IMG_6623–6630, 8 slides) and `day_20/` (IMG_6631–6638, 8 slides)
+  of "30天学习量化投资" using the macOS Vision OCR tool.
+- Created three self-contained HTML docs in `docs/`, matching the existing style:
+  - `docs/day_18_sliding-window-incremental-sma.html` — 滑动窗口与增量SMA:
+    Naive SMA O(N) problem; sliding window O(1) formula (new_sum = old_sum −
+    oldest + newest); circular buffer with fixed memory and in-place overwrite
+    (with visual ring buffer diagrams); Go SMA struct and Update() implementation;
+    why append(window[1:], v) is bad for long-running systems; Reset() for reuse;
+    don't prematurely unify Indicator interface; golden cross as edge trigger
+    (state machine with IN_UP/IN_DOWN states and Go code).
+  - `docs/day_19_strategy-signals-trading-logic.html` — 策略信号与交易逻辑:
+    Strategy's sole job is producing signals; Signal struct definition; dual MA
+    golden/death cross with state machine; Signal ≠ Order ≠ Trade; same signal
+    can produce different outcomes; BUY execution checklist (5 checks); SELL
+    execution checklist (5 checks); responsibility boundaries table (Strategy →
+    Risk → Order → Broker → Portfolio); complete 8-step trading chain with
+    pseudocode.
+  - `docs/day_20_trade-simulation-transaction-costs.html` — 成交模拟与交易成本:
+    Strategy thinks / Broker executes; ideal vs real fill; slippage definition
+    and cumulative impact table; commission types (brokerage, exchange, stamp
+    duty) with worked buy/sell examples; complete BUY calculation walkthrough
+    (signal → slippage → fill → qty → amount → commission → deduction → account
+    update); why costs destroy strategies (gross vs net comparison); high vs low
+    turnover cost comparison; slippage control methods.
+- Verified all three docs render with headless Chrome screenshots; no rendering
+  issues found; temporary screenshots deleted.
+- Day 21 folder exists but is empty — skipped.
+
+### Key decisions
+- Day 18 introduces `.ring` CSS component for circular buffer visualization
+  (colored cells with index labels showing in-place overwrite).
+- Day 19 uses `.checklist` component with colored icons for BUY/SELL execution
+  checks. State machine flow diagram for IN_UP/IN_DOWN transitions.
+- Day 20 uses `.cost-bar` component for visualizing gross return vs cost erosion.
+  Three-column comparison for before/after/cost account states.
+- All docs maintain the bilingual English/Chinese convention.
+
+### What's next (proposed)
+1. Continue extraction for remaining days as folders appear.
+2. Build an index/hub page linking all 20 day docs.
+3. Begin implementing the Go modules: CSV reader (Day 17) → SMA indicator
+   (Day 18) → Strategy signals (Day 19) → Broker simulation (Day 20).
+
+---
+
 ## 2026-08-30 — Day 14, 15, 16, 17 knowledge extraction → topic docs
 
 ### What was done

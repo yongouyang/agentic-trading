@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Simulation &amp; Transaction Costs | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-slip{--accent:#dc2626} .c-fee{--accent:#c2410c} .c-broker{--accent:#0369a1} .c-cost{--accent:#7e22ce} .c-strat{--accent:#1d4ed8}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .compare-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.compare-3{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel.warn{border-top:4px solid var(--orange)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}.panel.warn h4{color:var(--orange)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .formula{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin:16px 0;font-size:16px}
+  .formula .term{background:var(--blue-bg);color:var(--navy);border-radius:8px;padding:6px 14px;font-weight:700}
+  .formula .term.green{background:var(--green-bg);color:var(--green)}
+  .formula .term.orange{background:var(--orange-bg);color:var(--orange)}
+  .formula .term.red{background:var(--red-bg);color:var(--red)}
+  .formula .op{font-size:20px;font-weight:700;color:var(--muted)}
+  /* cost bar */
+  .cost-bar{display:flex;height:32px;border-radius:8px;overflow:hidden;border:1.5px solid var(--line);margin:14px 0;font-size:12px;font-weight:700;color:#fff}
+  .cost-bar .seg{display:flex;align-items:center;justify-content:center}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Execution Realism</div>
+  <h1>Trade Simulation &amp; Transaction Costs</h1>
+  <p>The strategy clearly makes money — so why might live trading lose money? (策略明明赚钱，为什么实盘可能亏钱？) Real trading must simulate slippage and commissions. Without a Broker, backtesting is just pretending to trade!</p>
+  <div class="src">Source: knowledge-base/day_20 (IMG_6631–IMG_6638), "30天学习量化投资 · Day 20: 成交模拟与交易成本" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. Strategy vs Broker ============ -->
+<section>
+  <h2><span class="num">1</span>Strategy Thinks, Broker Executes</h2>
+  <p class="subtitle">Strategy produces ideas. Broker simulates real fills with slippage, commissions, and partial fills.</p>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Strategy (策略) — the researcher</h4>
+      <ul>
+        <li>Analyzes market data and indicators</li>
+        <li>Generates signals based on rules</li>
+        <li>Decides "want to buy" or "want to sell"</li>
+        <li><b>Does NOT handle funds, positions, costs, or fills</b></li>
+      </ul>
+    </div>
+    <div class="panel" style="border-top:4px solid var(--sky)">
+      <h4 style="color:var(--sky)">Broker (执行) — the trader</h4>
+      <ul>
+        <li>Receives orders</li>
+        <li>Determines fill price (with slippage)</li>
+        <li>Calculates commission fees</li>
+        <li>Simulates partial fills</li>
+        <li>Outputs Trade records</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote"><strong>Key insight:</strong> Backtesting without a Broker = pretending to trade! Only by considering slippage and commissions can backtest results approach real trading performance. (没有Broker的回测 = 假装交易！)</div>
+</section>
+
+<!-- ============ 2. Ideal vs Real ============ -->
+<section>
+  <h2><span class="num">2</span>Ideal Fill vs Real Fill</h2>
+  <p class="subtitle">Backtesting can't simply assume "signal price = fill price". In real trading, the price you see and the price you get are always different.</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>Ideal fill (common backtest assumption)</h4>
+      <ul>
+        <li>Signal price = Fill price</li>
+        <li>No slippage</li>
+        <li>No commission</li>
+        <li>Always fully filled</li>
+        <li><b>Result: overly optimistic</b></li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>Real fill (needs simulation)</h4>
+      <ul>
+        <li>Signal price ≠ Fill price</li>
+        <li>Buy more expensive (slippage)</li>
+        <li>Sell cheaper (slippage)</li>
+        <li>Commission on every trade</li>
+        <li><b>Result: costs erode profits, may turn profitable → losing</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="formula">
+    <span class="term red">Real fill cost</span><span class="op">=</span>
+    <span class="term">Signal price</span><span class="op">+</span>
+    <span class="term red">Slippage</span><span class="op">+</span>
+    <span class="term orange">Commission</span><span class="op">+</span>
+    <span class="term">Other costs</span>
+  </div>
+</section>
+
+<!-- ============ 3. Slippage ============ -->
+<section>
+  <h2><span class="num">3</span>Slippage — The Price Gap</h2>
+  <p class="subtitle">Slippage = actual fill price − expected price. You buy more expensive and sell cheaper than you planned.</p>
+
+  <div class="spec c-slip">
+    <h3><span class="tag">cost</span>Slippage on BUY vs SELL</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>BUY slippage (buy more expensive)</h4>
+        <table>
+          <tr><td>Expected price</td><td class="num">10.00</td></tr>
+          <tr><td>Actual fill</td><td class="num" style="color:var(--red)">10.02</td></tr>
+          <tr><td>Slippage</td><td class="num" style="color:var(--red)"><b>+0.02 (买贵了)</b></td></tr>
+        </table>
+      </div>
+      <div class="panel bad">
+        <h4>SELL slippage (sell cheaper)</h4>
+        <table>
+          <tr><td>Expected price</td><td class="num">10.00</td></tr>
+          <tr><td>Actual fill</td><td class="num" style="color:var(--red)">9.98</td></tr>
+          <tr><td>Slippage</td><td class="num" style="color:var(--red)"><b>−0.02 (卖便宜了)</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>Why does slippage happen?</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="mod c-slip"><h4>Low liquidity</h4><p>Insufficient bid/ask depth — large orders push prices.</p></div>
+      <div class="mod c-slip"><h4>High volatility</h4><p>Prices change rapidly between order and fill.</p></div>
+      <div class="mod c-slip"><h4>Large order size</h4><p>Your order eats through multiple price levels.</p></div>
+      <div class="mod c-slip"><h4>Network latency</h4><p>Time gap between signal and market arrival.</p></div>
+      <div class="mod c-slip"><h4>Gap (跳空)</h4><p>Opening price skips past your intended price.</p></div>
+    </div>
+
+    <h3>Cumulative slippage impact</h3>
+    <table>
+      <tr><th>Direction</th><th>Ideal price</th><th>Actual fill</th><th>Slippage per trade</th></tr>
+      <tr><td>BUY</td><td class="num">10.00</td><td class="num">10.02</td><td class="num" style="color:var(--red)">+0.02</td></tr>
+      <tr><td>SELL</td><td class="num">10.00</td><td class="num">9.98</td><td class="num" style="color:var(--red)">−0.02</td></tr>
+      <tr style="background:var(--red-bg)"><td colspan="3"><b>Round-trip cost (buy + sell)</b></td><td class="num" style="color:var(--red)"><b>−0.04</b></td></tr>
+      <tr><td colspan="3">500 round trips per year</td><td class="num" style="color:var(--red)"><b>−20.00 / share</b></td></tr>
+    </table>
+
+    <div class="keypoint">💡 0.02 per trade seems small — but with frequent trading, the cumulative cost becomes enormous. If each trade's gross profit is only 0.05, slippage alone can turn it into a loss. (0.02元好像不多？但交易很多次后，累计起来非常可观！)</div>
+  </div>
+</section>
+
+<!-- ============ 4. Commission ============ -->
+<section>
+  <h2><span class="num">4</span>Commission — The Cost of Every Trade</h2>
+  <p class="subtitle">Commission = fill amount × rate (+ other rules). Every trade incurs costs that directly reduce returns.</p>
+
+  <div class="spec c-fee">
+    <h3><span class="tag">cost</span>Commission formula</h3>
+    <div class="formula">
+      <span class="term orange">Commission (手续费)</span><span class="op">=</span>
+      <span class="term">Fill amount (成交金额)</span><span class="op">×</span>
+      <span class="term orange">Rate (费率)</span>
+    </div>
+
+    <h3>Common fee types (A-share example)</h3>
+    <table>
+      <tr><th>Fee type</th><th>Buy</th><th>Sell</th><th>Typical rate</th></tr>
+      <tr><td>Brokerage commission (佣金)</td><td>✓</td><td>✓</td><td>0.01%–0.03%</td></tr>
+      <tr><td>Exchange fee (交易所费用)</td><td>✓</td><td>✓</td><td>~0.001%</td></tr>
+      <tr><td>Transfer fee (规费/过户费)</td><td>✓</td><td>✓</td><td>~0.002%</td></tr>
+      <tr><td><b>Stamp duty (印花税)</b></td><td>—</td><td><b>✓ only</b></td><td><b>0.1%</b></td></tr>
+    </table>
+
+    <h3>Worked example: 100,000 yuan trade</h3>
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Buy side</h4>
+        <table>
+          <tr><td>Fill amount</td><td class="num">100,000</td></tr>
+          <tr><td>Commission (万2)</td><td class="num">20</td></tr>
+          <tr><td>Exchange fee</td><td class="num">1</td></tr>
+          <tr><td>Transfer fee</td><td class="num">2</td></tr>
+          <tr><td><b>Total</b></td><td class="num"><b>~23 yuan</b></td></tr>
+        </table>
+      </div>
+      <div class="panel warn">
+        <h4>Sell side (more expensive)</h4>
+        <table>
+          <tr><td>Fill amount</td><td class="num">100,000</td></tr>
+          <tr><td>Commission (万2)</td><td class="num">20</td></tr>
+          <tr><td>Exchange fee</td><td class="num">1</td></tr>
+          <tr><td>Transfer fee</td><td class="num">2</td></tr>
+          <tr><td>Stamp duty (0.1%)</td><td class="num" style="color:var(--red)"><b>100</b></td></tr>
+          <tr><td><b>Total</b></td><td class="num"><b>~123 yuan</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 One trade looks like just a few yuan — but if you trade frequently, costs snowball. Low fees + low turnover = higher net returns. (低费用 + 低换手 = 更高的净收益。)</div>
+  </div>
+</section>
+
+<!-- ============ 5. Complete BUY Calculation ============ -->
+<section>
+  <h2><span class="num">5</span>Complete BUY Calculation — From Signal to Account</h2>
+  <p class="subtitle">A full worked example showing the real cash and position changes from a single BUY.</p>
+
+  <div class="spec c-broker">
+    <h3><span class="tag">example</span>BUY flow with slippage and commission</h3>
+    <div class="flow">
+      <div class="step c-strat" style="--stepbg:var(--blue-bg)"><div class="name">Strategy</div><div class="cn">BUY signal</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--red-bg);--accent:var(--red)"><div class="name">Risk</div><div class="cn">check pass</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--blue-bg);--accent:var(--blue)"><div class="name">Order</div><div class="cn">generate buy</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name">Broker</div><div class="cn">simulate fill</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--green-bg);--accent:var(--green)"><div class="name">Trade</div><div class="cn">fill report</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--purple-bg);--accent:var(--purple)"><div class="name">Portfolio</div><div class="cn">update account</div></div>
+    </div>
+
+    <h3>Step-by-step calculation</h3>
+    <table>
+      <tr><th>Step</th><th>Calculation</th><th>Result</th></tr>
+      <tr><td>① Fill price (with slippage +0.23%)</td><td>10.00 × (1 + 0.0023)</td><td class="num"><b>10.023</b></td></tr>
+      <tr><td>② Planned buy amount</td><td>—</td><td class="num">40,000</td></tr>
+      <tr><td>③ Fill quantity</td><td>40,000 ÷ 10.023 (rounded)</td><td class="num"><b>3,988 shares</b></td></tr>
+      <tr><td>④ Fill amount (excl. commission)</td><td>10.023 × 3,988</td><td class="num">39,999.02</td></tr>
+      <tr><td>⑤ Commission (0.23%)</td><td>40,000 × 0.0023</td><td class="num" style="color:var(--red)">92</td></tr>
+      <tr style="background:var(--red-bg)"><td><b>⑥ Actual deduction</b></td><td>39,999.02 + 92</td><td class="num" style="color:var(--red)"><b>40,092</b></td></tr>
+    </table>
+
+    <h3>Account state change</h3>
+    <div class="compare-3">
+      <div class="panel neutral">
+        <h4>Before trade</h4>
+        <table>
+          <tr><td>Cash</td><td class="num">100,000</td></tr>
+          <tr><td>Position</td><td class="num">0</td></tr>
+          <tr><td><b>Equity</b></td><td class="num"><b>100,000</b></td></tr>
+        </table>
+      </div>
+      <div class="panel neutral">
+        <h4>After trade</h4>
+        <table>
+          <tr><td>Cash</td><td class="num">59,908</td></tr>
+          <tr><td>Position (market)</td><td class="num">40,000</td></tr>
+          <tr><td><b>Equity</b></td><td class="num" style="color:var(--red)"><b>99,908</b></td></tr>
+        </table>
+      </div>
+      <div class="panel bad">
+        <h4>Cost impact</h4>
+        <p style="font-size:14px">Nothing has moved yet — but you've already lost <b style="color:var(--red)">92 yuan</b> to transaction costs alone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. Why Costs Destroy Strategies ============ -->
+<section>
+  <h2><span class="num">6</span>Why Transaction Costs Destroy Strategies</h2>
+  <p class="subtitle">A single cost seems small, but high turnover compounds relentlessly, eroding your returns. Alpha must exceed costs for the strategy to survive.</p>
+
+  <div class="spec c-cost">
+    <h3><span class="tag">danger</span>Cost erosion example</h3>
+    <div class="io-box">
+      <b>Strategy: looks good on paper</b><br>
+      Initial capital: 100,000 · 1-year backtest · Gross return (before costs): <b>+12%</b> (112,000)
+    </div>
+
+    <h3>Unavoidable real costs</h3>
+    <table>
+      <tr><th>Cost type</th><th>Example rate</th><th>Impact</th></tr>
+      <tr><td>Commission (buy + sell)</td><td>~0.025% each way</td><td class="num" style="color:var(--red)">−4.00%</td></tr>
+      <tr><td>Buy slippage</td><td>~0.05%/trade</td><td class="num" style="color:var(--red)">−2.00%</td></tr>
+      <tr><td>Sell slippage</td><td>~0.05%/trade</td><td class="num" style="color:var(--red)">−2.00%</td></tr>
+      <tr style="background:var(--red-bg)"><td><b>Total costs</b></td><td></td><td class="num" style="color:var(--red)"><b>−8.00%</b></td></tr>
+    </table>
+
+    <div class="cost-bar">
+      <div class="seg" style="background:var(--green); flex:12">Gross: +12%</div>
+      <div class="seg" style="background:var(--red); flex:8">Costs: −8%</div>
+      <div class="seg" style="background:var(--blue); flex:4">Net: +4%</div>
+    </div>
+
+    <h3>Different gross returns under same 8% cost</h3>
+    <table>
+      <tr><th>Gross return</th><th>Cost</th><th>Net return</th><th>Verdict</th></tr>
+      <tr><td class="num">20%</td><td class="num">−8%</td><td class="num" style="color:var(--green)">+12%</td><td style="color:var(--green)">Healthy profit</td></tr>
+      <tr><td class="num">12%</td><td class="num">−8%</td><td class="num" style="color:var(--orange)">+4%</td><td style="color:var(--orange)">Thin margin</td></tr>
+      <tr><td class="num">5%</td><td class="num">−8%</td><td class="num" style="color:var(--red)"><b>−3%</b></td><td style="color:var(--red)"><b>Loss!</b></td></tr>
+    </table>
+
+    <h3>High turnover makes it worse</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>Daily turnover (250 trades/year)</h4>
+        <p>Per-trade cost: 0.08%<br>
+        Annual cost: 0.08% × 250 = <b style="color:var(--red)">20%</b></p>
+        <p style="color:var(--red); font-size:13px">Even a 12% gross return strategy gets completely consumed!</p>
+      </div>
+      <div class="panel good">
+        <h4>Turnover every 10 days (25 trades/year)</h4>
+        <p>Per-trade cost: 0.08%<br>
+        Annual cost: 0.08% × 25 = <b style="color:var(--green)">2%</b></p>
+        <p style="color:var(--green); font-size:13px">Strategy's real return space is freed up.</p>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 <b>Cost control is a core competitive advantage.</b><br>
+      • Strategy optimization: improve win rate, P/L ratio, reduce drawdown<br>
+      • Trading optimization: reduce turnover, optimize slippage, choose low-fee brokers<br>
+      • <b>Only when Alpha (strategy edge) &gt; transaction costs can you sustainably profit.</b>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. Controlling Slippage ============ -->
+<section>
+  <h2><span class="num">7</span>How to Control Slippage</h2>
+  <p class="subtitle">Slippage can't be eliminated — but it can be reduced through smart execution.</p>
+
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    <div class="mod c-broker"><h4>Use limit orders</h4><p>Set max buy price / min sell price to avoid worst-case fills.</p></div>
+    <div class="mod c-broker"><h4>Choose liquid instruments</h4><p>Active markets with deep order books → smaller slippage.</p></div>
+    <div class="mod c-broker"><h4>Avoid volatile periods</h4><p>Market open/close, major news events → high slippage risk.</p></div>
+    <div class="mod c-broker"><h4>Split large orders</h4><p>Break into smaller chunks to reduce market impact.</p></div>
+    <div class="mod c-broker"><h4>Track &amp; analyze</h4><p>Continuously monitor slippage statistics to optimize execution.</p></div>
+  </div>
+
+  <h3>Long-term slippage impact by scenario</h3>
+  <table>
+    <tr><th>Scenario</th><th>Slippage/trade</th><th>Trades/year</th><th>Annual loss (per 100k)</th><th>% of capital</th></tr>
+    <tr><td>Optimistic</td><td class="num">0.05%</td><td class="num">250</td><td class="num">100 yuan</td><td class="num">0.10%</td></tr>
+    <tr><td>Normal</td><td class="num">0.20%</td><td class="num">250</td><td class="num">400 yuan</td><td class="num">0.40%</td></tr>
+    <tr><td>Pessimistic</td><td class="num">0.50%</td><td class="num">250</td><td class="num">1,000 yuan</td><td class="num">1.00%</td></tr>
+  </table>
+</section>
+
+<!-- ============ Summary ============ -->
+<section>
+  <h2><span class="num">★</span>Day 20 Summary</h2>
+  <table>
+    <tr><th>Concept</th><th>Key insight</th></tr>
+    <tr><td><b>Strategy vs Broker</b></td><td>Strategy produces ideas (signals); Broker simulates real execution (fills with costs).</td></tr>
+    <tr><td><b>Slippage</b></td><td>Real fill price − expected price. Buys are more expensive, sells are cheaper. Cumulative impact is massive.</td></tr>
+    <tr><td><b>Commission</b></td><td>Fill amount × rate. Includes brokerage, exchange fees, stamp duty. Every trade incurs costs.</td></tr>
+    <tr><td><b>Complete BUY calc</b></td><td>Signal price → slippage → fill price → quantity → fill amount → commission → actual deduction → account update.</td></tr>
+    <tr><td><b>Costs destroy strategies</b></td><td>Alpha must exceed transaction costs. High turnover amplifies costs. Low turnover frees profit space.</td></tr>
+    <tr><td><b>Cost control</b></td><td>Limit orders, liquid instruments, avoid volatile periods, split large orders, track slippage.</td></tr>
+  </table>
+
+  <div class="takeaway"><span class="star">★</span><b>Backtesting without slippage = strategies look beautiful. Live trading with slippage = that's the real world.</b> (回测里没有滑点时，策略看起来很美好；实盘里有滑点时，才是真实世界！)<br><br>Slippage and commission are essential parts of transaction costs. Only by including them can you truly evaluate a strategy's real P&amp;L performance. Strategy is responsible for ideas; Broker is responsible for execution and cost simulation — that's backtesting that approaches real markets.</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_20_trade-simulation-transaction-costs.html · Distilled from knowledge-base/day_20 (30天学习量化投资 · Day 20) · 2025-08-30
+</footer>
+</div>
+</body>
+</html>
