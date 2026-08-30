@@ -179,4 +179,4 @@ coherent, defensible build.
   dedicated data sources like the TradingAgents-astock adaptations).
 - Decision frequency for the agent layer (daily thesis vs. intraday).
 - Whether to reuse an engine (Lean/freqtrade as backtest backend) or grow our
-  own seven-module core as planned in `docs/quant-system-architecture.html`.
+  own seven-module core as planned in `docs/day_6_quant-system-architecture.html`.

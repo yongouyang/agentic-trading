@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trends &amp; Moving Averages — Don't Predict, Follow | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-up { --accent: #dc2626; } .c-down { --accent: #15803d; } .c-range { --accent: #ea580c; }
+  .c-noise { --accent: #0369a1; } .c-trend { --accent: #15803d; } .c-simple { --accent: #ea580c; } .c-lag { --accent: #7e22ce; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+  .loop-note {
+    text-align: center; margin-top: -6px; color: var(--blue); font-size: 13.5px; font-weight: 600;
+  }
+  .loop-note::before { content: "↺ "; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.fast { border-top: 4px solid var(--orange); background: #fffdfb; }
+  .panel.slow { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.fast h4 { color: var(--orange); }
+  .panel.slow h4 { color: var(--green); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; }
+
+  /* formula box */
+  .formula {
+    background: var(--blue-bg); border: 1.5px solid var(--blue-light); border-radius: var(--radius);
+    padding: 22px; text-align: center; font-size: 20px; color: var(--navy); margin: 18px 0;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .formula .frac { display: inline-block; vertical-align: middle; margin: 0 10px; }
+  .formula .frac .top { display: block; border-bottom: 2px solid var(--navy); padding: 0 14px 4px; font-size: 16px; }
+  .formula .frac .bot { display: block; padding-top: 4px; font-size: 16px; }
+
+  /* sliding-window chips */
+  .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 12px 0; font-size: 14px; }
+  .chip {
+    display: inline-block; min-width: 44px; text-align: center; padding: 8px 10px;
+    border-radius: 8px; border: 1.5px solid var(--line); background: #fff; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip.out { border-style: dashed; color: var(--muted); background: #f8fafc; }
+  .chip.in { border-color: var(--blue); background: var(--blue-bg); color: var(--navy); }
+  .chip.new { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+  .chip.arrow { border: none; background: none; font-weight: 700; color: var(--blue); min-width: 0; }
+  .chips .eq { font-weight: 700; color: var(--navy); font-family: ui-monospace, Menlo, monospace; }
+  .chips .eq b { color: var(--red); }
+
+  /* summary cards */
+  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 18px 0; }
+  .role { border-radius: var(--radius); padding: 16px; background: #fff; border: 1.5px solid var(--line); border-top: 4px solid var(--accent, var(--blue)); }
+  .role h4 { color: var(--accent, var(--blue)); font-size: 15.5px; }
+  .role .decides { font-weight: 700; font-size: 14px; margin: 4px 0 8px; }
+  .role p { font-size: 13px; color: var(--muted); }
+  .role .ord {
+    display: inline-block; width: 26px; height: 26px; line-height: 26px; text-align: center;
+    border-radius: 50%; background: var(--accent, var(--blue)); color: #fff; font-size: 13px; font-weight: 700; margin-bottom: 6px;
+  }
+
+  ol.roadmap { padding-left: 22px; font-size: 14.5px; }
+  ol.roadmap li { margin-bottom: 10px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Strategy Foundations</div>
+  <h1>Trends &amp; Moving Averages — Don't Predict, Follow</h1>
+  <p>The core idea of quantitative trend strategies: don't predict the market — identify the trend that has already formed, and follow it. (不预测市场，而是跟随趋势。)</p>
+  <div class="src">Source: knowledge-base/day_3 (IMG_6495–IMG_6502), "30天学习量化投资 · Day 3: 趋势与移动平均线" · Extracted 2026-08-30</div>
+</header>
+
+<!-- ============ 1. Trend: follow, don't predict ============ -->
+<section>
+  <h2><span class="num">1</span>Trend: Don't Predict — Follow</h2>
+  <p class="subtitle">A trend is price showing a sustained direction over a period of time: persistently up, persistently down, or sideways.</p>
+
+  <div class="quote">
+    <strong>Core idea: don't predict the market — follow the trend!</strong><br>
+    (核心思想：不预测市场，而是跟随趋势！) &nbsp;·&nbsp; "The trend is your friend — until it turns away." (趋势是朋友，直到它转身离开。)
+  </div>
+
+  <h3>Three common market states (三种常见的市场状态)</h3>
+  <div class="modules">
+    <div class="mod c-up"><div class="tag">Uptrend</div><h4>上升趋势</h4><p>Price keeps making higher highs and higher lows, moving overall upward. (价格不断创新高和新低，整体向上运行。)</p></div>
+    <div class="mod c-down"><div class="tag">Downtrend</div><h4>下降趋势</h4><p>Price keeps making lower lows and lower highs, moving overall downward. (价格不断创新低和新低，整体向下运行。)</p></div>
+    <div class="mod c-range"><div class="tag">Range / Sideways</div><h4>横盘震荡</h4><p>Price oscillates back and forth within a band, with no clear direction. (价格在一定区间内来回波动，没有明显的方向。)</p></div>
+  </div>
+
+  <h3>The goal of a quantitative trend strategy (量化趋势策略的目标)</h3>
+  <ul class="duty">
+    <li><b>Do not predict</b> whether tomorrow's price will rise or fall (不去预测明天价格会上涨还是下跌);</li>
+    <li>Instead, <b>identify whether a trend has already formed</b> right now (识别当前是否已经形成趋势);</li>
+    <li>Once a trend has formed, <b>go with it — until the trend ends</b> (一旦趋势形成，顺势而为，直到趋势结束).</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>A trend strategy trades on <b>confirmation, not prediction</b>: you give up calling the top and the bottom in exchange for riding the middle of a confirmed move.</div>
+</section>
+
+<!-- ============ 2. What is a moving average ============ -->
+<section>
+  <h2><span class="num">2</span>What Is a Moving Average (MA)?</h2>
+  <p class="subtitle">MA is the average of the closing prices of the most recent N periods. (MA 是最近 N 个周期收盘价的平均值。)</p>
+
+  <div class="formula">
+    MA(N) = <span class="frac"><span class="top">Sum of the last N closing prices (最近 N 个收盘价之和)</span><span class="bot">N</span></span>
+  </div>
+  <p style="font-size:13.5px; color:var(--muted)">💡 Tip: the closing price (Close) is the "C" of the K-line / candlestick (OHLC). (收盘价 Close 是 K 线的 "C"。)</p>
+
+  <div class="spec">
+    <h3><span class="tag">Example</span>Worked example: computing MA5</h3>
+    <div class="cols">
+      <div>
+        <table>
+          <tr><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th></tr>
+          <tr><td class="num">10</td><td class="num">11</td><td class="num">12</td><td class="num">13</td><td class="num">14</td></tr>
+        </table>
+        <div class="io-box">
+          <b>MA5 = (10 + 11 + 12 + 13 + 14) / 5 = 60 / 5 = 12</b>
+          MA5 = 12 means the average level of the last 5 closes is 12.
+        </div>
+      </div>
+      <div>
+        <ul class="duty">
+          <li>MA is <b>not</b> one day's price — it is the average price over a period of time.</li>
+          <li>MA <b>smooths short-term fluctuations</b> (平滑短期波动) and reflects the trend more clearly.</li>
+        </ul>
+        <div class="keypoint">💡 Price is the more volatile line; MA5 is the smoother line. Price zig-zags around its moving average; the MA traces the underlying direction. (价格更波动，MA5 更平滑。)</div>
+      </div>
+    </div>
+    <div class="keypoint">✏️ Practice ①: compute MA5 of 10, 12, 13, 15, 20 → MA5 = (10+12+13+15+20) / 5 = 70 / 5 = <b>14</b>. Mastering the definition of MA is the first step to understanding trend strategies.</div>
+  </div>
+</section>
+
+<!-- ============ 3. Why "moving"? ============ -->
+<section>
+  <h2><span class="num">3</span>Why Is It Called a "Moving" Average?</h2>
+  <p class="subtitle">Because the average moves forward with time, always computed over the <b>most recent N</b> closes.</p>
+
+  <div class="spec">
+    <h3><span class="tag">Example (continued)</span>One new bar arrives — the window slides one step right</h3>
+    <div class="cols">
+      <div>
+        <b style="font-size:13.5px">Step 1 — the first 5 days:</b>
+        <div class="chips">
+          <span class="chip in">10</span><span class="chip in">11</span><span class="chip in">12</span><span class="chip in">13</span><span class="chip in">14</span>
+          <span class="eq">→ MA5 = 60/5 = <b>12</b></span>
+        </div>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Step 2 — day 6 arrives with close 15:</b>
+        <div class="chips">
+          <span class="chip out">10</span>
+          <span class="chip in">11</span><span class="chip in">12</span><span class="chip in">13</span><span class="chip in">14</span><span class="chip new">15</span>
+          <span class="eq">→ MA5 = 65/5 = <b>13</b></span>
+        </div>
+      </div>
+    </div>
+    <ul class="duty" style="margin-top:14px">
+      <li>Every day the <b>oldest data point drops out</b> and the <b>newest one enters</b> (去掉最早的一个数据，加入最新的一个数据);</li>
+      <li>The window size is always N (here 5);</li>
+      <li>That is why it is a <b>"moving"</b> average — imagine a window of length 5 that slides one step to the right each day.</li>
+    </ul>
+    <div class="keypoint">✏️ Practice ②: if day 7 closes at 16, the new window is 12, 13, 14, 15, 16 → MA5 = (12+13+14+15+16) / 5 = 70 / 5 = <b>14</b>. Understanding "moving" is the key to actually using MA well. (理解"移动"，才能真正用好 MA。)</div>
+  </div>
+</section>
+
+<!-- ============ 4. Short MA vs long MA ============ -->
+<section>
+  <h2><span class="num">4</span>Short MA vs Long MA (短均线 vs 长均线)</h2>
+  <p class="subtitle">Different MA periods reflect price information over different time horizons.</p>
+
+  <div class="compare">
+    <div class="panel fast">
+      <h4>Short MA — reflects short-term change (短均线：反映短期变化)</h4>
+      <ul>
+        <li><b>Small period</b> — e.g. MA5, MA10;</li>
+        <li><b>More sensitive</b> to price changes, reacts faster;</li>
+        <li>Captures short-term rises and falls <b>sooner</b>.</li>
+      </ul>
+      <div class="keypoint">📈 MA5 hugs the price line: fast and sensitive, but easily disturbed by noise — like a sprint runner. (短均线像快跑的选手，反应快但容易被干扰。)</div>
+    </div>
+    <div class="panel slow">
+      <h4>Long MA — reflects long-term trend (长均线：反映长期趋势)</h4>
+      <ul>
+        <li><b>Large period</b> — e.g. MA20, MA60;</li>
+        <li><b>Less sensitive</b> to price changes, reacts slower;</li>
+        <li>Better represents the <b>long-term trend direction</b>.</li>
+      </ul>
+      <div class="keypoint">🐢 MA20 moves smoothly: slow but stable, representing the long-term direction — like a marathon jogger. (长均线像慢跑的选手，稳定但反应慢。)</div>
+    </div>
+  </div>
+
+  <h3>The meaning and role of moving averages (均线的意义)</h3>
+  <div class="modules">
+    <div class="mod c-noise"><div class="tag">Filter noise</div><h4>过滤噪音</h4><p>An MA filters out part of the short-term random fluctuation (noise), making the trend clearer.</p></div>
+    <div class="mod c-trend"><div class="tag">Trend following</div><h4>趋势跟随</h4><p>Helps judge whether the market is currently in an uptrend, downtrend, or sideways consolidation.</p></div>
+    <div class="mod c-simple"><div class="tag">Simplify decisions</div><h4>简化决策</h4><p>Reduces complex price data to a single line, making it easy to define strategy rules.</p></div>
+    <div class="mod c-lag"><div class="tag">Inherent lag</div><h4>存在滞后</h4><p>MA is an average of <b>historical</b> data — it lags. You cannot buy precisely at the bottom or sell precisely at the top.</p></div>
+  </div>
+
+  <div class="quote">
+    <strong>Important reminder: MA is not a tool for predicting the future — it helps us identify "the trend that has already formed".</strong><br>
+    (均线不是预测未来的工具，而是帮助我们识别"当前已经形成的趋势"。)
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>Short MAs reflect short-term change, long MAs reflect long-term trend; MAs filter noise and simplify judgment but lag. Using multiple periods together — fast and slow — is the foundation of trend strategies. (两者结合，效果更好。)</div>
+</section>
+
+<!-- ============ 5. Dual moving average strategy ============ -->
+<section>
+  <h2><span class="num">5</span>The Dual Moving Average Strategy (双均线策略)</h2>
+  <p class="subtitle">Use the relationship between a short MA and a long MA to judge the market trend and decide the action.</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>↗ MA5 &gt; MA20 → Buy or hold (买入或持有)</h4>
+      <p style="font-size:14px">The short MA runs <b>above</b> the long MA — the market is in an <b>uptrend</b> (上升趋势). Bullish alignment (多头市场): MA5 above MA20 → stay long.</p>
+    </div>
+    <div class="panel bad">
+      <h4>↘ MA5 &lt; MA20 → Sell or stay flat (卖出或空仓)</h4>
+      <p style="font-size:14px">The short MA runs <b>below</b> the long MA — the market is in a <b>downtrend</b> (下降趋势). Bearish alignment (空头市场): MA5 below MA20 → exit or stay out.</p>
+    </div>
+  </div>
+  <p style="font-size:13.5px; color:var(--muted)">💡 Tip: MA5 / MA20 is a common combination; you can choose different parameters to match your own trading horizon. (MA5、MA20 是常用组合，你也可以根据自己的交易周期选择不同的参数。)</p>
+
+  <h3>Operating procedure (操作思路)</h3>
+  <div class="flow">
+    <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">📊</div><div class="name">Compute MA5 &amp; MA20</div><div class="cn">计算 MA5 和 MA20</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--sky-bg)"><div class="icon">🔍</div><div class="name">Observe the two lines' positions</div><div class="cn">观察两条均线的位置关系</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--orange-bg)"><div class="icon">🚦</div><div class="name">Judge trend &amp; act by the rules</div><div class="cn">根据规则判断趋势并决定操作</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--green-bg)"><div class="icon">🔁</div><div class="name">Keep tracking until the signal changes</div><div class="cn">持续跟踪，直到信号发生变化</div></div>
+  </div>
+
+  <ul class="duty">
+    <li><b>Trend up:</b> MA5 above MA20 → buy or hold;</li>
+    <li><b>Trend down:</b> MA5 below MA20 → sell or stay flat;</li>
+    <li>The strategy is simple and intuitive and suits trending markets — but beware of its risk in choppy, range-bound markets (see the next section).</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>Core idea: let the trend tell us the direction — we only need to follow it. (让趋势告诉我们方向，我们只需要跟随趋势。)</div>
+</section>
+
+<!-- ============ 6. Weakness: Whipsaw ============ -->
+<section>
+  <h2><span class="num">6</span>The Weakness: Whipsaw in Choppy Markets (震荡行情)</h2>
+  <p class="subtitle">In a sideways market, the short and long MAs can cross frequently — causing repeated buy/sell churn that is hard to profit from.</p>
+
+  <div class="quote">
+    <strong>Frequent crossings = repeated signals = hard to make money.</strong> (频繁交叉 = 反复信号 = 难以盈利)<br>
+    When the market has no clear trend and oscillates within a range, the short MA repeatedly crosses the long MA, emitting mutually contradictory signals. This is <b>Whipsaw (鞭打效应)</b> — like being lashed by a whip, the strategy is whipped in and out of the market, exhausting both capital and nerves.
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Consequences of Whipsaw (结果)</h4>
+      <ul>
+        <li><b>Frequent trading</b> — transaction costs pile up (频繁买卖，交易成本增加);</li>
+        <li><b>Faked out by false breakouts</b> — signals get triggered by noise (容易被假突破骗出信号);</li>
+        <li><b>Repeated stop-outs</b> — the account bleeds continuously (反复止损，账户持续亏损).</li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>Why does it happen? (为什么会发生)</h4>
+      <ul>
+        <li>Price oscillates inside a range between an <b>upper resistance</b> (上方压力位) and a <b>lower support</b> (下方支撑位), with no clear direction;</li>
+        <li>The short MA is sensitive to price changes, so it easily crosses above and below the long MA;</li>
+        <li>Crossover signals appear in large numbers during chop — but <b>most of them are false signals (假信号)</b>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>How to reduce Whipsaw (如何减少 Whipsaw 的影响 — covered in later days)</h3>
+  <div class="modules">
+    <div class="mod c-trend"><div class="tag">Trend filter</div><h4>增加趋势过滤</h4><p>Trade only when a trend is clear — e.g. consider buying only when price is above the long MA.</p></div>
+    <div class="mod c-simple"><div class="tag">Widen the period gap</div><h4>扩大均线周期差</h4><p>E.g. use MA10 and MA60 instead — fewer, more meaningful crossings.</p></div>
+    <div class="mod c-noise"><div class="tag">Combine indicators</div><h4>结合其他指标</h4><p>Confirm signals with trend strength (ADX), volume, etc. to improve reliability.</p></div>
+    <div class="mod c-lag"><div class="tag">Stop-loss / take-profit</div><h4>设置止损止盈</h4><p>Cap the loss on each trade so small losses never grow into big ones.</p></div>
+  </div>
+
+  <h3>Strategy performance by market regime (重点记住)</h3>
+  <table>
+    <tr><th>Market regime (行情类型)</th><th>MA strategy performance (均线策略表现)</th><th></th></tr>
+    <tr><td>Trending — one-directional (趋势行情, 单边)</td><td>Works well; signals are valid (效果较好，信号有效)</td><td>✅</td></tr>
+    <tr><td>Choppy — sideways (震荡行情, 横盘)</td><td>Prone to Whipsaw; poor results (容易 Whipsaw，效果较差)</td><td>✗</td></tr>
+  </table>
+
+  <div class="takeaway"><span class="star">★</span>MA strategies perform well in trending markets but get whipsawed in ranges — they need extra filtering and risk control. Knowing a strategy's weakness is the first step to improving it. (认识弱点，才能更好地改进策略。)</div>
+</section>
+
+<!-- ============ 7. Exercises + summary ============ -->
+<section>
+  <h2><span class="num">7</span>Exercises &amp; Day 3 Summary</h2>
+  <p class="subtitle">Consolidate the MA calculation and see how trend strategies behave across different market environments.</p>
+
+  <h3>Worked exercises (练习题解析)</h3>
+  <div class="chips">
+    <span style="font-weight:700; color:var(--navy)">① Rising prices — 10, 12, 13, 15, 20:</span>
+    <span class="chip in">10</span><span class="chip in">12</span><span class="chip in">13</span><span class="chip in">15</span><span class="chip in">20</span>
+    <span class="eq">→ MA5 = 70/5 = <b>14</b></span>
+  </div>
+  <div class="chips">
+    <span style="font-weight:700; color:var(--navy)">② Next day closes at 25 — window slides to 12, 13, 15, 20, 25:</span>
+    <span class="chip out">10</span>
+    <span class="chip in">12</span><span class="chip in">13</span><span class="chip in">15</span><span class="chip in">20</span><span class="chip new">25</span>
+    <span class="eq">→ MA5 = 85/5 = <b>17</b></span>
+  </div>
+  <div class="chips">
+    <span style="font-weight:700; color:var(--navy)">③ Perfectly flat — every close is 10:</span>
+    <span class="chip in">10</span><span class="chip in">10</span><span class="chip in">10</span><span class="chip in">10</span><span class="chip in">10</span>
+    <span class="eq">→ MA5 = 50/5 = <b>10</b></span>
+  </div>
+
+  <h3>Key conclusions (关键结论)</h3>
+  <ul class="duty">
+    <li><b>MA reflects the trend (MA 能反映趋势)</b> — when price rises, MA rises step by step; when price is flat, MA stays flat; when price falls, MA falls.</li>
+    <li><b>MA lags (均线存在滞后)</b> — it is an "after-the-fact indicator" (事后指标): you cannot buy precisely at the lowest point, nor sell at the highest.</li>
+    <li><b>Trend strategies have limits (趋势策略的局限)</b> — in a purely sideways market with no clear trend, trend strategies usually struggle to profit.</li>
+  </ul>
+
+  <h3>Day 3 summary (Day 3 总结)</h3>
+  <div class="roles">
+    <div class="role" style="--accent:var(--blue)"><span class="ord">01</span><h4>Trend mindset</h4><div class="decides">趋势思维</div><p>Don't predict tomorrow — identify whether a trend has already formed now.</p></div>
+    <div class="role" style="--accent:var(--green)"><span class="ord">02</span><h4>The MA tool</h4><div class="decides">MA 工具</div><p>MA(N) = sum of the last N closes / N. Use an average line to describe the trend.</p></div>
+    <div class="role" style="--accent:var(--orange)"><span class="ord">03</span><h4>What MA means</h4><div class="decides">均线意义</div><p>Short MA → short-term change; long MA → long-term trend. Filters noise, but lags.</p></div>
+    <div class="role" style="--accent:var(--purple)"><span class="ord">04</span><h4>Dual-MA strategy</h4><div class="decides">双均线策略</div><p>MA5 &gt; MA20: buy or hold. MA5 &lt; MA20: sell or stay flat.</p></div>
+    <div class="role" style="--accent:var(--red)"><span class="ord">05</span><h4>Weakness: Whipsaw</h4><div class="decides">弱点：Whipsaw</div><p>In choppy markets the MAs cross repeatedly — churn, false signals, repeated stop-outs.</p></div>
+  </div>
+
+  <h3>Core reminders (核心提醒)</h3>
+  <ul class="duty">
+    <li>Trend strategies suit markets with a <b>clear trend</b>.</li>
+    <li>Be extra careful in choppy markets — watch out for <b>Whipsaw risk</b>.</li>
+    <li>Combining other indicators and risk control is what makes a strategy <b>stable</b>.</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>Remember: don't predict the market — follow the trend! (不预测市场，而是跟随趋势！) Day 3 complete — next: keep exploring more quantitative strategies.</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_3_trend-moving-averages.html · Distilled from knowledge-base/day_3 (30天学习量化投资 · Day 3 趋势与移动平均线) · 2026-08-30
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bar, Signal, Position &amp; Portfolio — Core Data Structures | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-bar { --accent: #1d4ed8; } .c-sig { --accent: #ea580c; } .c-pos { --accent: #7e22ce; }
+  .c-port { --accent: #15803d; } .c-risk { --accent: #dc2626; } .c-broker { --accent: #0369a1; }
+  .c-eq { --accent: #3730a3; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; }
+
+  /* formula strip */
+  .formula {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin: 16px 0; font-size: 16px;
+  }
+  .formula .term { background: var(--blue-bg); color: var(--navy); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .formula .term.green { background: var(--green-bg); color: var(--green); }
+  .formula .term.orange { background: var(--orange-bg); color: var(--orange); }
+  .formula .op { font-size: 20px; font-weight: 700; color: var(--muted); }
+
+  .pill { display: inline-block; border-radius: 6px; padding: 2px 10px; font-size: 12.5px; font-weight: 700; }
+  .pill.buy { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+  .pill.hold { background: #f3f4f6; color: #4b5563; border: 1px solid #9ca3af; }
+  .pill.sell { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+
+  ol.roadmap { padding-left: 22px; font-size: 14.5px; }
+  ol.roadmap li { margin-bottom: 10px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Data Structure Foundations</div>
+  <h1>Bar, Signal, Position &amp; Portfolio — Core Data Structures</h1>
+  <p>Turn "market data, signals, positions, account" into real data structures in the program — structured, continuously updated, computed, and evaluated. (把"行情、信号、持仓、账户"变成程序里真正的数据结构。)</p>
+  <div class="src">Source: knowledge-base/day_7 (IMG_6519–IMG_6526), "30天学习量化投资 · Day 7: Bar、Signal、Position 与 Portfolio" · Extracted 2026-08-30</div>
+</header>
+
+<!-- ============ 1. Overview ============ -->
+<section>
+  <h2><span class="num">1</span>Overview — Four Core Data Structures</h2>
+  <p class="subtitle">The essence of a quant system: express trading ideas as structured data, then continuously update, compute, and evaluate. (量化系统的本质，是把交易想法用结构化数据表达出来，并且持续更新、计算和评估。)</p>
+
+  <div class="modules">
+    <div class="mod c-bar"><div class="tag">行情输入</div><h4>Bar</h4><p>Market input (行情输入) — one candlestick (K 线) at a time: OHLCV for a time period.</p></div>
+    <div class="mod c-sig"><div class="tag">策略输出</div><h4>Signal</h4><p>Strategy output (策略输出) — buy / sell / hold as a <b>suggestion</b> (建议), with a position ratio and a reason.</p></div>
+    <div class="mod c-pos"><div class="tag">持仓状态</div><h4>Position</h4><p>Position state (持仓状态) — what is held, how much, at what cost, and the current price.</p></div>
+    <div class="mod c-port"><div class="tag">账户整体</div><h4>Portfolio</h4><p>The whole account (账户整体) — cash, positions, total equity; <b>continuously updated</b>.</p></div>
+  </div>
+
+  <h3>What you will master today (本节你将掌握)</h3>
+  <ul class="duty">
+    <li>Definitions of <b>Bar, Signal, Position, Portfolio</b>.</li>
+    <li>How to compute total equity (<b>Equity / 总权益</b>).</li>
+    <li>How position sizing (仓位) affects account returns.</li>
+    <li>A complete worked example of how cash, positions, and P&amp;L change together.</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>Today's goal: understand the data structures, and how the account reflects the strategy's results! (今天的目标：理解数据结构，掌握账户如何反映策略的结果！)</div>
+</section>
+
+<!-- ============ 2. Bar ============ -->
+<section>
+  <h2><span class="num">2</span>Bar — What Does One Candlestick Look Like in Code?</h2>
+  <p class="subtitle">A Bar is the smallest unit of market data a quant system processes — it represents the market's behavior over one time period.</p>
+
+  <div class="spec c-bar">
+    <h3><span class="tag">market</span>Bar — the market-data atom</h3>
+    <div class="cols">
+      <div>
+        <pre><span class="kw">type</span> <span class="ty">Bar</span> <span class="kw">struct</span> {
+    Time   time.Time <span class="cm">// 时间戳 timestamp</span>
+    Symbol string    <span class="cm">// 交易标的 instrument</span>
+    Open   float64   <span class="cm">// 开盘价 open price</span>
+    High   float64   <span class="cm">// 最高价 high price</span>
+    Low    float64   <span class="cm">// 最低价 low price</span>
+    Close  float64   <span class="cm">// 收盘价 close price</span>
+    Volume float64   <span class="cm">// 成交量 volume</span>
+}</pre>
+        <div class="keypoint">💡 A Bar only describes the market — it contains <b>no trading logic whatsoever</b> (不包含任何交易逻辑).</div>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Bar ↔ candlestick mapping (Bar 与 K 线图的对应关系):</b>
+        <table>
+          <tr><th>Field</th><th>Meaning</th></tr>
+          <tr><td>High (最高价)</td><td>Highest price within the period</td></tr>
+          <tr><td>Open (开盘价)</td><td>Price at the start of the period</td></tr>
+          <tr><td>Close (收盘价)</td><td>Price at the end of the period</td></tr>
+          <tr><td>Low (最低价)</td><td>Lowest price within the period</td></tr>
+        </table>
+        <div class="keypoint">💡 Green candle: Close &gt; Open (上涨, rising) · Red candle: Close &lt; Open (下跌, falling).</div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <b style="font-size:13.5px">Bars of different periods (不同周期的 Bar):</b>
+        <table>
+          <tr><th>Period</th><th>Meaning</th><th>Common use</th></tr>
+          <tr><td>1-minute Bar</td><td>1 minute of market data</td><td>Short-term strategies, intraday trading (短线策略、日内交易)</td></tr>
+          <tr><td>Daily Bar</td><td>1 day of market data</td><td>Mid/long-term trend strategies (中长线趋势策略)</td></tr>
+          <tr><td>Weekly Bar</td><td>1 week of market data</td><td>Trend judgment, swing strategies (趋势判断、波段策略)</td></tr>
+          <tr><td>Monthly Bar</td><td>1 month of market data</td><td>Long-term investing, macro analysis (长线投资、宏观分析)</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Example: one daily Bar (日线 Bar) for 2024-07-01</b>
+          Open: 10.00 · High: 10.50 · Low: 9.80 · Close: 10.20 · Volume: 120,000
+        </div>
+      </div>
+    </div>
+
+    <h3>Bar as a time series (Bar 的时间序列)</h3>
+    <div class="flow">
+      <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name">Bar 1</div><div class="cn">09:30~09:31</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name">Bar 2</div><div class="cn">09:31~09:32</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name">Bar 3</div><div class="cn">09:32~09:33</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:#f8fafc"><div class="name" style="color:var(--muted)">…</div><div class="cn">…</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name">Bar N</div><div class="cn">15:00~15:01</div></div>
+    </div>
+    <p style="font-size:13.5px; color:var(--muted)">Historical data is simply a series of consecutive Bars (历史数据就是一系列连续的 Bar), processed one by one in time order (按时间顺序一根根处理).</p>
+
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Summary (小结): A Bar is the smallest unit of market data. It carries OHLCV information, used to compute indicators and generate signals. A quant system processes Bars one at a time, in time order.</div>
+  </div>
+</section>
+
+<!-- ============ 3. Signal ============ -->
+<section>
+  <h2><span class="num">3</span>Signal — The Strategy Only Outputs a Suggestion</h2>
+  <p class="subtitle">A Signal is produced by the Strategy; it expresses "what I want to do" (想要做什么), but does not modify the account directly.</p>
+
+  <div class="spec c-sig">
+    <h3><span class="tag">strategy</span>Signal — the trade-suggestion memo (交易建议说明书)</h3>
+    <div class="cols">
+      <div>
+        <pre><span class="kw">type</span> <span class="ty">Signal</span> <span class="kw">struct</span> {
+    Time   time.Time <span class="cm">// 信号产生的时间 when generated</span>
+    Symbol string    <span class="cm">// 交易标的 instrument</span>
+    Action Action    <span class="cm">// 动作 buy / sell / hold</span>
+    Ratio  float64   <span class="cm">// 仓位比例 position ratio (0~1)</span>
+    Reason string    <span class="cm">// 产生信号的原因 why</span>
+}</pre>
+        <div class="keypoint">💡 A Signal is only a suggestion. Whether it is finally executed is decided by <b>Risk</b> and <b>Broker</b> — the Signal itself <b>never modifies Cash and Position</b>; it only tells the system the idea.</div>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Action enum (Action 枚举):</b>
+        <table>
+          <tr><th>Action</th><th>Meaning</th></tr>
+          <tr><td><span class="pill buy">BUY</span></td><td>Suggest buying, allocating funds by <b>Ratio</b>. Ratio = 1.0 means full position (满仓买入).</td></tr>
+          <tr><td><span class="pill hold">HOLD</span></td><td>Suggest holding, no trade. Ratio is usually 0.</td></tr>
+          <tr><td><span class="pill sell">SELL</span></td><td>Suggest selling <b>Ratio</b> of the position. Ratio = 1.0 means sell everything (全部卖出).</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>Signal examples (Signal 示例)</h3>
+    <table>
+      <tr><th>Time</th><th>Symbol</th><th>Action</th><th>Ratio</th><th>Reason (原因)</th><th>Meaning</th></tr>
+      <tr><td>2024-07-01 10:00</td><td>AAPL</td><td><span class="pill buy">BUY</span></td><td class="num">0.6</td><td>Broke above Bollinger upper band (突破布林带上轨)</td><td>Buy AAPL with 60% position</td></tr>
+      <tr><td>2024-07-01 10:05</td><td>AAPL</td><td><span class="pill hold">HOLD</span></td><td class="num">0</td><td>Trend unchanged, keep holding (趋势未变，继续持有)</td><td>No trade, keep current position</td></tr>
+      <tr><td>2024-07-01 10:10</td><td>AAPL</td><td><span class="pill sell">SELL</span></td><td class="num">1.0</td><td>Broke below the moving average (跌破移动平均线)</td><td>Sell the entire AAPL position</td></tr>
+    </table>
+
+    <div class="cols">
+      <div>
+        <h3 style="margin-top:14px">Where Signal sits in the system (Signal 在系统中的位置)</h3>
+        <div class="flow" style="margin-top:10px; padding:14px 10px">
+          <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name" style="font-size:12.5px">Bar (行情)</div><div class="cn">input data</div></div>
+          <div class="arrow">→</div>
+          <div class="step" style="--stepbg:var(--green-bg)"><div class="name" style="font-size:12.5px; color:var(--green)">Indicator (指标)</div><div class="cn">compute</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-sig" style="--stepbg:var(--orange-bg)"><div class="name" style="font-size:12.5px">Strategy (策略)</div><div class="cn">produce Signal</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px">Risk (风控)</div><div class="cn">allow or not</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">Broker (执行)</div><div class="cn">create order</div></div>
+          <div class="arrow">→</div>
+          <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name" style="font-size:12.5px">Portfolio (账户)</div><div class="cn">update cash &amp; positions</div></div>
+        </div>
+        <p style="font-size:13px; color:var(--muted); margin-top:6px;">A Signal only travels as a suggestion between Strategy and Risk (Signal 只在 Strategy 和 Risk 之间传递建议).</p>
+      </div>
+      <div>
+        <h3 style="margin-top:14px">A good Signal should be (一个好的 Signal 应该具备)</h3>
+        <ul class="duty">
+          <li><b>Clear (明确)</b> — knows what to do and when.</li>
+          <li><b>Explainable (可解释)</b> — the Reason is traceable.</li>
+          <li><b>Quantifiable (可量化)</b> — Ratio gives the position size.</li>
+          <li><b>Never oversteps (不越权)</b> — never modifies account state directly.</li>
+        </ul>
+        <div class="keypoint">💡 Keep the Signal simple and pure, and the system stays stable and testable (保持 Signal 简单、纯粹，系统才更稳定、可测试).</div>
+      </div>
+    </div>
+
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Summary (总结): A Signal is the strategy's "trade-suggestion memo" — it executes nothing, and only expresses: at what time, for which instrument, what it wants to do, and why. <b>Remember: Signal ≠ trade. It is an "idea", not an "action"! (Signal ≠ 交易，它只是"想法"，不是"动作"！)</b></div>
+  </div>
+</section>
+
+<!-- ============ 4. Position ============ -->
+<section>
+  <h2><span class="num">4</span>Position — What Must One Holding Record?</h2>
+  <p class="subtitle">A Position represents the account's current holding state in one instrument.</p>
+
+  <div class="spec c-pos">
+    <h3><span class="tag">portfolio</span>Position — the basic building block of a Portfolio</h3>
+    <div class="cols">
+      <div>
+        <pre><span class="kw">type</span> <span class="ty">Position</span> <span class="kw">struct</span> {
+    Symbol       string  <span class="cm">// 标的代码 instrument code</span>
+    Quantity     float64 <span class="cm">// 持仓数量 (+long, −short)</span>
+    AveragePrice float64 <span class="cm">// 持仓平均成本价 avg cost</span>
+    MarketPrice  float64 <span class="cm">// 当前市场价格 current price</span>
+}</pre>
+        <div class="keypoint">💡 The three core elements of a position (持仓的核心三要素): <b>quantity, cost, current price</b> (数量、成本、当前价). With Quantity, AveragePrice, MarketPrice, you can compute the floating P&amp;L (浮动盈亏).</div>
+      </div>
+      <div>
+        <b style="font-size:13.5px">The four key fields (持仓的四个关键字段):</b>
+        <table>
+          <tr><th>Field</th><th>Meaning</th></tr>
+          <tr><td>Symbol</td><td>Which instrument is held (持仓的标的是谁)</td></tr>
+          <tr><td>Quantity</td><td>How many shares are held (positive for longs 多头为正)</td></tr>
+          <tr><td>AveragePrice</td><td>Average buy cost — the lower the better (越低越好)</td></tr>
+          <tr><td>MarketPrice</td><td>Current market price — changes in real time (实时变化)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>Worked example: AAPL (持仓示例)</h3>
+    <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+      <div>
+        <b style="font-size:13.5px">Establish the position (建立持仓)</b>
+        <table>
+          <tr><td>Buy time</td><td class="num">2024-07-01 10:00</td></tr>
+          <tr><td>Buy price</td><td class="num">20.00</td></tr>
+          <tr><td>Buy quantity</td><td class="num">3,000 shares</td></tr>
+          <tr><td>Position cost</td><td class="num">20.00 × 3,000 = 60,000</td></tr>
+        </table>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Current position state (当前持仓状态)</b>
+        <table>
+          <tr><td>Symbol</td><td class="num">AAPL</td></tr>
+          <tr><td>Quantity</td><td class="num">3,000</td></tr>
+          <tr><td>AveragePrice</td><td class="num">20.00</td></tr>
+          <tr><td>MarketPrice</td><td class="num">22.00</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Current floating P&amp;L (当前浮动盈亏)</b>
+          Floating P&amp;L = (current price − cost) × quantity<br>
+          = (22.00 − 20.00) × 3,000<br>
+          = <strong style="color:var(--green)">6,000 (profit 盈利)</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3 style="margin-top:14px">Long vs short (多头 vs 空头)</h3>
+        <table>
+          <tr><th>Long (多头, 做多)</th><th>Short (空头, 做空)</th></tr>
+          <tr><td>Buy → price rises → profit (价格上涨盈利) → sell to close (卖出平仓)</td><td>Sell to open (卖出开仓) → price falls → profit (价格下跌盈利) → buy to close (买入平仓)</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3 style="margin-top:14px">Notes (注意事项)</h3>
+        <ul class="duty">
+          <li>Quantity &gt; 0 → long position (多头).</li>
+          <li>Quantity &lt; 0 → short position (空头).</li>
+          <li>Quantity = 0 → no position (空仓); after closing (平仓后), Quantity becomes 0.</li>
+          <li>AveragePrice is usually updated on opening / adding to the position (开仓/加仓时更新).</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>AveragePrice update rules (多头示例, long example)</h3>
+    <table>
+      <tr><th>Action (操作)</th><th>Price</th><th>Quantity</th><th>Position quantity (持仓数量)</th><th>Average price (持仓均价)</th></tr>
+      <tr><td>First buy (第一次买入)</td><td class="num">20.00</td><td class="num">1,000</td><td class="num">1,000</td><td class="num">20.00</td></tr>
+      <tr><td>Add (第二次加仓)</td><td class="num">22.00</td><td class="num">1,000</td><td class="num">2,000</td><td class="num">21.00</td></tr>
+      <tr><td>Partial sell (部分卖出)</td><td class="num">23.00</td><td class="num">−500</td><td class="num">1,500</td><td class="num">21.00</td></tr>
+      <tr><td>Sell all (全部卖出)</td><td class="num">23.00</td><td class="num">−1,500</td><td class="num">0</td><td class="num">0</td></tr>
+    </table>
+    <ul class="duty">
+      <li>After adding (加仓后): new average price = total cost / total quantity (新的均价 = 总成本 / 总数量).</li>
+      <li>After selling (卖出后): quantity decreases, average price unchanged (数量减少，均价不变).</li>
+      <li>After selling everything (全部卖出后): quantity = 0, average price resets to 0 (均价清零).</li>
+    </ul>
+
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Summary (小结): A Position records the holding state in one instrument and is the basic unit of a Portfolio. It lets us always know: how much is held, at what cost, and what it is worth now (持了多少、成本多少、现在值多少).</div>
+  </div>
+</section>
+
+<!-- ============ 5. Portfolio ============ -->
+<section>
+  <h2><span class="num">5</span>Portfolio — The Account's Overall State</h2>
+  <p class="subtitle">A Portfolio manages our cash and all positions — it is the core for computing total equity (总权益).</p>
+
+  <div class="spec c-port">
+    <h3><span class="tag">portfolio</span>Portfolio — the account snapshot (账户快照)</h3>
+    <div class="cols">
+      <div>
+        <pre><span class="kw">type</span> <span class="ty">Portfolio</span> <span class="kw">struct</span> {
+    Cash      float64                <span class="cm">// 账户现金 account cash</span>
+    Positions map[string]*Position   <span class="cm">// 持仓集合 position set</span>
+}</pre>
+        <ul class="duty">
+          <li><b>Cash (现金)</b> — usable for buying, paying fees, maintaining positions, etc.</li>
+          <li><b>Positions (持仓)</b> — the state of all holdings, keyed by Symbol.</li>
+          <li>One Portfolio can manage multiple Positions — <b>each Symbol maps to exactly one Position</b> (每个 Symbol 对应一个 Position).</li>
+        </ul>
+        <div class="keypoint">💡 Portfolio = account snapshot (账户快照), reflecting the true state of the account at any time.</div>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Example portfolio (Portfolio 示例)</b>
+          Cash (现金): 40,000 · total positions: 2 instruments
+        </div>
+        <table>
+          <tr><th>Symbol</th><th>Quantity</th><th>AveragePrice</th><th>MarketPrice</th><th>MarketValue</th></tr>
+          <tr><td>AAPL</td><td class="num">3,000</td><td class="num">20.00</td><td class="num">22.00</td><td class="num">66,000</td></tr>
+          <tr><td>MSFT</td><td class="num">500</td><td class="num">300.00</td><td class="num">320.00</td><td class="num">160,000</td></tr>
+          <tr><th colspan="4">Total (持仓市值合计)</th><td class="num"><b>226,000</b></td></tr>
+        </table>
+        <div class="formula" style="margin:10px 0; font-size:15px">
+          <span class="term">Cash 40,000</span><span class="op">+</span>
+          <span class="term orange">Market value 226,000</span><span class="op">=</span>
+          <span class="term green">Equity 266,000</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>How does the Portfolio update? (Portfolio 如何更新)</h3>
+    <div class="flow">
+      <div class="step c-sig" style="--stepbg:var(--orange-bg)"><div class="icon">📨</div><div class="name">Receive Signal</div><div class="cn">buy / sell / hold suggestion from Strategy</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="icon">🛡️</div><div class="name">Risk check</div><div class="cn">allow? position limits?</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="icon">🛒</div><div class="name">Broker executes</div><div class="cn">order filled, fees &amp; slippage</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">Update Portfolio</div><div class="cn">modify Cash &amp; Positions, recompute equity</div></div>
+    </div>
+
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Summary (小结): A Portfolio holds the account's overall state — cash + all positions. Equity = cash + position market value. The Portfolio updates once per trade; in backtests and live trading we always evaluate the strategy through it. <b>Remember: the Portfolio is your "account snapshot" — it tells you what you're worth right now.</b></div>
+  </div>
+</section>
+
+<!-- ============ 6. Equity ============ -->
+<section>
+  <h2><span class="num">6</span>Equity — How to Compute Total Account Value</h2>
+  <p class="subtitle">Total equity reflects the account's true current value — the core metric for evaluating returns and risk.</p>
+
+  <div class="spec c-eq">
+    <h3><span class="tag">equity</span>Equity = Cash + All Position Market Value (所有持仓市值)</h3>
+    <div class="formula">
+      <span class="term">Equity (总权益)</span><span class="op">=</span>
+      <span class="term green">Cash (现金)</span><span class="op">+</span>
+      <span class="term orange">Σ (Quantity × MarketPrice)</span>
+    </div>
+    <ul class="duty">
+      <li><b>Cash (现金)</b> — unused funds in the account.</li>
+      <li><b>All position market value (所有持仓市值)</b> — the sum of each position's quantity × current market price.</li>
+      <li>Position market value = Σ (Quantity × MarketPrice). Use the <b>latest</b> MarketPrice for the most accurate Equity (使用最新的 MarketPrice 才能得到最准确的 Equity).</li>
+    </ul>
+    <div class="keypoint">💡 In one sentence (一句话理解): total equity = money in your pocket + what all your assets are worth. It changes continuously with price movements and trading (总权益会随着价格波动和交易不断变化).</div>
+
+    <h3>Worked example (计算示例)</h3>
+    <div class="cols">
+      <div>
+        <b style="font-size:13.5px">Position market value (持仓市值的计算方式):</b>
+        <table>
+          <tr><th>Symbol</th><th>Quantity</th><th>MarketPrice</th><th>Market value</th></tr>
+          <tr><td>AAPL</td><td class="num">3,000</td><td class="num">22.00</td><td class="num">66,000</td></tr>
+          <tr><td>MSFT</td><td class="num">500</td><td class="num">320.00</td><td class="num">160,000</td></tr>
+          <tr><th colspan="3">Total</th><td class="num"><b>226,000</b></td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Current account state</b>
+          Cash: 40,000 · Positions: 2 instruments<br><br>
+          Equity = Cash + position market value<br>
+          = 40,000 + 226,000<br>
+          = <strong style="color:var(--blue)">266,000</strong>
+        </div>
+      </div>
+    </div>
+
+    <h3>Equity change scenarios (Equity 的变化场景)</h3>
+    <div class="flow" style="padding:14px 10px">
+      <div class="step c-eq" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:12.5px">After buying (买入后)</div><div class="cn">Equity roughly unchanged (cash ↔ market value)</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-eq" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:12.5px">Price rises (价格上涨)</div><div class="cn">Equity rises</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-eq" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:12.5px">After selling (卖出后)</div><div class="cn">Cash increases, Equity reflects the change</div></div>
+    </div>
+    <ul class="duty">
+      <li>Equity rises when position market value increases <b>or</b> cash increases (持仓市值增加 或 Cash 增加).</li>
+      <li>Equity falls when position market value decreases <b>or</b> cash decreases (持仓市值减少 或 Cash 减少).</li>
+    </ul>
+
+    <h3>Factors that can affect Equity (可能影响 Equity 的因素)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div class="mod c-bar"><h4>Price moves (价格波动)</h4><p>Market prices rise and fall.</p></div>
+      <div class="mod c-sig"><h4>Trading (交易行为)</h4><p>Buying, selling, rebalancing (买入、卖出、调仓).</p></div>
+      <div class="mod c-pos"><h4>Cash changes (现金变动)</h4><p>Deposits, withdrawals, fees (入金、出金、费用).</p></div>
+      <div class="mod c-risk"><h4>Fees / slippage (手续费/滑点)</h4><p>Transaction costs reduce Equity.</p></div>
+      <div class="mod c-port"><h4>Dividends / interest (分红/利息)</h4><p>Dividends increase Cash.</p></div>
+      <div class="mod c-eq"><h4>Risk control (风险控制)</h4><p>Stop-losses can reduce Equity (止损可能导致 Equity 下降).</p></div>
+    </div>
+
+    <div class="takeaway" style="margin-top:14px"><span class="star">★</span>Summary (小结): Equity = Cash + all position market value. It reflects the account's true value and P&amp;L; every decision, risk rule, and evaluation revolves around Equity. <b>No matter how complex the strategy, the ultimate goal is steady Equity growth! (不管策略多复杂，最终目的都是让 Equity 稳定增长！)</b></div>
+  </div>
+</section>
+
+<!-- ============ 7. Position sizing ============ -->
+<section>
+  <h2><span class="num">7</span>Position Sizing — How It Shapes Returns (仓位对收益的影响)</h2>
+  <p class="subtitle">The same instrument move produces very different account returns under different position sizes (同样的标的涨跌，不同的仓位，会直接改变账户的收益).</p>
+
+  <div class="quote">
+    <strong>Account return ≈ instrument return × invested position ratio (账户收益率 ≈ 标的收益率 × 投入仓位比例)</strong><br>
+    Example: the instrument rises 10%, but the account invests only 60% of funds → account return ≈ 10% × 60% = <b>6%</b>.
+  </div>
+
+  <div class="cols2">
+    <h3>Returns at different position sizes (标的上涨 10%)</h3>
+    <table>
+      <tr><th>Invested ratio (投入仓位比例)</th><th>Account return (约)</th><th>Note (说明)</th></tr>
+      <tr><td class="num">100%</td><td class="num">10%</td><td>Full position — maximum return, maximum risk (满仓，收益最大，但风险也最大)</td></tr>
+      <tr><td class="num">60%</td><td class="num">6%</td><td>Return amplifier of 0.6 (收益放大系数 0.6)</td></tr>
+      <tr><td class="num">30%</td><td class="num">3%</td><td>Return amplifier of 0.3</td></tr>
+      <tr><td class="num">10%</td><td class="num">1%</td><td>Return amplifier of 0.1</td></tr>
+      <tr><td class="num">0%</td><td class="num">0%</td><td>Empty position — no return, no risk (空仓，无收益也无风险)</td></tr>
+    </table>
+  </div>
+
+  <h3>Why is position sizing so important? (为什么仓位很重要)</h3>
+  <div class="modules">
+    <div class="mod c-bar"><h4>Return amplifier (收益的放大器)</h4><p>Higher position → bigger returns; but also bigger drawdowns and volatility (仓位越高，收益越大；同时，回撤和波动也越大).</p></div>
+    <div class="mod c-risk"><h4>Core of risk control (风险控制的核心)</h4><p>Position sizing limits single-trade losses and maximum drawdown (通过控制仓位，限制单笔亏损和最大回撤).</p></div>
+    <div class="mod c-port"><h4>Key to long-term survival (长期生存的关键)</h4><p>Only by surviving long enough do you get the chance to earn more (活得久，才有机会赚得多).</p></div>
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Position too high (仓位过高, e.g. full position 满仓)</h4>
+      <ul>
+        <li><b>Potentially higher returns</b> (收益可能更高)</li>
+        <li><b>But much larger drawdowns</b> (回撤更大)</li>
+        <li><b>More violent volatility</b> (波动更剧烈)</li>
+        <li><b>Easy to blow up the account</b> (容易爆仓)</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Moderate position (仓位适中, e.g. 50%–80%)</h4>
+      <ul>
+        <li><b>Relatively stable returns</b> (收益相对稳定)</li>
+        <li><b>Controllable drawdowns</b> (回撤可控)</li>
+        <li><b>Better long-term compounding</b> (长期复利更优)</li>
+        <li><b>Better long-term survival</b> (更利于长期生存)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Key points (关键要点总结)</h3>
+  <ul class="duty">
+    <li>The instrument's move determines the <b>instrument return</b> (标的涨跌决定"标的收益率"); position size determines the <b>account return</b> (仓位决定"账户收益率"的大小).</li>
+    <li>Account return ≈ instrument return × invested position ratio.</li>
+    <li>Controlling position size is one of the core methods for controlling risk and achieving long-term stable returns.</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span><b>Direction is decided by the strategy; success or failure is decided by position size (方向由策略决定，成败由仓位决定).</b> Position size is neither "the higher the better" nor "the lower the safer" — find your own position range so capital grows long-term, steadily, and continuously. Position decides how much you can earn, and how long you can survive (仓位决定你能赚多少，也决定你能活多久).</div>
+</section>
+
+<!-- ============ 8. Practice ============ -->
+<section>
+  <h2><span class="num">8</span>Practice — Bring the Knowledge Onto the Account (练习：把知识落到账户上)</h2>
+  <p class="subtitle">One complete example connecting Bar → Signal → Position → Portfolio → Equity.</p>
+
+  <div class="io-box">
+    <b>Exercise setup (练习条件)</b>
+    Initial capital (初始资金): <strong>100,000</strong> · Position ratio (仓位比例): <strong>60%</strong> · Buy price (买入价格): <strong>20</strong> · Instrument (标的): some stock (某股票)
+  </div>
+
+  <h3>Step 1 — Buy according to the signal (price 20)</h3>
+  <div class="flow" style="padding:14px 10px">
+    <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name">Bar (行情)</div><div class="cn">10:00 · Close = 20</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-sig" style="--stepbg:var(--orange-bg)"><div class="name">Signal (信号)</div><div class="cn">BUY · Ratio = 0.60 · Reason: broke above MA (突破均线)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="name">Risk (风控)</div><div class="cn">check passed, trade allowed (检查通过)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name">Broker (成交)</div><div class="cn">filled at 20</div></div>
+  </div>
+
+  <h3>Step 2 — Build the Position and Portfolio</h3>
+  <div class="cols2">
+    <table>
+      <tr><th>Buy calculation (买入计算)</th><th>Amount</th></tr>
+      <tr><td>Available funds = 100,000 × 60%</td><td class="num">60,000</td></tr>
+      <tr><td>Buy amount</td><td class="num">60,000</td></tr>
+      <tr><td>Quantity = 60,000 ÷ 20</td><td class="num">3,000 shares</td></tr>
+      <tr><td>Remaining cash = 100,000 − 60,000</td><td class="num">40,000</td></tr>
+    </table>
+    <div class="compare">
+      <div class="panel">
+        <h4 style="color:var(--pos, #7e22ce)">Position (持仓)</h4>
+        <table>
+          <tr><td>Symbol</td><td class="num">某股票</td></tr>
+          <tr><td>Quantity</td><td class="num">3,000 shares</td></tr>
+          <tr><td>AveragePrice</td><td class="num">20.00</td></tr>
+          <tr><td>MarketPrice</td><td class="num">20.00</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h4 style="color:var(--green)">Portfolio (账户)</h4>
+        <table>
+          <tr><td>Cash</td><td class="num">40,000</td></tr>
+          <tr><td>Positions</td><td class="num">某股票: 3,000 @ 20.00</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3>Step 3 — Compute equity at the buy (买入时)</h3>
+  <div class="formula" style="font-size:15px">
+    <span class="term green">Cash 40,000</span><span class="op">+</span>
+    <span class="term orange">3,000 × 20.00 = 60,000</span><span class="op">=</span>
+    <span class="term">Equity 100,000</span>
+  </div>
+  <p style="font-size:14px">At the moment of buying, total equity = 100,000 — <b>no P&amp;L yet</b> (position market value = cost 没有盈亏).</p>
+
+  <h3>Step 4 — Price rises to 22 (价格上涨到 22)</h3>
+  <p style="font-size:14px">Update the Position's MarketPrice: Symbol 某股票 · Quantity 3,000 · AveragePrice 20.00 · MarketPrice <b style="color:var(--red)">22.00</b>.</p>
+
+  <h3>Step 5 — Recompute equity (价格 22)</h3>
+  <div class="formula" style="font-size:15px">
+    <span class="term green">Cash 40,000</span><span class="op">+</span>
+    <span class="term orange">3,000 × 22.00 = 66,000</span><span class="op">=</span>
+    <span class="term">Equity 106,000</span>
+  </div>
+  <ul class="duty">
+    <li>Profit = 106,000 − 100,000 = <b style="color:var(--green)">6,000</b> (收益).</li>
+    <li>Return = 6,000 ÷ 100,000 = <b style="color:var(--green)">6%</b> (收益率).</li>
+  </ul>
+
+  <h3>Full-process recap (本次练习的完整过程回顾)</h3>
+  <div class="flow" style="padding:14px 10px">
+    <div class="step c-bar" style="--stepbg:var(--blue-bg)"><div class="name" style="font-size:12.5px">1 · Bar</div><div class="cn">price 20</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-sig" style="--stepbg:var(--orange-bg)"><div class="name" style="font-size:12.5px">2 · Signal</div><div class="cn">BUY · Ratio 0.60</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px">3 · Risk</div><div class="cn">passed</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:12.5px">4 · Broker</div><div class="cn">buy 3,000 @ 20</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-pos" style="--stepbg:var(--purple-bg)"><div class="name" style="font-size:12.5px">5 · Position</div><div class="cn">3,000 shares, cost 20</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--green-bg)"><div class="name" style="font-size:12.5px">6 · Portfolio</div><div class="cn">Cash 40,000 · Equity 100,000</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-eq" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:12.5px">7 · Equity</div><div class="cn">price 22 → 106,000 · +6%</div></div>
+  </div>
+
+  <h3>Your exercise results (你的练习结果)</h3>
+  <table>
+    <tr><th>Initial capital</th><th>Position ratio</th><th>Buy price</th><th>Quantity</th><th>Cash left</th><th>Price → 22</th><th>Equity</th><th>Return</th></tr>
+    <tr><td class="num">100,000</td><td class="num">60%</td><td class="num">20</td><td class="num">3,000 shares</td><td class="num">40,000</td><td class="num">22</td><td class="num">106,000</td><td class="num" style="color:var(--green)"><b>6%</b></td></tr>
+  </table>
+
+  <h3>Day 7 summary (Day 7 总结)</h3>
+  <ul class="duty">
+    <li>Bar provides market data; Signal is the strategy's suggestion; Risk decides whether it's allowed; Broker handles execution.</li>
+    <li>Position records the quantity, cost, and current price of a holding.</li>
+    <li>Portfolio manages cash and all positions.</li>
+    <li>Equity = Cash + all position market value — the core metric of account performance (衡量账户表现的核心指标).</li>
+    <li>Lower position → lower account return; position management is the key to long-term stable profits (仓位越低，账户收益越低；仓位管理是长期稳定盈利的关键).</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span><b>Remember one sentence (记住一句话): the strategy decides what to do, position size decides how much you earn, and risk control decides how long you survive (策略决定做什么，仓位决定赚多少，风控决定能活多久).</b></div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_7_bar-signal-position-portfolio.html · Distilled from knowledge-base/day_7 (30天学习量化投资 · Day 7: Bar、Signal、Position 与 Portfolio) · 2026-08-30
+</footer>
+
+</div>
+</body>
+</html>

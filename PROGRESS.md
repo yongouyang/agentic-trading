@@ -5,7 +5,86 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
-## 2026-08-30 — Landscape research: existing agentic trading platforms (web + GitHub)
+## 2026-08-30 — Day 4, 5, 7 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_4/` (IMG_6503–6510), `day_5/`
+  (IMG_6511–6518) and `day_7/` (IMG_6519–6526), same pipeline as before
+  (Vision OCR via `knowledge-base/day_6/.tools/ocr` + direct visual reads,
+  three parallel subagents).
+- Created three self-contained HTML docs in `docs/`:
+  - `docs/day_4_backtest-state-machine.html` — 回测是一个状态机: backtest replays
+  history bar-by-bar in strict time order; look-ahead bias (前视偏差) as the
+    deadliest sin (5 scenarios, 4 harms); the 6-step daily loop; the Flat↔Long
+  two-state FSM with a 15-day dual-MA walkthrough; three core variables
+    (cash / position / price).
+  - `docs/day_5_time-series-and-arrays.html` — 时间序列与数组: a program sees a
+  time series, not a chart; MA as a fixed-size sliding window over the last N
+  closes; why averaging all history is wrong; NaN on insufficient data;
+    the O(1) incremental sliding-window MA (Go struct with Update).
+  - `docs/day_7_bar-signal-position-portfolio.html` — Bar、Signal、Position 与
+    Portfolio: the four core data structures (Go struct contracts); Signal as a
+  suggestion memo that never mutates the account; floating P&L and average
+    cost rules; Equity = Cash + Σ(Qty × Price); position sizing; a full
+    Bar→Signal→Risk→Broker→Portfolio worked exercise.
+- Fixed two rendering issues found during verification (emoji tofu in day_5,
+  `<b>` inside `.io-box` inheriting `display: block` in day_7). Re-screenshotted
+  all three docs after fixes — render cleanly; temp screenshots deleted.
+- Renamed the docs to `day_N_<slug>.html` (underscore after the day number) to
+  match the user's rename of the day_6 doc; updated the day_1–3 filenames and
+  their references in the previous PROGRESS entry accordingly.
+
+### Key decisions
+- Day 4 slide 8/8's practice table has an internal inconsistency (labels Day 14
+  as the sell trigger while its own MA5/MA20 numbers show MA5 > MA20); the doc
+  follows slide 6/8's internally consistent 15-day version (buy Day 10, hold
+  Day 11–14, sell Day 15).
+
+### What's next (proposed)
+1. All available days (1–7) are now extracted — the knowledge base feeds the
+   repo skeleton: `data/` (Day 2 + Day 7 Bar), `indicator/` (Day 3 + Day 5 MA),
+   `strategy/`/`portfolio/`/`backtest/` (Day 4 + Day 6 + Day 7 contracts).
+2. When day_8+ folders appear, run the same extraction pipeline.
+
+---
+
+## 2026-08-30 — Day 1–3 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_1/` (IMG_6480–6486, slides 2–8),
+  `day_2/` (IMG_6487–6494) and `day_3/` (IMG_6495–6502) of the course
+  "30天学习量化投资", using the same pipeline as day 6: Vision OCR via
+  `knowledge-base/day_6/.tools/ocr` plus direct visual reads (three parallel
+  subagents, one per day).
+- Created three self-contained HTML docs in `docs/`, matching the day_6 style:
+  - `docs/day_1_quant-investing-fundamentals.html` — 量化投资入门: core metrics
+    (return, max drawdown, win rate, profit factor, Sharpe), an MA golden-cross
+    trend strategy walkthrough, reading backtests, and risk control as the
+    survival key. (Note: day_1 folder holds slides 2–8; the cover slide is absent.)
+  - `docs/day_2_candlestick-ohlcv-data.html` — K线与OHLCV数据: OHLCV structure,
+    阳线/阴线 semantics (color encodes Close vs Open only, not the intraday
+    path), body & shadows, return rate vs price difference.
+  - `docs/day_3_trend-moving-averages.html` — 趋势与移动平均线: "don't predict,
+    follow", MA(N) computation and the sliding window, short vs long MAs, the
+    dual-MA strategy, and the whipsaw weakness (鞭打效应).
+- Verified all three docs render with headless Chrome screenshots; no issues
+  found; temporary screenshots deleted.
+
+### Key decisions
+- One HTML doc per day in `docs/`, named `day_N-<topic-slug>.html`, reusing the
+  day_6 CSS design language verbatim (plus small same-style extensions where a
+  day needed new components, e.g. candlestick diagram, formula blocks).
+- English as working language with original Chinese terms preserved in
+  parentheses — same convention as the day_6 doc.
+
+### What's next (proposed)
+1. Continue extraction for the remaining days as their folders appear
+   (days 4–5 are still missing).
+2. Feed Days 1–3 concepts into the repo skeleton: `data/` (OHLCV from Day 2),
+   `indicator/` (MA from Day 3), and the metrics/risk vocabulary (Day 1).
+
+---
+
 
 ### What was done
 - Ran a web + GitHub survey (GitHub API star counts fetched live) of platforms
@@ -37,7 +116,7 @@ Each entry: what was done, key decisions, and what's next.
 1. Decide first market/broker target (Alpaca paper trading is the obvious
    default) and agent decision frequency.
 2. Decide: reuse an engine (Lean/freqtrade) as backtest backend vs. grow our
-   own seven-module core from `docs/quant-system-architecture.html`.
+   own seven-module core from `docs/day_6_quant-system-architecture.html`.
 3. Skim-read candidates: TradingAgents paper, FinMem, RD-Agent; track
    `LLMQuant/awesome-trading-agents` for new entrants.
 

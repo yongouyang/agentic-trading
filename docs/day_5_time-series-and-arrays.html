@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Series & Arrays — The Sliding-Window MA | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+  border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-data { --accent: #1d4ed8; } .c-ind { --accent: #15803d; } .c-strat { --accent: #ea580c; }
+  .c-port { --accent: #7e22ce; } .c-broker { --accent: #0369a1; } .c-risk { --accent: #dc2626; }
+  .c-bt { --accent: #3730a3; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+  flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+  .loop-note {
+    text-align: center; margin-top: -6px; color: var(--blue); font-size: 13.5px; font-weight: 600;
+  }
+  .loop-note::before { content: "↺ "; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.center { text-align: center; }
+  td.win { background: var(--blue-bg); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+  td.no { color: var(--red); font-weight: 600; }
+  td.yes { color: var(--green); font-weight: 600; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; }
+
+  ol.roadmap { padding-left: 22px; font-size: 14.5px; }
+  ol.roadmap li { margin-bottom: 10px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Data Foundations</div>
+  <h1>Time Series &amp; Arrays — Computing MA with a Sliding Window</h1>
+  <p>A program doesn't see a candlestick chart — it sees a time series: an array of numbers in time order. From today we understand the market with code, not with our eyes. (程序看到的不是K线图，而是时间序列。从今天开始，我们用代码理解市场，而不是用眼睛看图形。)</p>
+  <div class="src">Source: knowledge-base/day_5 (IMG_6511–IMG_6518), "30天学习量化投资 · Day 5: 时间序列与数组" · Extracted 2026-08-30</div>
+</header>
+
+<!-- ============ 1. Essence of market data ============ -->
+<section>
+  <h2><span class="num">1</span>The Essence of Market Data: a Time Series</h2>
+  <p class="subtitle">What a quant program processes is not a chart, but a sequence of numbers ordered by time (行情数据的本质：时间序列).</p>
+
+  <div class="compare">
+    <div class="panel" style="border-top:4px solid var(--sky)">
+      <h4 style="color:var(--sky)">What we see (图形)</h4>
+      <p style="font-size:14px">A candlestick (K-line) chart — intuitive and easy to read, but <b>a computer cannot process graphics directly</b>. The chart is only a visualization of the underlying data.</p>
+    </div>
+    <div class="panel" style="border-top:4px solid var(--blue)">
+      <h4>What the program sees (数据)</h4>
+      <p style="font-size:14px">A plain array of numbers — each number is the closing price at one point in time:</p>
+      <pre style="margin-top:8px"><span class="cm">// Go example: closes for Day1..Day7</span>
+close := []<span class="ty">float64</span>{10, 11, 12, 13, 14, 15, 16}</pre>
+    </div>
+  </div>
+
+  <h3>Four properties of a time series (时间序列的特点)</h3>
+  <div class="modules">
+    <div class="mod c-data"><div class="tag">1</div><h4>Time-ordered</h4><p>Data must be arranged from earliest to latest (按时间从早到晚排列).</p></div>
+    <div class="mod c-ind"><div class="tag">2</div><h4>One-dimensional</h4><p>Just a string of numbers — no rows and columns (没有行和列的概念).</p></div>
+    <div class="mod c-strat"><div class="tag">3</div><h4>Continuously varying</h4><p>Adjacent time points are usually correlated (相邻时间点的数据通常是相关的).</p></div>
+    <div class="mod c-bt"><div class="tag">4</div><h4>Iterable</h4><p>Can be processed one by one, from head to tail (可迭代计算，逐个处理).</p></div>
+  </div>
+
+  <h3>Why it matters</h3>
+  <p style="font-size:14.5px">Every indicator (e.g. MA), every signal, every strategy is ultimately computed <b>day by day from this string of numbers</b> (所有指标、所有信号、所有策略，最终都是基于这串数字逐日计算出来的).</p>
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="icon">🗄️</div><div class="name">Time Series</div><div class="cn">时间序列（数组）</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-ind" style="--stepbg:var(--green-bg)"><div class="icon">📈</div><div class="name">Indicators</div><div class="cn">计算指标（如 MA）</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="icon">💡</div><div class="name">Signals</div><div class="cn">产生信号</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-bt" style="--stepbg:var(--navy-bg)"><div class="icon">🔁</div><div class="name">Strategy &amp; Backtest</div><div class="cn">执行策略与回测</div></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>Core insight: charts are for humans to look at; arrays are for programs to compute (图形是给人看的，数组是给程序算的). Understanding time series and arrays is the first cornerstone of quant.</div>
+</section>
+
+<!-- ============ 2. MA window ============ -->
+<section>
+  <h2><span class="num">2</span>The MA Computation Window: Only the Last N Prices</h2>
+  <p class="subtitle">MA is a sliding window (移动平均 / 滑动窗口) that always uses only the most recent N closing prices.</p>
+
+  <div class="quote">
+    <strong>Core concept:</strong> MA5 always looks at only the most recent 5 prices, forming a window of length 5. Each time the window moves forward one day, the oldest data point is discarded and the newest is added. (MA5 永远只看最近 5 个价格；窗口每向前移动 1 天，就丢弃最老的数据，加入最新的数据。)
+  </div>
+
+  <div class="compare">
+    <div class="panel" style="border-top:4px solid var(--blue)">
+      <h4>What is the MA5 window?</h4>
+      <table>
+        <tr><th>Price series (closes)</th><td class="center">10 · 11 · 12 · 13 · 14 · 15 · 16 · 17 …</td></tr>
+        <tr><th>MA5 window (last 5)</th><td class="win">10 · 11 · 12 · 13 · 14</td></tr>
+        <tr><th>MA5 formula</th><td class="center">MA5 = (10+11+12+13+14) / 5 = <b>12</b></td></tr>
+      </table>
+    </div>
+    <div class="panel good">
+      <h4>✓ Window properties (窗口特点)</h4>
+      <ul>
+        <li><b>Fixed length</b> — always exactly 5 prices (长度固定).</li>
+        <li><b>Only the recent</b> — never looks at older data (只看最近).</li>
+        <li><b>Slides daily</b> — moves forward 1 day at a time (每天向前滑动).</li>
+        <li><b>Real-time updates</b> — reflects the latest trend (实时更新).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>How the window forms and moves (以 10,11,12,13,14,15,16,17 为例)</h3>
+  <table>
+    <tr><th>Day</th><th>New close</th><th>Action</th><th>MA5 window (5 values)</th><th>MA5</th></tr>
+    <tr><td>Day5</td><td class="num">14</td><td>—</td><td class="win">10 11 12 13 14</td><td class="num"><b>12</b></td></tr>
+    <tr><td>Day6</td><td class="num">15</td><td>drop oldest 10, add 15</td><td class="win">11 12 13 14 15</td><td class="num"><b>13</b></td></tr>
+    <tr><td>Day7</td><td class="num">16</td><td>add newest 16</td><td class="win">12 13 14 15 16</td><td class="num"><b>14</b></td></tr>
+    <tr><td>Day8</td><td class="num">17</td><td>add newest 17</td><td class="win">13 14 15 16 17</td><td class="num"><b>15</b></td></tr>
+  </table>
+
+  <div class="keypoint">💡 <b>Why "recent"?</b> Because we care about the short-term trend. If prices from long ago were included, old data would "dilute" the result and the MA would lose sensitivity to the current market (被旧数据"稀释"，失去对当前市场的敏感度).</div>
+
+  <div class="takeaway"><span class="star">★</span>The MA window contains only the last N closes — a sliding window moving forward day by day. Remember: MA is not a cumulative average; it describes the <b>recent</b> price level (MA 不是累计平均，而是描述"最近"的价格水平).</div>
+</section>
+
+<!-- ============ 3. Why the window moves ============ -->
+<section>
+  <h2><span class="num">3</span>Why Does the Window Move?</h2>
+  <p class="subtitle">With each new price, the oldest data point is pushed out and the whole window slides forward (窗口为什么会移动).</p>
+
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="icon">🧮</div><div class="name">Step 1 · Current window</div><div class="cn">[10 11 12 13 14] → MA5 = 12<br>oldest = 10 (about to leave); 15 not yet in</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-ind" style="--stepbg:var(--green-bg)"><div class="icon">🔔</div><div class="name">Step 2 · New price 15 arrives</div><div class="cn">10 leaves the window, 15 enters</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-bt" style="--stepbg:var(--navy-bg)"><div class="icon">📊</div><div class="name">New window</div><div class="cn">[11 12 13 14 15] → MA5 = 13</div></div>
+  </div>
+
+  <table>
+    <tr><th>Time</th><th>Day1</th><th>Day2</th><th>Day3</th><th>Day4</th><th>Day5</th><th>Day6</th><th>Day7</th></tr>
+    <tr><th>New data (close)</th><td class="num">10</td><td class="num">11</td><td class="num">12</td><td class="num">13</td><td class="num">14</td><td class="num">15</td><td class="num">16</td></tr>
+    <tr><th>MA5 window</th><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="win">10 11 12 13 14</td><td class="win">11 12 13 14 15</td><td class="win">12 13 14 15 16</td></tr>
+    <tr><th>MA5 value</th><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="num">12</td><td class="num">13</td><td class="num">14</td></tr>
+  </table>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>✓ Correct: sliding window (last 5)</h4>
+      <ul>
+        <li>Window size fixed at 5; each new data point shifts the window by one.</li>
+        <li>Always keeps only the most recent 5 prices.</li>
+        <li><b>Reflects the recent trend and responds quickly to change.</b></li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>✗ Wrong: cumulative average (all history)</h4>
+      <ul>
+        <li>If the window never moves and all history keeps accumulating, you get a cumulative average.</li>
+        <li>It cannot reflect the "recent" price level or trend.</li>
+        <li><b>Slow to react, blind to recent change (反应迟钝，无法体现近期变化).</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>The essence of MA is a fixed-size sliding window. Window movement = discard the oldest data + add the newest data (窗口移动 = 丢弃最旧数据 + 加入最新数据).</div>
+</section>
+
+<!-- ============ 4. Why not all history ============ -->
+<section>
+  <h2><span class="num">4</span>Why Not Include All Historical Data?</h2>
+  <p class="subtitle">Averaging all history yields a cumulative average — lagging, distorted, and overweighted toward the distant past.</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>✓ Correct: only the last N (e.g. MA5)</h4>
+      <p style="font-size:14px">Series: 10 11 12 13 14 15 16 17 … — window is the last 5:</p>
+      <div class="io-box" style="margin-top:8px">MA5 = (13+14+15+16+17) / 5 = <b>15</b></div>
+      <ul style="margin-top:10px">
+        <li>Reflects only the recent price level (只反映最近的价格水平).</li>
+        <li>More sensitive to new data, follows the trend in time.</li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>✗ Wrong: cumulative average over all history</h4>
+      <p style="font-size:14px">Including every price ever seen:</p>
+      <div class="io-box" style="margin-top:8px">Cumulative avg = (10+11+12+…+17) / 8 = <b>13.75</b></div>
+      <ul style="margin-top:10px">
+        <li>Sluggish — cannot show recent change (反应迟钝).</li>
+        <li>Distant data gets too much weight and masks the recent trend (远期数据权重过大，掩盖近期趋势).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Why fix N at 5?</h3>
+  <ul class="duty">
+    <li>5 is a common empirical value that balances the trade-off: <b>too small</b> → noisy, frequent whipsaws (噪音大，波动频繁); <b>too large</b> → slow response, heavy lag (反应慢，滞后严重).</li>
+    <li>Different strategies use different windows: 5, 10, 20, 60, …</li>
+  </ul>
+
+  <h3>Worked example — window sliding forward (MA5, prices 8,9,10,…,16)</h3>
+  <table>
+    <tr><th>Time</th><th>Day1</th><th>Day2</th><th>Day3</th><th>Day4</th><th>Day5</th><th>Day6</th><th>Day7</th><th>Day8</th><th>Day9</th></tr>
+    <tr><th>Close</th><td class="num">8</td><td class="num">9</td><td class="num">10</td><td class="num">11</td><td class="num">12</td><td class="num">13</td><td class="num">14</td><td class="num">15</td><td class="num">16</td></tr>
+    <tr><th>MA5 window</th><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="win">8 9 10 11 12</td><td class="win">9 10 11 12 13</td><td class="win">10 11 12 13 14</td><td class="win">11 12 13 14 15</td><td class="win">12 13 14 15 16</td></tr>
+    <tr><th>MA5 value</th><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="num"><b>10</b></td><td class="num"><b>11</b></td><td class="num"><b>12</b></td><td class="num"><b>13</b></td><td class="num"><b>14</b></td></tr>
+  </table>
+
+  <div class="keypoint">💡 <b>Practice (你的练习):</b> given 8, 9, 10, 11, 12, 13, 14 — compute MA5. Answers: Day5 = 10 (8–12), Day6 = 11 (9–13), Day7 = 12 (10–14).</div>
+
+  <div class="takeaway"><span class="star">★</span>Fixed window size + forward sliding = the key to reflecting the recent trend (窗口固定大小 + 向前滑动 = 反映近期趋势的关键).</div>
+</section>
+
+<!-- ============ 5. Insufficient data ============ -->
+<section>
+  <h2><span class="num">5</span>What If There Isn't Enough Data?</h2>
+  <p class="subtitle">MA5 needs at least 5 prices; with fewer, it simply cannot be computed (数据不足怎么办).</p>
+
+  <div class="compare">
+    <div>
+      <table>
+        <tr><th>Day</th><th>Close</th><th>Data count</th><th>Can compute MA5?</th><th>Note</th></tr>
+        <tr><td>Day1</td><td class="num">8</td><td class="num">1</td><td class="no">✗ No</td><td>insufficient</td></tr>
+        <tr><td>Day2</td><td class="num">9</td><td class="num">2</td><td class="no">✗ No</td><td>insufficient</td></tr>
+        <tr><td>Day3</td><td class="num">10</td><td class="num">3</td><td class="no">✗ No</td><td>insufficient</td></tr>
+        <tr><td>Day4</td><td class="num">11</td><td class="num">4</td><td class="no">✗ No</td><td>insufficient</td></tr>
+        <tr><td>Day5</td><td class="num">12</td><td class="num">5</td><td class="yes">✓ Yes</td><td>exactly 5</td></tr>
+        <tr><td>Day6</td><td class="num">13</td><td class="num">6</td><td class="yes">✓ Yes</td><td>first full result</td></tr>
+        <tr><td>Day7</td><td class="num">14</td><td class="num">7</td><td class="yes">✓ Yes</td><td>keep computing</td></tr>
+      </table>
+      <div class="keypoint">💡 The program only emits indicator values once data is sufficient — no MA5 for the first 4 days, avoiding false signals from incomplete data (前 4 天不产生 MA5，避免使用不完整数据导致错误信号).</div>
+    </div>
+    <div>
+      <pre><span class="cm">// Go example: computing MA5</span>
+<span class="kw">func</span> <span class="ty">MA5</span>(prices []<span class="ty">float64</span>) <span class="ty">float64</span> {
+    <span class="kw">if</span> len(prices) &lt; 5 {
+        <span class="cm">// insufficient data — cannot compute</span>
+        <span class="kw">return</span> math.NaN()
+    }
+    sum := 0.0
+    n := len(prices)
+    <span class="kw">for</span> i := n - 5; i &lt; n; i++ {
+        sum += prices[i]
+    }
+    <span class="kw">return</span> sum / 5
+}</pre>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Common mistakes (常见错误)</h4>
+      <ul>
+        <li><b>Mistake 1:</b> averaging all historical data → you get a cumulative average, not a moving average.</li>
+        <li><b>Mistake 2:</b> forcing the calculation with insufficient data → wrong MA values and false signals (虚假信号).</li>
+        <li><b>Mistake 3:</b> array index out of bounds (数组越界) → crash or runtime errors.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Correct practices (正确做法)</h4>
+      <ul>
+        <li>Only the most recent N data points participate in the computation.</li>
+        <li>Return an empty value or NaN when data is insufficient.</li>
+        <li>Make sure index ranges are correct.</li>
+        <li>Indicator values exist only from day N onward (从第 N 天开始才有指标值).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>When data is insufficient: don't guess, don't compute, don't output — that itself is a form of risk control (数据不足时，不猜、不算、不输出，这本身就是一种风险控制). The first step of computing any indicator is ensuring enough data; without it, all calculations and signals are meaningless.</div>
+</section>
+
+<!-- ============ 6. Efficient MA: sliding window O(1) ============ -->
+<section>
+  <h2><span class="num">6</span>Computing MA Efficiently: the Sliding-Window Algorithm</h2>
+  <p class="subtitle">Re-summing every time costs O(N) per step; the sliding window makes each update O(1) (滑动窗口算法).</p>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Wrong: re-sum the whole window each day</h4>
+      <ul>
+        <li>Every day, all 5 numbers in the window are added up again from scratch.</li>
+        <li>With large windows (100, 200), the workload becomes huge.</li>
+        <li><b>Time complexity: O(N) per update.</b></li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Right: sliding window — "add new, subtract old" (加新减旧)</h4>
+      <ul>
+        <li>Each step does only two things: add the new data, subtract the old.</li>
+        <li>The window sum needs one addition and one subtraction.</li>
+        <li><b>Time complexity: O(1) per update.</b></li>
+        <li>Ideal for real-time computation and large-scale backtesting.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Incremental update in action (prices 10,11,12,…,16)</h3>
+  <table>
+    <tr><th>Day</th><th>New price in</th><th>Price out</th><th>Window content (5)</th><th>Window sum</th><th>MA5</th></tr>
+    <tr><td>Day5</td><td class="num">14</td><td class="center">—</td><td class="win">10 11 12 13 14</td><td class="num">60</td><td class="num">12.00</td></tr>
+    <tr><td>Day6</td><td class="num">15</td><td class="num">10</td><td class="win">11 12 13 14 15</td><td class="num">70</td><td class="num">14.00</td></tr>
+    <tr><td>Day7</td><td class="num">16</td><td class="num">11</td><td class="win">12 13 14 15 16</td><td class="num">75</td><td class="num">15.00</td></tr>
+  </table>
+
+  <h3>Go implementation: the MA struct with an Update method</h3>
+  <pre><span class="kw">type</span> <span class="ty">MA</span> <span class="kw">struct</span> {
+    window []<span class="ty">float64</span> <span class="cm">// holds the most recent N values</span>
+    sum    <span class="ty">float64</span>   <span class="cm">// sum of the values inside the window</span>
+    n      <span class="ty">int</span>        <span class="cm">// window size N</span>
+}
+
+<span class="kw">func</span> <span class="ty">NewMA</span>(n <span class="ty">int</span>) *MA {
+    <span class="kw">return</span> &amp;MA{window: make([]<span class="ty">float64</span>, 0, n), n: n}
+}
+
+<span class="kw">func</span> (m *MA) <span class="ty">Update</span>(v <span class="ty">float64</span>) (<span class="ty">float64</span>, <span class="ty">bool</span>) {
+    <span class="cm">// 1. add the new data</span>
+    m.window = append(m.window, v)
+    m.sum += v
+    <span class="cm">// 2. if the window exceeds N, drop the oldest value</span>
+    <span class="kw">if</span> len(m.window) &gt; m.n {
+        old := m.window[0]
+        m.window = m.window[1:]
+        m.sum -= old
+    }
+    <span class="cm">// 3. fewer than N values — cannot compute yet</span>
+    <span class="kw">if</span> len(m.window) &lt; m.n {
+        <span class="kw">return</span> math.NaN(), <span class="kw">false</span>
+    }
+    <span class="cm">// 4. compute and return the MA</span>
+    <span class="kw">return</span> m.sum / <span class="ty">float64</span>(m.n), <span class="kw">true</span>
+}</pre>
+
+  <h3>Trace of the run (MA5)</h3>
+  <table>
+    <tr><th>Day</th><th>Price</th><th>Operation</th><th>Window content (5)</th><th>Window sum</th><th>MA5</th></tr>
+    <tr><td>Day1</td><td class="num">10</td><td>add 10</td><td class="win">10</td><td class="num">10</td><td class="center">—</td></tr>
+    <tr><td>Day2</td><td class="num">11</td><td>add 11</td><td class="win">10 11</td><td class="num">21</td><td class="center">—</td></tr>
+    <tr><td>Day3</td><td class="num">12</td><td>add 12</td><td class="win">10 11 12</td><td class="num">33</td><td class="center">—</td></tr>
+    <tr><td>Day4</td><td class="num">13</td><td>add 13</td><td class="win">10 11 12 13</td><td class="num">46</td><td class="center">—</td></tr>
+    <tr><td>Day5</td><td class="num">14</td><td>add 14</td><td class="win">10 11 12 13 14</td><td class="num">60</td><td class="num">12.00</td></tr>
+    <tr><td>Day6</td><td class="num">15</td><td>remove 10, add 15</td><td class="win">11 12 13 14 15</td><td class="num">70</td><td class="num">14.00</td></tr>
+    <tr><td>Day7</td><td class="num">16</td><td>remove 11, add 16</td><td class="win">12 13 14 15 16</td><td class="num">75</td><td class="num">15.00</td></tr>
+  </table>
+
+  <div class="keypoint">💡 <b>Tip:</b> MA doesn't need all historical data — only the last N values plus the running window sum are enough to keep computing efficiently. <b>Practice:</b> for prices 8,9,10,11,12,13,14,15, the sliding window gives MA5 = 10 (Day5), 11 (Day6), 12 (Day7), 13 (Day8). The bigger the window (10, 20, …), the more the algorithm's advantage shows.</div>
+
+  <div class="takeaway"><span class="star">★</span>The essence of the sliding window is "add new, subtract old", taking MA from O(N) to O(1) — one of the most common and most important optimization ideas in quant systems.</div>
+</section>
+
+<!-- ============ 7. Summary ============ -->
+<section>
+  <h2><span class="num">7</span>Day 5 Summary — Core Takeaways</h2>
+  <p class="subtitle">Today we completed the key step of MA computation: efficiently computing moving averages with a sliding-window algorithm.</p>
+
+  <div class="compare">
+    <div>
+      <ul class="duty">
+        <li><b>The essence of the window</b> — MA only cares about the last N prices, forming a fixed-size sliding window (窗口的本质).</li>
+        <li><b>Window movement</b> — each new price pushes out the oldest and brings in the newest; the window slides forward by one (窗口的移动).</li>
+        <li><b>Why not all history</b> — a cumulative average over all history lags and distorts; only the recent N reflect the current trend.</li>
+        <li><b>Sliding-window algorithm</b> — O(1) per update (one add + one subtract) versus O(N) for recomputation.</li>
+        <li><b>Insufficient data</b> — the first N−1 days produce no value; data sufficiency must be guaranteed.</li>
+      </ul>
+      <div class="flow" style="margin-top:14px; padding:14px 10px">
+        <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="name" style="font-size:12.5px">New price arrives</div><div class="cn">新价格到来</div></div>
+        <div class="arrow">→</div>
+        <div class="step c-ind" style="--stepbg:var(--green-bg)"><div class="name" style="font-size:12.5px">Window slides</div><div class="cn">去掉最旧，加入最新</div></div>
+        <div class="arrow">→</div>
+        <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="name" style="font-size:12.5px">Update sum → MA5</div><div class="cn">更新窗口和，计算 MA5</div></div>
+        <div class="arrow">→</div>
+        <div class="step c-bt" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:12.5px">Indicator output</div><div class="cn">供策略使用</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel good" style="margin-bottom:14px">
+        <h4>✓ Sliding-window algorithm (recommended)</h4>
+        <ul>
+          <li>Time complexity: <b>O(1)</b></li>
+          <li>Per update: 1 addition + 1 subtraction</li>
+          <li>Suits real-time computation and large-scale backtests</li>
+          <li>High performance, low memory footprint</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>✗ Recompute-from-scratch algorithm (inefficient)</h4>
+        <ul>
+          <li>Time complexity: <b>O(N)</b></li>
+          <li>Per update: N additions</li>
+          <li>Slow on large data; unsuitable for real-time scenarios</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3>Practical notes for real trading (实战中的注意事项)</h3>
+  <ul class="duty">
+    <li>Use <code>float64</code> — avoid integer division.</li>
+    <li>Mind price adjustment for corporate actions (前复权 / 后复权).</li>
+    <li>During trading hours, only use completed K-line (bar) data.</li>
+    <li>Multiple indicators can share the same price stream for efficiency.</li>
+    <li>Handle boundaries carefully — no out-of-range indexes or empty windows.</li>
+  </ul>
+
+  <h3>Exercises (你的练习)</h3>
+  <ol class="roadmap">
+    <li>Given the price series 8, 9, 10, 11, 12, 13, 14, 15, 16 — manually compute MA5 for Day6, Day7, Day8. (Answers: 11, 12, 13.)</li>
+    <li>Think: MA20 needs the first 19 days before it can produce a value — what impact does this have on backtesting?</li>
+  </ol>
+
+  <div class="takeaway"><span class="star">★</span>The key to MA computation: a fixed-size sliding window + efficient incremental updates. From today, you can efficiently compute moving averages of any period (从今天开始，你可以高效计算任意周期的移动平均线了).</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_5_time-series-and-arrays.html · Distilled from knowledge-base/day_5 (30天学习量化投资 · Day 5 时间序列与数组) · 2026-08-30
+</footer>
+
+</div>
+</body>
+</html>

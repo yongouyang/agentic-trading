@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candlesticks &amp; OHLCV Data | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-open { --accent: #1d4ed8; } .c-high { --accent: #dc2626; } .c-low { --accent: #15803d; }
+  .c-close { --accent: #ea580c; } .c-vol { --accent: #7e22ce; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; }
+
+  /* candlestick illustration */
+  .candle-row { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; margin: 18px 0; }
+  .candle-card {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 22px; text-align: center; min-width: 230px;
+  }
+  .candle-card h4 { font-size: 15px; margin-bottom: 4px; }
+  .candle-card .rel { font-size: 13px; color: var(--muted); margin-bottom: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .candle { position: relative; height: 210px; width: 130px; margin: 0 auto; }
+  .candle .wick {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: 3px; border-radius: 2px;
+  }
+  .candle .body {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: 46px; border-radius: 3px;
+  }
+  .candle .lbl {
+    position: absolute; left: 84px; font-size: 11.5px; color: var(--muted);
+    font-family: ui-monospace, Menlo, monospace; white-space: nowrap; transform: translateY(-50%);
+  }
+  .candle .lbl b { color: var(--ink); }
+  .candle .lbl::before {
+    content: ""; display: inline-block; width: 26px; border-top: 1.5px dashed #cbd5e1;
+    vertical-align: middle; margin-right: 5px;
+  }
+  .candle.up .wick { background: #dc2626; top: 8%; height: 84%; }
+  .candle.up .body { background: #ef4444; top: 28%; height: 38%; }
+  .candle.down .wick { background: #15803d; top: 8%; height: 84%; }
+  .candle.down .body { background: #22c55e; top: 28%; height: 38%; }
+
+  /* formula block */
+  .formula {
+    background: var(--navy-bg); border: 1.5px solid var(--blue-light); border-radius: var(--radius);
+    padding: 18px 22px; text-align: center; font-size: 17px; margin: 16px 0; color: var(--navy);
+  }
+  .formula .frac { display: inline-block; vertical-align: middle; text-align: center; margin: 0 6px; }
+  .formula .frac .top { display: block; padding: 0 12px 4px; border-bottom: 2px solid var(--navy); }
+  .formula .frac .bot { display: block; padding-top: 4px; }
+  .formula .res { color: var(--green); font-weight: 700; }
+
+  ol.roadmap { padding-left: 22px; font-size: 14.5px; }
+  ol.roadmap li { margin-bottom: 10px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Data Foundations</div>
+  <h1>Candlesticks &amp; OHLCV Data (K线与 OHLCV 数据)</h1>
+  <p>Understand the most fundamental data structure behind every quant strategy: one candlestick = one time period, five core numbers — Open, High, Low, Close, Volume. (看懂量化策略最基础的数据结构。)</p>
+  <div class="src">Source: knowledge-base/day_2 (IMG_6487–IMG_6494), "30天学习量化投资 · Day 2: K线与OHLCV数据" · Extracted 2026-08-30</div>
+</header>
+
+<!-- ============ 1. What is OHLCV ============ -->
+<section>
+  <h2><span class="num">1</span>What Is OHLCV? (什么是 OHLCV)</h2>
+  <p class="subtitle">One candlestick (K线) represents the price movement within a single time period. Every bar corresponds to five core data points.</p>
+
+  <div class="modules">
+    <div class="mod c-open"><div class="tag">O</div><h4>Open 开盘价</h4><p>The price at the start of the period (周期开始时的价格).</p></div>
+    <div class="mod c-high"><div class="tag">H</div><h4>High 最高价</h4><p>The highest price reached during the period (周期内达到的最高价格).</p></div>
+    <div class="mod c-low"><div class="tag">L</div><h4>Low 最低价</h4><p>The lowest price reached during the period (周期内达到的最低价格).</p></div>
+    <div class="mod c-close"><div class="tag">C</div><h4>Close 收盘价</h4><p>The price at the end of the period (周期结束时的价格).</p></div>
+    <div class="mod c-vol"><div class="tag">V</div><h4>Volume 成交量</h4><p>The number of units traded during the period (周期内的成交数量).</p></div>
+  </div>
+
+  <div class="quote">
+    <strong>Every candlestick corresponds to five core values: O, H, L, C, V.</strong><br>
+    OHLCV is the most basic and most commonly used data structure in quantitative investing. (OHLCV 是量化投资中最基础、最常用的数据结构。)
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>Different periods (1-minute, 5-minute, daily, weekly, …) produce different K-line data. A candlestick is not just a picture — it is a row of structured data (更是一条结构化的数据).</div>
+</section>
+
+<!-- ============ 2. Bullish vs bearish ============ -->
+<section>
+  <h2><span class="num">2</span>Bullish vs Bearish Candles (阳线与阴线)</h2>
+  <p class="subtitle">The candle's color only expresses the relationship between close and open — it says nothing about the path taken during the day.</p>
+
+  <div class="candle-row">
+    <div class="candle-card">
+      <h4 style="color:#dc2626">Bullish candle 阳线</h4>
+      <div class="rel">Close &gt; Open · 收盘价高于开盘价</div>
+      <div class="candle up">
+        <div class="wick"></div>
+        <div class="body"></div>
+        <div class="lbl" style="top:8%"><b>High</b> 最高价</div>
+        <div class="lbl" style="top:28%"><b>Close</b> 收盘价</div>
+        <div class="lbl" style="top:66%"><b>Open</b> 开盘价</div>
+        <div class="lbl" style="top:92%"><b>Low</b> 最低价</div>
+      </div>
+    </div>
+    <div class="candle-card">
+      <h4 style="color:#15803d">Bearish candle 阴线</h4>
+      <div class="rel">Close &lt; Open · 收盘价低于开盘价</div>
+      <div class="candle down">
+        <div class="wick"></div>
+        <div class="body"></div>
+        <div class="lbl" style="top:8%"><b>High</b> 最高价</div>
+        <div class="lbl" style="top:28%"><b>Open</b> 开盘价</div>
+        <div class="lbl" style="top:66%"><b>Close</b> 收盘价</div>
+        <div class="lbl" style="top:92%"><b>Low</b> 最低价</div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:13px; color:var(--muted); text-align:center; margin-top:-4px;">Color convention above follows the Chinese market (红涨绿跌): red = 阳线 (up), green = 阴线 (down).</p>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>⚠ Common misreading</h4>
+      <ul>
+        <li><b>阳线 ≠ "price rose all day"</b> — a bullish candle only means <b>Close &gt; Open</b>. The intraday path may have dipped first and recovered (e.g. 20 → 17 → 22).</li>
+        <li><b>阴线 ≠ "price fell all day"</b> — a bearish candle only means <b>Close &lt; Open</b>. The path may have surged first and then given back gains (e.g. 20 → 23 → 17).</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ The correct mental model</h4>
+      <ul>
+        <li><b>A K-line is a result, not a process</b> (K线是结果，不是过程) — it is a "snapshot" of one time period.</li>
+        <li>The candle only reflects the <b>relationship between close and open</b> (收盘价与开盘价的关系).</li>
+        <li>Many different real price paths can produce the exact same OHLC bar.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>Remembering that a candle is only a snapshot helps you avoid many misreadings (能帮你避免很多误解). 阳线不代表一定涨，阴线不代表一定跌。</div>
+</section>
+
+<!-- ============ 3. Body and shadows ============ -->
+<section>
+  <h2><span class="num">3</span>Body and Shadows (实体与影线)</h2>
+  <p class="subtitle">A candlestick consists of three parts: the body (实体), the upper shadow (上影线), and the lower shadow (下影线).</p>
+
+  <div class="spec c-high">
+    <h3><span class="tag">阴线</span>Bearish candle anatomy (Close &lt; Open)</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li><b>Upper shadow 上影线:</b> High → Open — the part where price pushed up and fell back (当日冲高回落的部分).</li>
+          <li><b>Body 实体:</b> Open → Close — the actual result of the bull/bear contest (实际的多空对抗结果).</li>
+          <li><b>Lower shadow 下影线:</b> Close → Low — the part where price probed down and rebounded (当日下探反弹的部分).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="keypoint">💡 A 阴线 closes below its open — sellers (空方) were stronger, and price overall leaned downward.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec c-low">
+    <h3><span class="tag">阳线</span>Bullish candle anatomy (Close &gt; Open)</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li><b>Upper shadow 上影线:</b> High → Close — the part where price pushed up and was pressed back (冲高回落).</li>
+          <li><b>Body 实体:</b> Open → Close — the actual result of the bull/bear contest.</li>
+          <li><b>Lower shadow 下影线:</b> Open → Low — the part where price probed down and was supported (下探回升).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="keypoint">💡 A 阳线 closes above its open — buyers (多方) were stronger, and price overall leaned upward.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Three things to remember (记住这三点)</h3>
+  <ul class="duty">
+    <li>The <b>body</b> represents the final outcome of the bull/bear battle (实体代表多空的最终结果).</li>
+    <li>The <b>upper shadow</b> represents a rally that was sold into (上影线代表冲高被打压).</li>
+    <li>The <b>lower shadow</b> represents a dip that was bought up (下影线代表探底被承接).</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>The longer the shadows, the larger the price swings and the more obvious the market disagreement (影线越长，说明价格波动越大，市场分歧越明显). Candlestick shapes reflect market sentiment and the balance of power — they are the basic input of quant strategies.</div>
+</section>
+
+<!-- ============ 4. Return rate ============ -->
+<section>
+  <h2><span class="num">4</span>Return Rate: What Programs Care About (收益率：程序更重视它)</h2>
+  <p class="subtitle">A price difference and a percentage change are not the same thing (价格差和涨跌幅不是一回事!).</p>
+
+  <div class="formula">
+    涨跌幅 = <span class="frac"><span class="top">(收盘价 − 基准价格)</span><span class="bot">基准价格</span></span>
+    &nbsp;&nbsp;→&nbsp;&nbsp;
+    (19 − 20) / 20 = −0.05 = <span class="res">−5%</span>
+  </div>
+
+  <ul class="duty">
+    <li>The percentage change (涨跌幅) is a <b>relative</b> change — it removes the effect of the absolute price level and reflects the true return.</li>
+    <li>Worked example: base price (开盘价) = 20元, close = 19元 → difference = −1元, change = (19−20)/20 = <b>−5%</b>.</li>
+  </ul>
+
+  <h3>Price difference vs percentage change (差价 vs 涨跌幅)</h3>
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Looking only at the absolute difference</h4>
+      <ul>
+        <li>Stock A: 100元 → 95元, difference <b>−5元</b>.</li>
+        <li>Stock B: 1000元 → 995元, difference <b>−5元</b>.</li>
+        <li><b>Both fell 5元 — but the impact is completely different!</b> The higher the price level, the bigger the difference <i>looks</i>, which doesn't mean the return is bigger.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Looking at the percentage change</h4>
+      <ul>
+        <li>Stock A: 100元 → 95元 = <b>−5%</b>.</li>
+        <li>Stock B: 1000元 → 995元 = <b>−0.5%</b>.</li>
+        <li><b>A fell much more — higher risk!</b> Relative change is the more important metric in investing.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>The underlying logic of quant strategies (量化策略的底层逻辑)</h3>
+  <ul class="duty">
+    <li>Use percentage change to compute returns and drawdowns (使用涨跌幅来计算收益和回撤).</li>
+    <li>It makes stocks at different price levels comparable (不同价格的股票才具有可比性).</li>
+    <li>It is closer to the real profit/loss of your capital (更接近资金的真实盈亏情况).</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span>Remember: programs care about the return rate, not the price difference (程序更关心收益率，而不是价格差!). The first step of quantitative investing: learn to think in returns (学会用收益率思考).</div>
+</section>
+
+<!-- ============ 5. Worked exercise ============ -->
+<section>
+  <h2><span class="num">5</span>Worked Exercise: Dissect One Candlestick (动手判断一根K线)</h2>
+  <p class="subtitle">Given the OHLC data below: what kind of candle is this, what do the shadows and body represent, and did it rise or fall relative to the open?</p>
+
+  <div class="spec c-open">
+    <h3><span class="tag">input</span>Given data (已知数据)</h3>
+    <table>
+      <tr><th>Open (开盘价)</th><th>High (最高价)</th><th>Low (最低价)</th><th>Close (收盘价)</th></tr>
+      <tr><td class="num">20</td><td class="num">23</td><td class="num">18</td><td class="num">19</td></tr>
+    </table>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li><b>Upper shadow 上影线:</b> 23 → 20 (High to Open) — the rally that fell back (冲高回落).</li>
+          <li><b>Body 实体:</b> 20 → 19 (Open to Close, since it is a 阴线) — the open-to-close range.</li>
+          <li><b>Lower shadow 下影线:</b> 19 → 18 (Close to Low) — the dip that rebounded (探底反弹).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Conclusion (结论总结)</b>
+          ✓ This is a <b>阴线</b> (bearish candle): Close 19 &lt; Open 20<br>
+          ✓ Body: 20 → 19 &nbsp;·&nbsp; Upper shadow: 23 → 20 &nbsp;·&nbsp; Lower shadow: 19 → 18<br>
+          ✓ 涨跌幅 = (19 − 20) / 20 = −0.05 = <b>−5%</b> relative to the open
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>A candlestick as structured data</h3>
+  <p style="font-size:14.5px">One K-line = one time period; OHLCV = the full price record of that period (一根K线 = 一个时间周期，OHLCV = 价格的全记录). Minute-level bars look exactly like this in a table:</p>
+  <table>
+    <tr><th>Time (时间)</th><th>O</th><th>H</th><th>L</th><th>C</th><th>V</th></tr>
+    <tr><td>09:30</td><td class="num">20.0</td><td class="num">21.5</td><td class="num">19.5</td><td class="num">20.8</td><td class="num">1200</td></tr>
+    <tr><td>09:31</td><td class="num">20.8</td><td class="num">21.2</td><td class="num">20.2</td><td class="num">20.3</td><td class="num">980</td></tr>
+    <tr><td>09:32</td><td class="num">20.3</td><td class="num">20.5</td><td class="num">19.8</td><td class="num">20.1</td><td class="num">1050</td></tr>
+    <tr><td>…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td></tr>
+  </table>
+
+  <div class="takeaway"><span class="star">★</span>Being able to dissect a candle — judge its direction, name its parts, and compute the percentage change — is the basic input skill for every quant strategy (这是量化策略的基础输入).</div>
+</section>
+
+<!-- ============ 6. Summary ============ -->
+<section>
+  <h2><span class="num">6</span>Day 2 Summary &amp; Why It Matters</h2>
+  <p class="subtitle">Learning to read candlesticks is the real first step into quantitative investing (学会看懂K线，才真正迈出了量化投资的第一步).</p>
+
+  <h3>Quick-recall cheat sheet (快速记忆口诀)</h3>
+  <table>
+    <tr><th>Letter</th><th>Field</th><th>Meaning</th></tr>
+    <tr><td><b>O</b></td><td>Open 开盘价</td><td>Price at the start of the period</td></tr>
+    <tr><td><b>H</b></td><td>High 最高价</td><td>Highest price reached in the period</td></tr>
+    <tr><td><b>L</b></td><td>Low 最低价</td><td>Lowest price reached in the period</td></tr>
+    <tr><td><b>C</b></td><td>Close 收盘价</td><td>Price at the end of the period</td></tr>
+    <tr><td><b>V</b></td><td>Volume 成交量</td><td>Quantity traded in the period</td></tr>
+  </table>
+
+  <ul class="duty">
+    <li><b>阳线 vs 阴线:</b> 阳线 Close &gt; Open; 阴线 Close &lt; Open. A candle is a snapshot — a result, not the process.</li>
+    <li><b>Body vs shadows:</b> the body spans open→close (the bull/bear outcome); shadows span the extremes beyond the body (the range of disagreement).</li>
+    <li><b>Return rate first:</b> 涨跌幅 = (收盘价 − 基准价格) / 基准价格 — programs track relative change, not absolute price gaps.</li>
+    <li><b>Practice:</b> given OHLC, judge the candle's shape and compute the percentage change.</li>
+  </ul>
+
+  <h3>Why this matters (为什么这些很重要)</h3>
+  <div class="modules">
+    <div class="mod c-open"><h4>Foundation</h4><p>K-lines are the most basic data of quant strategies (K线是量化策略最基础的数据).</p></div>
+    <div class="mod c-high"><h4>Everything builds on it</h4><p>All indicators and strategies are based on OHLCV (所有指标和策略都是基于它).</p></div>
+    <div class="mod c-low"><h4>Correct code</h4><p>Only by understanding the data structure can you write correct code (只有理解了数据结构，才能写出正确的代码).</p></div>
+    <div class="mod c-close"><h4>Risk &amp; return</h4><p>Return rates help us measure risk and reward properly (收益率帮助我们更好地衡量风险和收益).</p></div>
+    <div class="mod c-vol"><h4>Go further</h4><p>A solid foundation is what lets you go far (打好基础，才能走得更远).</p></div>
+  </div>
+
+  <h3>Day 3 preview (Day 3 预告)</h3>
+  <ol class="roadmap">
+    <li><b>What is a DataFrame</b> (认识 DataFrame).</li>
+    <li><b>How to load historical stock data</b> (如何读取股票历史数据).</li>
+    <li><b>Basic data inspection and processing methods</b> (基本的数据查看与处理方法).</li>
+  </ol>
+
+  <div class="takeaway"><span class="star">★</span>One candlestick = one time period; OHLCV = the complete price record. K线不仅是一张图，更是一条结构化的数据 — learn a little every day, and quantity becomes quality (坚持每天学习一点点，量变会带来质变).</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_2_candlestick-ohlcv-data.html · Distilled from knowledge-base/day_2 (30天学习量化投资 · Day 2 K线与OHLCV数据) · 2026-08-30
+</footer>
+
+</div>
+</body>
+</html>
