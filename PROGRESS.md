@@ -5,6 +5,50 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-31 — Skills-reuse review → architecture amendments + vendored corpora
+
+### What was done
+- Reviewed `docs/research-github-skills-reuse.md` (934-line audit of 9 top
+  trading repos) against our v1 scope, focusing on market data collection and
+  technical analysis implementation.
+- Amended `docs/architecture-v1.md`:
+  - §4: replaced "silently excluded from screening" with the loud three-way
+    `DataOutcome` taxonomy (OK / GENUINELY_ABSENT / FETCH_FAILED), degraded-run
+    marking, and a data-integrity header in the daily report (resolves the
+    conflict flagged in the audit's §15.2).
+  - §4: added declarative data-routing table requirement + tencent/longbridge
+    as identified HK fallbacks if Yahoo fails the Phase 0 gate.
+  - §5: pipeline steps updated for typed outcomes and integrity header.
+  - §7: dual signal representation (5-tier rating + continuous conviction
+    ∈ [-1,1] + abstain ≠ neutral) and PromptCache-keyed decision log
+    (cache + audit + debug, $0 reruns).
+- Vendored reference skill corpora (both MIT, shallow sparse clones, outside
+  the repo): `~/vendor/Vibe-Trading/agent/src/skills` (90 skills) and
+  `~/vendor/ccxt/.claude/skills` (24 skills + `skills-lock.json`).
+- Registered both skill dirs in `~/.pi/agent/settings.json` (`skills` array)
+  so pi sessions can consult them as reference prose.
+
+### Key decisions
+- Loud, typed data failures over silent exclusion — a silent rate-limit batch
+  must never read as "no opportunities today."
+- Dual signal representation adopted: 5-tier rating for UI, continuous
+  conviction for Phase 4 backtesting, abstain excluded from blend numerator
+  AND denominator.
+- MIT corpora are reference-only knowledge sources: read the prose,
+  reimplement in TS. freqtrade/OpenBB/Fincept remain ideas-only (licenses).
+
+### What's next (proposed)
+1. Phase 0: scaffold monorepo; data ingestion + quality report (gate: Yahoo
+   HK/US/LSE data quality).
+2. Write our own first skills in `.agents/skills/` (data-routing,
+   data-quality-gate, universe-lanes, hk-tax-treatment — per audit §12
+   Phase 1) once the repo skeleton exists.
+3. Consider playbooks-as-markdown for the daily pipeline and the 4-section
+   report contract (core_conclusion / data_perspective / intelligence /
+   battle_plan) when building Phase 2.
+
+---
+
 ## 2026-08-30 — Platform architecture decided (stock picker v1)
 
 ### What was done
@@ -39,6 +83,102 @@ Each entry: what was done, key decisions, and what's next.
 1. Phase 0: scaffold monorepo; data ingestion + quality report. Gate: verify
    Yahoo data quality for HK/US/LSE tickers before building screening on it.
 2. Phase 1: quant-core indicators + screening engine + daily CLI shortlist.
+
+---
+
+## 2026-08-30 — Research: GitHub skills audit (9 top trading repos)
+
+### What was done
+- Created `docs/research-github-skills-reuse.md` — inspected the **actual
+  source trees** (GitHub API + raw file reads, not README summaries) of
+  TradingAgents 102k★, OpenBB 72k★, daily_stock_analysis 64k★,
+  ai-hedge-fund 63k★, freqtrade 54k★, Qlib 48k★, ccxt 44k★,
+  Vibe-Trading 32k★, FinceptTerminal 31k★.
+- **Only 4 of 9 ship real SKILL.md files**: Vibe-Trading (**90 skills**),
+  ccxt (**24 skills**), daily_stock_analysis (1), FinceptTerminal (runtime
+  *learned* skills). The two highest-starred agentic repos (TradingAgents,
+  ai-hedge-fund) ship zero skills — but the strongest architecture patterns.
+- **Major discovery:** ai-hedge-fund was silently rewritten into a clean 93-file
+  quant core. Extracted: `AlphaModel` ABC unifying quant + LLM personas into
+  one conviction-valued `Signal`; the three-way failure contract (data errors
+  RAISE, LLM errors ABSTAIN, empty means genuinely-absent); `abstain ≠ neutral`
+  in blending (excluded from numerator AND denominator); triple-purpose
+  `PromptCache`; "conviction requests, risk disposes" with the
+  clamp-to-cash-never-redistribute rule; `FundSpec` YAML mandate hierarchy;
+  CPCV + PBO overfitting validation.
+- **Major discovery:** Vibe-Trading ships 90 MIT skills incl. HK-specific
+  `hk-connect-flow`, `etf-analysis`, `dividend-analysis`, plus 462-alphas Alpha
+  Zoo, 30 YAML swarm-team presets, the `data-routing` router skill
+  (test-enforced against the source registry), markdown research playbooks with
+  cron frontmatter, a strategy decay state machine, fail-closed ordered mandate
+  checks, and a hash-chained governance ledger.
+- Documented ccxt's skills *distribution* engineering: provenance split
+  (`.claude/skills/` own 9 / `.agents/skills/` vendored 15 / 15 symlinks
+  bridging), `skills-lock.json` content hashes, POSIX-sh installer targeting
+  4 harness dirs, and 7 parallel agent-discovery surfaces.
+- Catalogued 23 ranked reusable patterns with source, effort and rationale;
+  mapped each to a specific one of our modules; listed 8 explicit anti-patterns
+  NOT to copy; flagged license risk (freqtrade GPL-3.0, OpenBB + FinceptTerminal
+  NOASSERTION — ideas only, no vendoring).
+- Cross-checked against pi's own skills doc: pi implements the Agent Skills
+  standard and loads `~/.agents/skills/` and project `.agents/skills/` natively,
+  so ccxt's vendored set and Vibe-Trading's 90 skills are usable today with
+  zero conversion.
+- **Reconciled the whole audit against `docs/architecture-v1.md`** (written
+  after the landscape research, before this audit) in a new §15:
+  - **Withdrew** the "run vibe-trading-mcp as a backend" recommendation —
+    v1 locks *pure TypeScript, no Python service*. Phase 0 is now read-only
+    reference mining (keeps the guarantee intact), with the out-of-band option
+    documented consciously since Python would live in the agent harness, not the
+    pipeline.
+  - **Flagged a real conflict:** v1 §4 says a ticker failing data-quality checks
+    is *"silently excluded from screening"*, which contradicts this audit's
+    single most-repeated finding (ai-hedge-fund: silently-empty-on-failure
+    "poisons backtests, because missing data is indistinguishable from 'no
+    signal'"). Proposed keeping the exclusion but making it loud and typed via a
+    three-way `DataOutcome` (OK / GENUINELY_ABSENT / FETCH_FAILED), a
+    data-integrity header in the daily report, and a **degraded** run status.
+    With ~800 tickers and Yahoo-only fallback, a silent 429 batch could gut the
+    HK lane while the report reads normal.
+  - **Re-tiered scope:** v1 is a stock picker, so mandate enforcement, risk
+    clamps, decay state machine, governance ledger and CPCV/PBO move to
+    Phase 4+ in a dedicated deferral table.
+  - **Corrected stale assumptions** in the NestJS doc: universe is ~800 tickers
+    (not 50–200) and there are two daily runs (16:45 + 06:00 HKT). Conclusion
+    unchanged — still sub-second compute and ~99.9% idle.
+  - **Confirmed v1's design on 7 independent points** (agents-propose/core-
+    disposes, structured outputs, decision log, separate debate-free Irish
+    UCITS lane, provider abstraction, pattern-not-code reuse) and found one
+    free upgrade: keying the decision log by prompt hash also yields $0 reruns.
+  - **Surfaced one representation decision:** v1's 5-tier rating vs
+    ai-hedge-fund's continuous conviction ∈ [-1,+1]. Recommend storing both —
+    rating for the UI, conviction so Phase 4 backtesting isn't degraded by
+    bucketing.
+
+### Key decisions
+- **Adopt the agent-skills format for our own knowledge packaging** — start with
+  7 skills (not 90): `data-routing`, `mandate`, `hk-tax-treatment`,
+  `backtest-diagnose`, `signal-authoring`, `data-quality-gate`, `universe-lanes`.
+  The last two are ours alone — no surveyed repo has them.
+- **Adopt ai-hedge-fund's contracts wholesale** — the failure taxonomy and
+  abstain semantics are cheap now and un-retrofittable later.
+- **Mine skill content, don't depend on Python runtimes** — Vibe-Trading/ccxt
+  are MIT reference material under v1's pure-TypeScript constraint.
+- **Strategies become YAML specs, not code** — so an agent can propose one and
+  our validator can accept or reject it (Phase 4; v1 output is a ranking).
+- **Documented the license boundary explicitly** so no GPL code enters the tree.
+
+### What's next (proposed)
+1. **Resolve the §15.2 silent-exclusion conflict** — confirm the three-way
+   `DataOutcome` amendment to architecture-v1 §4.
+2. Decide the Phase 0 gate: pure-TS only, or allow out-of-band Vibe-Trading MCP
+   for ad-hoc HK research if `yahoo-finance2` proves too thin for HK small-caps.
+3. Scaffold `.agents/skills/` with the 7 skills above; add the router-vs-registry
+   consistency test.
+4. Encode `Signal{conviction, reasoning, abstained}` + `DataOutcome` as the
+   first `packages/quant-core` shared types (alongside v1's 5-tier rating).
+5. Write `playbooks/hk-close.md` and `playbooks/us-close.md` in the playbook
+   frontmatter format before writing any scheduler code.
 
 ---
 

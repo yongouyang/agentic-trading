@@ -5,6 +5,14 @@
 (`docs/research-agentic-trading-landscape.md`), TradingAgents framework review
 (v0.3.x), and a decision session with the user (all forks below are confirmed).
 
+> 🔎 **Follow-up audit:** [`research-github-skills-reuse.md`](./research-github-skills-reuse.md)
+> (§15) reconciles this design against a source-level audit of 9 top trading
+> repos. It confirms most v1 decisions. Its one conflict — §4's "silently
+> excluded from screening" vs the three-way `DataOutcome` taxonomy — was
+> **resolved 2026-08-31**: the loud taxonomy was adopted (see §4), along with
+> dual signal representation (5-tier rating + continuous conviction + explicit
+> abstain, see §7).
+
 ---
 
 ## 1. Objective
@@ -63,8 +71,28 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
   downstream code.
 - Every daily ingest runs the Day-17 7-category data-quality checklist
   (missing bars, stale dates, zero volume, price spikes, duplicates, bad
-  adjustments, halted days). **A ticker failing checks is silently excluded
-  from screening** — never traded on bad data.
+  adjustments, halted days). Failures are **typed and loud, never silent**
+  (amended 2026-08-31 per `research-github-skills-reuse.md` §15.2):
+
+  ```typescript
+  enum DataOutcome {
+    OK,               // clean → eligible for screening
+    GENUINELY_ABSENT, // delisted, halted all-day, no such symbol →
+                      //   exclude, log at info, no alarm
+    FETCH_FAILED,     // 429, timeout, 5xx, schema break → exclude from
+                      //   TODAY's screen, alert loudly, retry next run
+  }
+  ```
+
+  `FETCH_FAILED` must never look like "this ticker has no opportunity." A run
+  with non-trivial fetch failures is marked **degraded**, and the daily report
+  leads with a data-integrity header (e.g. *"782/800 screened; 11 Yahoo 429s
+  retried; 7 halted; 3 excluded for bad adjustments"*).
+- Source selection is declarative: a **data-routing table** (source → markets →
+  auth env key → constraints) with a test asserting it matches the loader
+  registry — no per-module hard-coded provider choices. Fallbacks if the
+  Phase 0 gate finds Yahoo HK/LSE insufficient: **tencent** (HK/US, reported
+  "never-banned"), **longbridge** (HK/US OHLCV, key-based).
 - Known weakness: HK small-cap Yahoo data quality (adjusted close, halts) and
   HK-specific news depth. Phase 0 gate validates this before we build on it.
 
@@ -73,7 +101,8 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
 ```
 ~16:45 HKT (HK close) / ~06:00 HKT (US close)
   1. Update OHLCV for ~800 tickers
-  2. Data-quality gate (Day 17 checklist)
+  2. Data-quality gate (Day 17 checklist) → typed DataOutcome per ticker;
+     non-trivial FETCH_FAILED count marks the run degraded (see §4)
   3. Technical screen (deterministic, quant-core):
        trend structure (MA alignment, Day 3/18), momentum, volume
        confirmation, volatility/Sharpe bounds (Day 12)
@@ -81,9 +110,11 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
   4. Lean LLM deep-dive per candidate (~6–8 calls each):
        News/Sentiment Analyst + Fundamentals Analyst (parallel)
        → Bull vs Bear debate (2 rounds)
-       → structured verdict: 5-tier rating, thesis, key risks,
-         invalidation conditions
-  5. Persist report → chat UI / daily report view
+       → structured verdict: 5-tier rating + continuous conviction
+         ∈ [-1,1] (abstain tracked separately from neutral), thesis,
+         key risks, invalidation conditions
+  5. Persist report → chat UI / daily report view, led by a
+     data-integrity header (screened/excluded/degraded counts)
 ```
 
 Cost estimate: 20–30 deep-dives/day × 6–8 calls ≈ pennies/day at Moonshot
@@ -108,9 +139,17 @@ Reimplements the TradingAgents org-chart *pattern* in TS, lean variant:
 
 - Structured outputs (JSON schema) for every agent — verdicts are
   machine-readable and persistable.
-- Persistent decision log: every debate transcript and verdict stored, so the
-  chat UI can answer "why did you rank X on Aug 28?" and we can score the
-  agents' historical accuracy later.
+- **Dual signal representation** (adopted 2026-08-31, from ai-hedge-fund's
+  `AlphaModel` contract): every verdict carries both a **5-tier rating**
+  (human-facing, UI/report) and a **continuous conviction ∈ [-1, +1]** (kept
+  so Phase 4 can backtest signals without losing resolution to bucketing).
+  **Abstain ≠ neutral**: an abstained signal is excluded from any blend's
+  numerator *and* denominator; a genuine 0.0 conviction is a real neutral vote.
+- Persistent decision log keyed by `hash(agent|model|system|user)`
+  (PromptCache pattern): one artifact serving as **cache** (unchanged snapshot
+  = $0 rerun), **audit record** (exact prompt + response behind every verdict),
+  and **debug trail**. The chat UI can answer "why did you rank X on Aug 28?"
+  and we can score the agents' historical accuracy later.
 - Provider-agnostic client (OpenAI-compatible): `LLM_ANALYST_MODEL`,
   `LLM_DEBATE_MODEL`, `LLM_VERDICT_MODEL` env vars.
 
