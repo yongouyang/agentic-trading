@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parameter Optimization &amp; Overfitting | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-overfit { --accent: #dc2626; } .c-plateau { --accent: #15803d; } .c-peak { --accent: #b91c1c; }
+  .c-test { --accent: #7e22ce; } .c-param { --accent: #1d4ed8; } .c-warn { --accent: #c2410c; }
+
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel.warn { border-top: 4px solid var(--orange); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel.warn h4 { color: var(--orange); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; } pre .fn { color: #a5f3fc; }
+
+  .formula {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin: 16px 0; font-size: 16px;
+  }
+  .formula .term { background: var(--blue-bg); color: var(--navy); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .formula .term.green { background: var(--green-bg); color: var(--green); }
+  .formula .term.orange { background: var(--orange-bg); color: var(--orange); }
+  .formula .term.red { background: var(--red-bg); color: var(--red); }
+  .formula .op { font-size: 20px; font-weight: 700; color: var(--muted); }
+
+  /* parameter landscape SVG area */
+  .param-chart { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 24px; margin: 18px 0; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Risk &amp; Validation</div>
+  <h1>Parameter Optimization &amp; Overfitting</h1>
+  <p>Why the most profitable parameters in backtests might be the most dangerous in live trading. (为什么回测里最赚钱的参数，实盘反而可能最危险？) Historical data has already happened — the future is the real test.</p>
+  <div class="src">Source: knowledge-base/day_11 (IMG_6550–IMG_6553), "30天学习量化投资 · Day 11: 参数优化与过拟合" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ Overview ============ -->
+<section>
+  <h2><span class="num">★</span>Overview — The Optimization Trap</h2>
+  <p class="subtitle">Parameter optimization is not about finding the historically most profitable number — it's about finding rules that work across a broad range of conditions and continue to work in the future.</p>
+
+  <div class="modules">
+    <div class="mod c-overfit"><div class="tag">trap</div><h4>Overfitting (过拟合)</h4><p>Identifying the essence — avoid being fooled by historical data.</p></div>
+    <div class="mod c-plateau"><div class="tag">good</div><h4>Parameter Plateau (参数平台)</h4><p>Stable regions where neighboring parameters all work well.</p></div>
+    <div class="mod c-test"><div class="tag">validation</div><h4>Out-of-Sample Testing (样本外测试)</h4><p>Verifying the strategy's true ability on unseen data.</p></div>
+    <div class="mod c-param"><div class="tag">selection</div><h4>Reliable Parameters</h4><p>Choosing parameters that are robust, not just optimal.</p></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Core takeaway:</b> Parameter optimization is not about finding the single highest-return number in history — it's about finding a region where the strategy is effective and will continue to work in the future. <b>Historically optimal parameters ≠ future optimal parameters!</b> (历史最优的参数，不一定是未来最优的参数！)</div>
+</section>
+
+<!-- ============ 1. What is Overfitting? ============ -->
+<section>
+  <h2><span class="num">1</span>What is Overfitting?</h2>
+  <p class="subtitle">Backtest returns are sky-high, but live trading loses money — why? (回测里收益很高，为什么实盘却亏了？)</p>
+
+  <div class="spec c-overfit">
+    <h3><span class="tag">definition</span>Overfitting: over-tuning parameters to fit historical noise</h3>
+    <p>Overfitting (过拟合) means adjusting strategy parameters so aggressively that the strategy performs brilliantly on historical data, but cannot adapt to future market changes. (过度调整策略的参数，使它在历史数据上表现极好，但无法适应未来的市场变化。)</p>
+
+    <div class="compare">
+      <div class="panel good">
+        <h4>Good strategy (好的策略)</h4>
+        <ul>
+          <li><b>Finds the real pattern</b> behind historical data (找到历史数据背后的规律)</li>
+          <li>Simple, stable, generalizable (简单、稳定、能泛化)</li>
+          <li><b>Still effective in the future</b> (在未来也可能有效)</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>Overfitted strategy (过拟合的策略)</h4>
+        <ul>
+          <li><b>Treats noise as pattern</b> (把历史数据的噪声也当成规律)</li>
+          <li>Overly complex, tightly fitted to noise (过于复杂、紧贴噪声)</li>
+          <li><b>Likely to fail in the future</b> (未来很可能失效)</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Programmer analogy (程序员类比)</h3>
+    <div class="compare">
+      <div class="panel good">
+        <h4>Normal approach</h4>
+<pre><span class="cm">// Find a pattern, solve a class of problems</span>
+<span class="kw">def</span> <span class="fn">solve</span>(problem):
+    <span class="kw">return</span> general_algorithm(problem)</pre>
+        <p style="font-size:13px; color:var(--green)">Works on new data too — truly learned the pattern.</p>
+      </div>
+      <div class="panel bad">
+        <h4>Overfitted approach</h4>
+<pre><span class="cm">// Memorize historical answers</span>
+<span class="kw">def</span> <span class="fn">solve</span>(problem):
+    <span class="kw">if</span> problem <span class="kw">in</span> history_data:
+        <span class="kw">return</span> history_answer[problem]
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="ty">None</span></pre>
+        <p style="font-size:13px; color:var(--red)">Crashes on new data — just memorized the answers.</p>
+      </div>
+    </div>
+
+    <h3>Typical signs of overfitting (过拟合的典型表现)</h3>
+    <ul class="duty">
+      <li>Extremely high backtest returns, but poor live trading results (历史回测收益极高，实盘表现差)</li>
+      <li>Out-of-sample test performance drops significantly (样本外测试表现明显变差)</li>
+      <li>Parameters are very sensitive — small changes cause large performance drops (参数非常敏感，稍微变动就大幅下降)</li>
+      <li>Many parameters needed to "tune" good results (需要很多参数才能"调出"好结果)</li>
+      <li>Model/strategy structure is abnormally complex (模型/策略结构异常复杂)</li>
+    </ul>
+
+    <div class="keypoint">💡 Historical performance being good doesn't mean future performance will be good. Don't be fooled by the "illusion" of historical data. (历史表现好，不代表未来一定好。不要被历史数据的"假象"迷惑。)</div>
+  </div>
+</section>
+
+<!-- ============ 2. Parameter Plateau vs Isolated Peak ============ -->
+<section>
+  <h2><span class="num">2</span>Parameter Plateau vs Isolated Peak</h2>
+  <p class="subtitle">Rather than chasing a single extraordinary high point, prefer a broad region where everything works well. (宁可选一片都不错的区域，也不要迷信一个异常高点！)</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>Stable: Parameter Plateau (参数平台) ✓</h4>
+      <p>Neighboring parameters produce similar returns, forming a "plateau" — the strategy is stable.</p>
+
+      <!-- SVG: plateau chart -->
+      <svg viewBox="0 0 500 180" style="width:100%; max-width:500px; display:block; margin:12px auto">
+        <line x1="40" y1="10" x2="40" y2="150" stroke="#e5e7eb" stroke-width="1"/>
+        <line x1="40" y1="150" x2="480" y2="150" stroke="#e5e7eb" stroke-width="1"/>
+        <text x="30" y="48" text-anchor="end" font-size="10" fill="#6b7280">20%</text>
+        <text x="30" y="150" text-anchor="end" font-size="10" fill="#6b7280">0%</text>
+        <!-- plateau bars -->
+        <rect x="70" y="60" width="60" height="90" rx="4" fill="#86efac" stroke="#15803d" stroke-width="1.5"/>
+        <text x="100" y="54" text-anchor="middle" font-size="12" fill="#15803d" font-weight="700">18%</text>
+        <rect x="160" y="55" width="60" height="95" rx="4" fill="#86efac" stroke="#15803d" stroke-width="1.5"/>
+        <text x="190" y="49" text-anchor="middle" font-size="12" fill="#15803d" font-weight="700">19%</text>
+        <rect x="250" y="58" width="60" height="92" rx="4" fill="#86efac" stroke="#15803d" stroke-width="1.5"/>
+        <text x="280" y="52" text-anchor="middle" font-size="12" fill="#15803d" font-weight="700">20%</text>
+        <rect x="340" y="60" width="60" height="90" rx="4" fill="#86efac" stroke="#15803d" stroke-width="1.5"/>
+        <text x="370" y="54" text-anchor="middle" font-size="12" fill="#15803d" font-weight="700">18%</text>
+        <!-- plateau bracket -->
+        <line x1="70" y1="40" x2="400" y2="40" stroke="#15803d" stroke-width="2"/>
+        <text x="235" y="34" text-anchor="middle" font-size="11" fill="#15803d" font-weight="700">Plateau region (平台区间)</text>
+        <!-- x labels -->
+        <text x="100" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA5</text>
+        <text x="190" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA6</text>
+        <text x="280" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA8</text>
+        <text x="370" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA9</text>
+      </svg>
+      <p style="font-size:13px">An entire region works — changing parameters slightly doesn't matter much. More likely to represent a real pattern, not a coincidence.</p>
+    </div>
+    <div class="panel bad">
+      <h4>Dangerous: Isolated Peak (孤立峰值) ✗</h4>
+      <p>Only one point is exceptionally high; surrounding parameters are poor — likely historical coincidence.</p>
+
+      <!-- SVG: spike chart -->
+      <svg viewBox="0 0 500 180" style="width:100%; max-width:500px; display:block; margin:12px auto">
+        <line x1="40" y1="10" x2="40" y2="150" stroke="#e5e7eb" stroke-width="1"/>
+        <line x1="40" y1="150" x2="480" y2="150" stroke="#e5e7eb" stroke-width="1"/>
+        <text x="30" y="22" text-anchor="end" font-size="10" fill="#6b7280">35%</text>
+        <text x="30" y="150" text-anchor="end" font-size="10" fill="#6b7280">0%</text>
+        <!-- spike bars -->
+        <rect x="70" y="110" width="60" height="40" rx="4" fill="#fecaca" stroke="#b91c1c" stroke-width="1.5"/>
+        <text x="100" y="104" text-anchor="middle" font-size="12" fill="#b91c1c" font-weight="700">8%</text>
+        <rect x="160" y="105" width="60" height="45" rx="4" fill="#fecaca" stroke="#b91c1c" stroke-width="1.5"/>
+        <text x="190" y="99" text-anchor="middle" font-size="12" fill="#b91c1c" font-weight="700">9%</text>
+        <!-- the spike -->
+        <rect x="250" y="20" width="60" height="130" rx="4" fill="#fca5a5" stroke="#dc2626" stroke-width="2"/>
+        <text x="280" y="14" text-anchor="middle" font-size="13" fill="#dc2626" font-weight="800">35%</text>
+        <rect x="340" y="112" width="60" height="38" rx="4" fill="#fecaca" stroke="#b91c1c" stroke-width="1.5"/>
+        <text x="370" y="106" text-anchor="middle" font-size="12" fill="#b91c1c" font-weight="700">7%</text>
+        <!-- spike annotation -->
+        <text x="280" y="168" text-anchor="middle" font-size="11" fill="#dc2626" font-weight="700">⚠ Isolated peak!</text>
+        <!-- x labels -->
+        <text x="100" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA5</text>
+        <text x="190" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA6</text>
+        <text x="280" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA7</text>
+        <text x="370" y="168" text-anchor="middle" font-size="10" fill="#6b7280">MA8</text>
+      </svg>
+      <p style="font-size:13px">One point is abnormally high — likely captured noise. Change parameters slightly and performance drops dramatically in the future.</p>
+    </div>
+  </div>
+
+  <div class="spec c-plateau">
+    <h3><span class="tag">example</span>Case study: MA period optimization (移动平均周期优化回测)</h3>
+    <table>
+      <tr><th>Parameter (MA period)</th><th>Backtest return</th><th>Verdict</th></tr>
+      <tr><td>MA5</td><td class="num">18%</td><td rowspan="4" style="background:var(--green-bg); color:var(--green); font-weight:700; vertical-align:middle; text-align:center">Plateau region ✓<br>Stable, reliable,<br>represents real ability</td></tr>
+      <tr><td>MA6</td><td class="num">19%</td></tr>
+      <tr><td>MA8</td><td class="num">18%</td></tr>
+      <tr><td>MA9</td><td class="num">17%</td></tr>
+      <tr style="background:var(--red-bg)"><td><b>MA7</b></td><td class="num" style="color:var(--red)"><b>35%</b></td><td style="color:var(--red); font-weight:700">Isolated peak ✗<br>Looks beautiful, but future is dangerous!</td></tr>
+    </table>
+
+    <div class="compare">
+      <div class="panel good">
+        <h4>Choose the plateau (MA5–MA6–MA8–MA9)</h4>
+        <ul>
+          <li>Returns are not the highest, but <b>stable and replicable</b></li>
+          <li>More likely represents the strategy's true ability</li>
+          <li><b>More durable in live trading, risk more controllable</b></li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>Chase the spike (MA7)</h4>
+        <ul>
+          <li>Highest historical return, but no surrounding support</li>
+          <li>Very likely coincidence or noise</li>
+          <li>Change parameters → returns may collapse or turn negative</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 <b>Don't just look at single-point returns.</b> Observe whether surrounding parameters support the high point. Quantitative investing is not about luck — it's about replicable probabilistic advantage! <b>Prefer "parameter plateaus" over "isolated peaks."</b> (优先选择"参数平台"，而不是"孤立峰值"。最赚钱的参数，往往不是最靠谱的参数！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. Why Highest Return Params Are Dangerous ============ -->
+<section>
+  <h2><span class="num">3</span>Why the Highest-Return Parameter May Be Dangerous</h2>
+  <p class="subtitle">MA7 looks the most profitable on paper — so why shouldn't we pick it?</p>
+
+  <div class="spec c-warn">
+    <h3><span class="tag">risk</span>MA7: the "lucky" parameter (MA7 回测收益最高，为什么不选它？)</h3>
+    <div class="cols">
+      <div>
+        <table>
+          <tr><th>Parameter</th><th>Return</th></tr>
+          <tr><td>MA5</td><td class="num">18%</td></tr>
+          <tr><td>MA6</td><td class="num">19%</td></tr>
+          <tr style="background:var(--red-bg)"><td><b>MA7</b></td><td class="num" style="color:var(--red)"><b>35%</b></td></tr>
+          <tr><td>MA8</td><td class="num">18%</td></tr>
+          <tr><td>MA9</td><td class="num">17%</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3 style="margin-top:0; color:var(--red)">Why MA7 is unreliable:</h3>
+        <ul class="duty">
+          <li><b>Surrounding parameters vary wildly</b> — they don't support MA7 as a real pattern (周围参数表现差异很大，不支持它是真正的规律)</li>
+          <li>Likely captured <b>historical noise or coincidental events</b> (很可能捕捉到历史噪音或偶然事件)</li>
+          <li>Change the time period or market, and returns may <b>plummet or turn negative</b> (换个时间段或市场，收益可能大幅下降甚至转亏)</li>
+          <li>It's not "real skill" — it's a <b>"historical coincidence"</b> (它不是"真本事"，而是"历史巧合")</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. Out-of-Sample Testing ============ -->
+<section>
+  <h2><span class="num">4</span>Out-of-Sample Testing — Don't Let the Strategy Peek at the Answers</h2>
+  <p class="subtitle">Split data into training (for tuning) and validation (for testing). Never cross the boundary. (别让策略偷看答案。)</p>
+
+  <div class="spec c-test">
+    <h3><span class="tag">validation</span>The two-period approach</h3>
+
+    <div class="flow">
+      <div class="step" style="--stepbg:var(--blue-bg); --accent:var(--blue)"><div class="icon">📚</div><div class="name">Training period (训练集)</div><div class="cn">2015–2022 · find patterns, tune parameters</div></div>
+      <div class="arrow" style="color:var(--red); font-size:24px">⫿</div>
+      <div class="step" style="--stepbg:var(--purple-bg); --accent:var(--purple)"><div class="icon">📝</div><div class="name">Out-of-sample (样本外)</div><div class="cn">2023–2025 · validate, no more tuning</div></div>
+    </div>
+
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Training set = teacher's practice problems (训练集 = 老师出的题)</h4>
+        <ul>
+          <li>Use historical data to find patterns and tune parameters (用历史数据找规律、调参数)</li>
+          <li>Try different parameter combinations iteratively (不断尝试不同参数组合)</li>
+          <li>Goal: make the strategy profitable on history (目标：在历史上尽量赚钱)</li>
+        </ul>
+      </div>
+      <div class="panel" style="border-top:4px solid var(--purple); background:#faf5ff">
+        <h4 style="color:var(--purple)">Out-of-sample = the real exam (样本外 = 正式考试)</h4>
+        <ul>
+          <li>Use future data to validate the strategy (用未来数据验证策略)</li>
+          <li><b>No more parameter tuning</b> — only validate (不再调参数，只验证效果)</li>
+          <li>Simulates real trading environment (模拟真实交易环境)</li>
+          <li>Goal: test if the strategy can profit in the future (目标：检验策略是否能未来赚钱)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="quote">
+      <strong>Programmer analogy:</strong> If you use the exam questions to practice, you're just memorizing answers — not actually learning. Same with strategies: if you tune on all available data, you have no way to test whether the strategy truly works. (如果拿考试题来练习，那只是把答案背熟，不是真正学会了！)
+    </div>
+
+    <h3>Core principles (核心原则)</h3>
+    <ul class="duty">
+      <li>Don't seek the single highest-return parameter — seek parameters that are <b>stable across a region</b> (不寻找收益最高的单一参数，而寻找在一片区域内都稳定有效的参数).</li>
+      <li><b>Adjacent returns close together = stable</b> (相邻收益接近 = 稳定): strategy is insensitive to parameter changes, more likely reflecting real patterns.</li>
+      <li><b>Single-point extremely high return = don't pick</b> (单点收益特别高 = 不选): isolated spike = highly suspicious, probably noise.</li>
+      <li>Don't push returns from 20% to 40% by endlessly tuning — <b>over-tuning = overfitting risk explodes</b> (过度调参 = 过拟合风险大增).</li>
+    </ul>
+
+    <div class="keypoint">
+      💡 <b>More precise statement:</b> Overfitting doesn't guarantee losses — but its historical performance has low credibility, and future returns may drop significantly or even turn negative. (过拟合不一定必然亏损，但其历史表现的可信度很低，未来收益可能显著下降甚至转亏。)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Practice & Summary ============ -->
+<section>
+  <h2><span class="num">5</span>Practice &amp; Summary</h2>
+  <p class="subtitle">Your checklist for selecting reliable parameters.</p>
+
+  <div class="spec c-param">
+    <h3>Decision checklist (你的练习与总结)</h3>
+    <table>
+      <tr><th>Check</th><th>Action</th><th>Why</th></tr>
+      <tr><td>✓ Adjacent returns similar</td><td>Stable → select this region (说明策略对参数不敏感)</td><td>More likely reflects a real pattern</td></tr>
+      <tr><td>✗ Single-point extremely high</td><td>Don't select — highly suspicious (孤立高点 = 高度可疑)</td><td>Probably historical noise or coincidence</td></tr>
+      <tr><td>✗ Pushing 20% → 40% by tuning</td><td>Stop — overfitting risk (过度调参 = 过拟合风险)</td><td>Strategy becomes fragile</td></tr>
+    </table>
+
+    <h3>Summary of Day 11</h3>
+    <table>
+      <tr><th>Concept</th><th>Key insight</th></tr>
+      <tr><td><b>Overfitting</b> (过拟合)</td><td>Strategy memorizes history instead of learning patterns. High backtest returns but poor live results.</td></tr>
+      <tr><td><b>Parameter Plateau</b> (参数平台)</td><td>Neighboring parameters all work well → stable, reliable, more likely to persist in the future.</td></tr>
+      <tr><td><b>Isolated Peak</b> (孤立峰值)</td><td>One parameter is exceptionally high while neighbors are poor → likely noise, dangerous to use.</td></tr>
+      <tr><td><b>Out-of-Sample Testing</b> (样本外测试)</td><td>Split data: train on past, validate on future. Never let the strategy peek at the test answers.</td></tr>
+    </table>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Parameter optimization is not about finding the historically most profitable number — it's about finding rules that remain stable and effective in the future!</b> (参数优化不是为了寻找历史上最赚钱的数字，而是为了找到在未来依然能工作的、稳定的规则！)<br><br>Quantitative investing is not about luck — it's about replicable probabilistic advantage. (量化投资拼的不是运气，而是可复制的概率优势！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_11_parameter-optimization-overfitting.html · Distilled from knowledge-base/day_11 (30天学习量化投资 · Day 11: 参数优化与过拟合) · 2025-08-30
+</footer>
+
+</div>
+</body>
+</html>

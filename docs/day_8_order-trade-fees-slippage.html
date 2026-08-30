@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order, Trade, Fees &amp; Slippage — The Execution Chain | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-signal { --accent: #ea580c; } .c-order { --accent: #1d4ed8; } .c-trade { --accent: #15803d; }
+  .c-port { --accent: #7e22ce; } .c-risk { --accent: #dc2626; } .c-broker { --accent: #0369a1; }
+  .c-eq { --accent: #3730a3; } .c-cost { --accent: #b91c1c; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+    overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; }
+
+  /* formula strip */
+  .formula {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin: 16px 0; font-size: 16px;
+  }
+  .formula .term { background: var(--blue-bg); color: var(--navy); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .formula .term.green { background: var(--green-bg); color: var(--green); }
+  .formula .term.orange { background: var(--orange-bg); color: var(--orange); }
+  .formula .term.red { background: var(--red-bg); color: var(--red); }
+  .formula .op { font-size: 20px; font-weight: 700; color: var(--muted); }
+
+  .pill { display: inline-block; border-radius: 6px; padding: 2px 10px; font-size: 12.5px; font-weight: 700; }
+  .pill.buy { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+  .pill.sell { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+  .pill.hold { background: #f3f4f6; color: #4b5563; border: 1px solid #9ca3af; }
+
+  /* cost bar visual */
+  .cost-bar {
+    display: flex; align-items: center; background: #fff; border: 1.5px solid var(--line);
+    border-radius: var(--radius); padding: 16px 20px; margin: 16px 0; gap: 4px; font-size: 14px;
+  }
+  .cost-bar .seg { padding: 8px 12px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 13px; text-align: center; }
+  .cost-bar .seg.fee { background: var(--orange); }
+  .cost-bar .seg.slip { background: var(--red); }
+  .cost-bar .seg.delay { background: #d97706; }
+  .cost-bar .seg.partial { background: #7c3aed; }
+  .cost-bar .seg.impact { background: #0369a1; }
+  .cost-bar .seg.profit { background: var(--green); flex: 1; }
+  .cost-bar .minus { color: var(--muted); font-weight: 700; font-size: 18px; }
+
+  ol.roadmap { padding-left: 22px; font-size: 14.5px; }
+  ol.roadmap li { margin-bottom: 10px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Execution Foundations</div>
+  <h1>Order, Trade, Fees &amp; Slippage — The Execution Chain</h1>
+  <p>From "the strategy wants to buy" to "the account actually got filled" — there are many steps in between. Understanding these costs and constraints is the key to getting closer to real trading. (从"策略想买"到"账户真的成交"，中间还有很多环节。)</p>
+  <div class="src">Source: knowledge-base/day_8 (IMG_6527–IMG_6542), "30天学习量化投资 · Day 8: 订单、成交、手续费与滑点" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. Order vs Trade ============ -->
+<section>
+  <h2><span class="num">1</span>Order vs Trade — Intent vs Reality</h2>
+  <p class="subtitle">Many beginners think "placing an order = getting filled". In reality, there is a world of uncertainty in between. (很多新手以为下单就等于成交，其实中间隔着很多不确定性。)</p>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Order (订单) — the intent</h4>
+      <ul>
+        <li><b>Intent to trade</b> (下单意图)</li>
+        <li>Tells the system: "I want to buy/sell X" (告诉系统：我想买/卖什么)</li>
+        <li>Contains: price, quantity, direction, type (包含：价格、数量、方向、类型等信息)</li>
+        <li><b>Result is uncertain</b> (结果是不确定的)</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>Trade (成交) — the result</h4>
+      <ul>
+        <li><b>Actual fill result</b> (实际成交结果)</li>
+        <li>The portion the market actually matched (市场真正撮合成功的部分)</li>
+        <li>Contains: fill price, quantity, time, fees, etc. (包含：成交价格、数量、时间、手续费等)</li>
+        <li><b>Result is certain</b> (结果是确定的)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote">
+    <strong>Key insight (关键认知):</strong> An Order only expresses "what I want to do" (想做什么). A Trade is what actually happened (真正发生的交易). Only a Trade changes the account (直接影响账户资金和持仓).
+  </div>
+
+  <h3>Example walkthrough (举个例子)</h3>
+  <div class="flow">
+    <div class="step c-signal" style="--stepbg:var(--orange-bg)"><div class="icon">📡</div><div class="name">Signal</div><div class="cn">see signal, want to buy 1000 shares</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-order" style="--stepbg:var(--blue-bg)"><div class="icon">📝</div><div class="name">Order</div><div class="cn">limit 10.00, buy 1000 shares</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-trade" style="--stepbg:var(--green-bg)"><div class="icon">🤝</div><div class="name">Trade</div><div class="cn">filled 800 shares @ 10.02</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">Portfolio</div><div class="cn">+800 shares, cash decreased</div></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Remember one sentence (一句话记住):</b> Want to buy = Signal → Place order = Order → Get filled = Trade → Affects account = Portfolio. Placing an order is just the beginning; the fill is what actually happens! (下单只是开始，成交才是真实发生的事情！)</div>
+</section>
+
+<!-- ============ 2. Complete Trading Chain ============ -->
+<section>
+  <h2><span class="num">2</span>Signal to Account — The Complete Trading Chain</h2>
+  <p class="subtitle">A single trade, from strategy idea to account impact, passes through multiple stages. (一次交易，从策略产生想法，到最终影响账户，中间要经过多个环节。)</p>
+
+  <div class="flow">
+    <div class="step c-signal" style="--stepbg:var(--orange-bg)"><div class="icon">①</div><div class="name">Signal</div><div class="cn">strategy produces a trade idea based on market &amp; indicators</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-order" style="--stepbg:var(--blue-bg)"><div class="icon">②</div><div class="name">Order</div><div class="cn">convert signal into a concrete order instruction</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-trade" style="--stepbg:var(--green-bg)"><div class="icon">③</div><div class="name">Trade</div><div class="cn">market matching produces the actual fill</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">④</div><div class="name">Portfolio</div><div class="cn">update positions &amp; cash based on fill</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-eq" style="--stepbg:var(--navy-bg)"><div class="icon">⑤</div><div class="name">Equity</div><div class="cn">recompute total equity from latest prices</div></div>
+  </div>
+
+  <div class="spec c-signal">
+    <h3>Stage-by-stage breakdown (逐环节解析)</h3>
+    <table>
+      <tr><th>Stage</th><th>What happens</th><th>Example</th><th>Key property</th></tr>
+      <tr>
+        <td><b>① Signal</b></td>
+        <td>Strategy generates a trade idea from market data and indicators (策略根据行情和指标，产生交易信号)</td>
+        <td>Price breaks above MA → produce "buy" signal</td>
+        <td>Just an "idea" — no funds or positions involved (信号只是"想法"，不涉及资金和持仓)</td>
+      </tr>
+      <tr>
+        <td><b>② Order</b></td>
+        <td>Convert signal into a concrete order instruction (将信号转化为具体的下单指令)</td>
+        <td>Buy 2000 shares, limit 10.00, direction: buy</td>
+        <td>A request to the market, not yet filled (Order 还没有成交，只是向市场发出的请求)</td>
+      </tr>
+      <tr>
+        <td><b>③ Trade</b></td>
+        <td>Market matching produces the actual fill (市场撮合后，得到实际成交的结果)</td>
+        <td>Filled 1500 shares @ 10.05</td>
+        <td>Fill price, quantity, time may all differ from order (成交价格、数量、时间等都可能与订单不同)</td>
+      </tr>
+      <tr>
+        <td><b>④ Portfolio</b></td>
+        <td>Update positions and cash based on fill result (根据成交结果，更新持仓和资金)</td>
+        <td>Position +1500, cash reduced accordingly</td>
+        <td><b>The only source of account state change</b> (账户状态变化的唯一来源)</td>
+      </tr>
+      <tr>
+        <td><b>⑤ Equity</b></td>
+        <td>Recompute total equity from latest positions and prices (根据最新持仓和市场价格，计算总权益)</td>
+        <td>Equity = Cash + all position market value</td>
+        <td>Ultimate measure of whether the account is making or losing money (最终衡量账户赚还是亏的指标)</td>
+      </tr>
+    </table>
+
+    <div class="keypoint">
+      💡 <b>Core insight (核心认知):</b> A signal produces an "idea", an order expresses an "intent", and a fill produces a "result". Only the fill changes the account state, which then affects total equity. Quant trading is essentially about standardizing, controlling, and backtesting this chain. (量化交易的本质，就是把这个链路标准化、可控化、可回测化。)
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span>See opportunity → Place order → Get filled → Update positions → Impact equity — this is the complete trading chain! (看到机会 → 下单 → 成交 → 更新持仓 → 影响权益，这就是完整的交易链路！)</div>
+</section>
+
+<!-- ============ 3. Slippage ============ -->
+<section>
+  <h2><span class="num">3</span>Slippage — The Price You See ≠ The Price You Get</h2>
+  <p class="subtitle">The price you see is not necessarily the price you get. The difference between the actual fill price and the expected price is called slippage. (看到的价格，不一定能以这个价格成交，实际成交价偏离预期价格的部分，就是滑点。)</p>
+
+  <div class="spec c-cost">
+    <h3><span class="tag">cost</span>What is slippage? (什么是滑点？)</h3>
+    <div class="formula">
+      <span class="term red">Slippage (滑点)</span><span class="op">=</span>
+      <span class="term orange">Actual fill price (实际成交价)</span><span class="op">−</span>
+      <span class="term">Expected price (看到的价格)</span>
+    </div>
+
+    <h3>Example: slippage on a buy (买入时的滑点)</h3>
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Expected (预期)</h4>
+        <table>
+          <tr><td>You see the price at</td><td class="num"><b>10.00</b></td></tr>
+          <tr><td>You want to buy at</td><td class="num">10.00</td></tr>
+        </table>
+      </div>
+      <div class="panel bad">
+        <h4>Actual (实际)</h4>
+        <table>
+          <tr><td>Fill price</td><td class="num"><b>10.05</b></td></tr>
+          <tr><td>Slippage</td><td class="num" style="color:var(--red)">+0.05 (5 basis points)</td></tr>
+        </table>
+      </div>
+    </div>
+    <p style="font-size:14px; color:var(--muted)">Slippage directly increases trading costs and reduces final returns. If backtests ignore slippage, returns are typically overestimated. (滑点会直接增加交易成本，降低最终收益。回测时如果忽略滑点，收益通常会被高估。)</p>
+
+    <h3>Common sources of slippage (滑点的常见来源)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="mod c-cost"><h4>Market volatility (市场波动)</h4><p>Prices change rapidly; by the time you order, the price is different.</p></div>
+      <div class="mod c-order"><h4>Low liquidity (流动性不足)</h4><p>Few orders on the book — your order must take worse prices.</p></div>
+      <div class="mod c-risk"><h4>Large order size (订单规模大)</h4><p>Big orders eat through multiple price levels (冲击成本, market impact).</p></div>
+      <div class="mod c-trade"><h4>Network / system latency (网络与系统延迟)</h4><p>Time between signal and order — market has already moved.</p></div>
+      <div class="mod c-broker"><h4>Matching rules (撮合机制)</h4><p>Exchange priority rules also affect fill prices.</p></div>
+    </div>
+
+    <h3>Impact on returns (滑点对收益的影响)</h3>
+    <div class="compare">
+      <div class="panel good">
+        <h4>Ideal (no slippage)</h4>
+        <table>
+          <tr><td>Buy price</td><td class="num">10.00</td></tr>
+          <tr><td>Sell price</td><td class="num">10.50</td></tr>
+          <tr><td><b>Profit</b></td><td class="num" style="color:var(--green)"><b>0.50 (5%)</b></td></tr>
+        </table>
+      </div>
+      <div class="panel bad">
+        <h4>Real (with slippage)</h4>
+        <table>
+          <tr><td>Buy price</td><td class="num">10.05 (+0.05)</td></tr>
+          <tr><td>Sell price</td><td class="num">10.45 (−0.05)</td></tr>
+          <tr><td><b>Profit</b></td><td class="num" style="color:var(--red)"><b>0.40 (4%)</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 Slippage makes you: ① buy at a higher price, ② sell at a lower price, ③ earn less than expected. Slippage is part of trading costs and must be accounted for in both backtests and live trading! (滑点是交易成本的一部分，必须在回测和实盘中认真考虑！)</div>
+  </div>
+</section>
+
+<!-- ============ 4. Commission Fees ============ -->
+<section>
+  <h2><span class="num">4</span>Commission Fees — The Cost of Every Trade</h2>
+  <p class="subtitle">Every fill incurs a fee — this is an unavoidable cost in real trading. (每一笔成交都会产生手续费，这是真实交易中必不可少的成本。)</p>
+
+  <div class="formula">
+    <span class="term orange">Fee (手续费)</span><span class="op">=</span>
+    <span class="term">Trade amount (成交金额)</span><span class="op">×</span>
+    <span class="term red">Commission rate (手续费率)</span>
+  </div>
+
+  <div class="spec c-order">
+    <h3><span class="tag">broker</span>Fee calculation (手续费计算)</h3>
+    <div class="cols">
+      <div>
+        <b style="font-size:13.5px">Common commission rates (常见手续费率):</b>
+        <table>
+          <tr><th>Market</th><th>Rate</th><th>Note</th></tr>
+          <tr><td>A-shares (A股)</td><td>~0.03% (万三)</td><td>Varies by broker; may differ across markets</td></tr>
+          <tr><td>US stocks</td><td>$0 or per-share</td><td>Many zero-commission brokers, but PFOF exists</td></tr>
+          <tr><td>Crypto</td><td>0.05%–0.1%</td><td>Maker/taker rates differ</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Quick example (简单计算)</b>
+          Trade amount: 100,000 yuan<br>
+          Commission rate: 0.03% (万三)<br>
+          Fee = 100,000 × 0.0003 = <strong>30 yuan</strong>
+        </div>
+      </div>
+    </div>
+
+    <h3>Impact on the account (手续费对账户的影响)</h3>
+    <table>
+      <tr><th>Action</th><th>Trade amount</th><th>Fee</th><th>Real cost / return</th><th>Account change</th></tr>
+      <tr><td>Buy or sell</td><td>Your spend</td><td>= amount × rate</td><td>Buy cost increases; sell return decreases</td><td>Account decreases accordingly</td></tr>
+    </table>
+
+    <h3>Don't ignore the small numbers (别忽略小数点后三位)</h3>
+    <div class="io-box">
+      <b>Accumulation example</b>
+      Buy 100,000 yuan of stock → fee = 30 yuan per trade<br><br>
+      If you trade 100 times per year: 30 × 100 = <strong style="color:var(--red)">3,000 yuan</strong> in fees annually.<br>
+      Frequent trading significantly erodes returns — controlling trade frequency is important! (频繁交易会大幅侵蚀收益，控制交易频率很重要！)
+    </div>
+
+    <div class="keypoint">💡 <b>Day 8 key point:</b> Although each fee is tiny, they accumulate significantly over time. Quantitative systems <b>must</b> include fees! (手续费虽然每次很小，但长期累计会显著影响收益，做量化一定要把手续费算进去！) <br><em>Tip: Beyond commissions, there may be stamp duty, transfer fees, and exchange fees to consider in backtests and live trading.</em></div>
+  </div>
+</section>
+
+<!-- ============ 5. Partial Fill ============ -->
+<section>
+  <h2><span class="num">5</span>Partial Fill — Not All Orders Get Fully Filled</h2>
+  <p class="subtitle">Market liquidity is finite. Your order may not be completely filled. (市场的流动性有限，你下的订单可能无法全部成交。)</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>Full fill — ideal (完整成交)</h4>
+      <ul>
+        <li>Order quantity = 2,000 shares</li>
+        <li>Filled quantity = <b>2,000 shares</b> ✓</li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>Partial fill — reality (部分成交)</h4>
+      <ul>
+        <li>Order quantity = 2,000 shares</li>
+        <li>Filled quantity = <b>1,200 shares</b> ✗</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="spec c-trade">
+    <h3><span class="tag">broker</span>Why partial fills happen (为什么会部分成交)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-cost"><h4>Insufficient depth (市场深度不足)</h4><p>Not enough buy/sell orders available at your price level.</p></div>
+      <div class="mod c-risk"><h4>Large order impact (大单冲击)</h4><p>Big orders are split into multiple fills across price levels.</p></div>
+      <div class="mod c-order"><h4>Fast price movement (价格快速变化)</h4><p>Remaining quantity can't be filled as price moves away.</p></div>
+      <div class="mod c-trade"><h4>Aggressive limit price (限价太激进)</h4><p>Only part of the order meets the price condition.</p></div>
+    </div>
+
+    <h3>Core constraint (核心约束)</h3>
+    <div class="quote">
+      <strong>Trade.Quantity ≤ Order.Quantity</strong> — actual fill quantity is always less than or equal to order quantity.
+    </div>
+
+    <h3>Market depth example (市场买盘深度示例)</h3>
+    <table>
+      <tr><th>Price (元)</th><th>Available qty (可卖数量)</th><th>Fill result</th></tr>
+      <tr><td class="num">10.00</td><td class="num">800</td><td>Filled 800 shares</td></tr>
+      <tr><td class="num">10.01</td><td class="num">500</td><td>Filled 400 shares (remaining from 1,200 target)</td></tr>
+      <tr><td class="num">10.02</td><td class="num">300</td><td>Not filled — order exhausted</td></tr>
+    </table>
+
+    <div class="io-box">
+      <b>Partial fill processing example</b>
+      Order: buy 2,000 shares @ limit 10.00<br>
+      Actual fill: 1,200 shares @ average 10.005<br><br>
+      <b>System handling:</b><br>
+      ① Generate Order for 2,000 shares<br>
+      ② Market matches 1,200 shares only<br>
+      ③ Update Position: +1,200 shares<br>
+      ④ Update Portfolio: cash reduced by 1,200 × 10.005 + fees<br>
+      ⑤ Remaining 800 shares: unfilled, awaiting further action or cancellation
+    </div>
+
+    <div class="keypoint">💡 In real markets, partial fills are the norm, not the exception! A good trading system must correctly handle every "unfilled" remainder. (在真实市场中，部分成交是常态，不是例外！好的交易系统，必须正确处理每一次"未成交"。)</div>
+  </div>
+</section>
+
+<!-- ============ 6. Practice ============ -->
+<section>
+  <h2><span class="num">6</span>Practice — Full Cost Calculation</h2>
+  <p class="subtitle">Buy 2,000 shares at 10.05 yuan, commission at 0.03%. Calculate the real account impact.</p>
+
+  <div class="io-box">
+    <b>Problem setup (题目条件)</b>
+    Direction: Buy · Quantity: 2,000 shares · Fill price: 10.05 · Commission rate: 0.03% (万三)<br>
+    Initial capital: 100,000 yuan
+  </div>
+
+  <h3>Step-by-step calculation (计算过程)</h3>
+
+  <div class="spec c-trade">
+    <h3><span class="tag">①</span>Trade amount (成交金额)</h3>
+    <div class="formula">
+      <span class="term">Quantity 2,000</span><span class="op">×</span>
+      <span class="term orange">Price 10.05</span><span class="op">=</span>
+      <span class="term green">20,100 yuan</span>
+    </div>
+  </div>
+
+  <div class="spec c-cost">
+    <h3><span class="tag">②</span>Commission fee (手续费)</h3>
+    <div class="formula">
+      <span class="term">20,100</span><span class="op">×</span>
+      <span class="term red">0.0003</span><span class="op">=</span>
+      <span class="term red">6.03 yuan</span>
+    </div>
+  </div>
+
+  <div class="spec c-eq">
+    <h3><span class="tag">③</span>Account change (账户资金变化)</h3>
+    <div class="formula">
+      <span class="term red">Amount reduction</span><span class="op">=</span>
+      <span class="term">Trade amount 20,100</span><span class="op">+</span>
+      <span class="term red">Fee 6.03</span><span class="op">=</span>
+      <span class="term red">20,106.03 yuan</span>
+    </div>
+
+    <h3>Account state after buy</h3>
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Before (买入前)</h4>
+        <table>
+          <tr><td>Cash</td><td class="num">100,000.00</td></tr>
+          <tr><td>Positions</td><td class="num">none</td></tr>
+          <tr><td><b>Total assets</b></td><td class="num"><b>100,000.00</b></td></tr>
+        </table>
+      </div>
+      <div class="panel neutral">
+        <h4>After (买入后)</h4>
+        <table>
+          <tr><td>Cash</td><td class="num">79,893.97</td></tr>
+          <tr><td>Position</td><td class="num">2,000 shares @ 10.05</td></tr>
+          <tr><td>Position value</td><td class="num">20,100.00</td></tr>
+          <tr><td><b>Total assets</b></td><td class="num"><b>99,993.97</b></td></tr>
+        </table>
+      </div>
+    </div>
+    <p style="font-size:13.5px; color:var(--muted)">Note: Total assets dropped from 100,000 to 99,993.97 — the 6.03 yuan fee is the immediate "cost of entry". On buy, cash decreases by (trade amount + fee); on sell, cash increases by (trade amount − fee). (买入时，账户减少 = 成交金额 + 手续费；卖出时，账户增加 = 成交金额 − 手续费。)</p>
+  </div>
+</section>
+
+<!-- ============ 7. Why Real Returns < Ideal ============ -->
+<section>
+  <h2><span class="num">7</span>Why Real Returns Fall Short of Ideal Backtests</h2>
+  <p class="subtitle">Backtests assume ideal conditions. Real trading is full of "hidden costs" that continuously erode returns. (回测往往假设理想条件，真实交易中存在多种"隐形成本"，让收益被不断侵蚀。)</p>
+
+  <h3>The five hidden costs (五大隐形成本)</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+    <div class="mod c-cost"><div class="tag">①</div><h4>Fees (手续费)</h4><p>Every trade incurs costs. Frequent trading → high cumulative cost.</p></div>
+    <div class="mod c-cost"><div class="tag">②</div><h4>Slippage (滑点)</h4><p>The price you see ≠ the price you get.</p></div>
+    <div class="mod c-cost"><div class="tag">③</div><h4>Latency (延迟)</h4><p>Time gap between signal and fill; market has already moved.</p></div>
+    <div class="mod c-cost"><div class="tag">④</div><h4>Partial fills (部分成交)</h4><p>Order qty &gt; filled qty; can't trade at the expected price/size.</p></div>
+    <div class="mod c-cost"><div class="tag">⑤</div><h4>Market impact (冲击成本)</h4><p>Large orders push the market price against you.</p></div>
+  </div>
+
+  <h3>Cost erosion visualized (成本对收益的侵蚀)</h3>
+  <div class="cost-bar">
+    <div class="seg profit">Ideal return (理想收益)</div>
+    <div class="minus">−</div>
+    <div class="seg fee">Fees</div>
+    <div class="seg slip">Slippage</div>
+    <div class="seg delay">Latency</div>
+    <div class="seg partial">Partial fills</div>
+    <div class="seg impact">Impact</div>
+    <div class="minus">=</div>
+    <div class="seg" style="background:var(--green); flex:0 0 auto">Real return (真实收益)</div>
+  </div>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>Ideal backtest assumptions (理想回测)</h4>
+      <ul>
+        <li>Fill at the signal day's price ✓</li>
+        <li>No slippage, no latency ✓</li>
+        <li>All orders fully filled ✓</li>
+        <li>No fees, no market impact ✓</li>
+        <li><b>Result: returns are overestimated (收益被高估)</b></li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>Real trading reality (真实交易)</h4>
+      <ul>
+        <li>Actual fill price is worse ✗</li>
+        <li>Various trading costs exist ✗</li>
+        <li>Partial fills or unfilled orders ✗</li>
+        <li>Reduced capital utilization ✗</li>
+        <li><b>Result: returns are lower than expected (收益被低估)</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>The strategy's theoretical return ≠ real trading return.</b> Only by incorporating costs, slippage, latency, and fill scenarios can we get closer to the real world. The essence of quant trading is seeking a probabilistic edge amid uncertainty. (策略的理论收益，不等于真实交易收益。只有把成本、滑点、延迟、成交情况考虑进来，才能更接近真实世界。量化交易的本质，是在不确定性中，争取概率上的优势。)<br><br><b>Remember: backtests tell you "what you could earn"; trading tells you "what you actually earn." Reducing friction is improving win rate! (回测告诉你"可能赚多少"，交易告诉你"最终赚多少"。减少损耗，提升胜率，才是长期稳定盈利的关键！)</b></div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_8_order-trade-fees-slippage.html · Distilled from knowledge-base/day_8 (30天学习量化投资 · Day 8: 订单、成交、手续费与滑点) · 2025-08-30
+</footer>
+
+</div>
+</body>
+</html>

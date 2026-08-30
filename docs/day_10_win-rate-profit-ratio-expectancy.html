@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Win Rate, Profit/Loss Ratio &amp; Expected Return | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-winrate { --accent: #1d4ed8; } .c-ratio { --accent: #ea580c; } .c-expect { --accent: #15803d; }
+  .c-trend { --accent: #7e22ce; } .c-risk { --accent: #dc2626; } .c-warn { --accent: #c2410c; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel.warn { border-top: 4px solid var(--orange); }
+  .panel.purple { border-top: 4px solid var(--purple); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel.warn h4 { color: var(--orange); }
+  .panel.purple h4 { color: var(--purple); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* formula strip */
+  .formula {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin: 16px 0; font-size: 16px;
+  }
+  .formula .term { background: var(--blue-bg); color: var(--navy); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .formula .term.green { background: var(--green-bg); color: var(--green); }
+  .formula .term.orange { background: var(--orange-bg); color: var(--orange); }
+  .formula .term.red { background: var(--red-bg); color: var(--red); }
+  .formula .term.purple { background: var(--purple-bg); color: var(--purple); }
+  .formula .op { font-size: 20px; font-weight: 700; color: var(--muted); }
+
+  /* trade strip visualization */
+  .trade-strip {
+    display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 16px 20px; margin: 16px 0;
+  }
+  .trade-strip .t {
+    width: 52px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .trade-strip .t.win { background: var(--green); }
+  .trade-strip .t.loss { background: var(--red); }
+  .trade-strip .label { font-size: 12px; color: var(--muted); margin: 0 8px; }
+
+  /* expectancy gauge */
+  .gauge {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 24px; margin: 14px 0;
+  }
+  .gauge .bar {
+    flex: 1; height: 24px; border-radius: 12px; background: #f1f5f9; position: relative; overflow: hidden;
+  }
+  .gauge .bar .fill { height: 100%; border-radius: 12px; }
+  .gauge .bar .fill.pos { background: linear-gradient(90deg, #22c55e, #15803d); }
+  .gauge .bar .fill.neg { background: linear-gradient(90deg, #ef4444, #b91c1c); }
+  .gauge .bar .fill.zero { background: #9ca3af; }
+  .gauge .val { font-size: 18px; font-weight: 800; min-width: 80px; text-align: right; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Strategy Evaluation</div>
+  <h1>Win Rate, Profit/Loss Ratio &amp; Expected Return</h1>
+  <p>A high win rate does not mean you're making money! (胜率高 ≠ 一定赚钱！) The real question is: does the strategy have a mathematical foundation for long-term profitability? (一个策略到底有没有长期赚钱的数学基础？)</p>
+  <div class="src">Source: knowledge-base/day_10 (IMG_6543–IMG_6549), "30天学习量化投资 · Day 10: 胜率、盈亏比与期望收益" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ Overview ============ -->
+<section>
+  <h2><span class="num">★</span>Overview — The Three Pillars of Strategy Evaluation</h2>
+  <p class="subtitle">Today you will learn: Win Rate, Profit/Loss Ratio, Expected Return, and why low-win-rate strategies can still be profitable.</p>
+
+  <div class="modules">
+    <div class="mod c-winrate"><div class="tag">frequency</div><h4>Win Rate (胜率)</h4><p>How many trades won? Measures frequency, not magnitude.</p></div>
+    <div class="mod c-ratio"><div class="tag">quality</div><h4>Profit/Loss Ratio (盈亏比)</h4><p>How much bigger is a win vs a loss? Measures quality of each trade.</p></div>
+    <div class="mod c-expect"><div class="tag">verdict</div><h4>Expected Return (期望收益)</h4><p>Is the strategy worth repeating long-term? The ultimate verdict.</p></div>
+  </div>
+
+  <div class="quote">
+    <strong>Core viewpoint:</strong> What truly matters is not winning every time, but earning enough when you win and losing little when you lose. (真正重要的不是每次都赢，而是赢的时候赚得够多，输的时候亏得够少。)
+  </div>
+</section>
+
+<!-- ============ 1. Win Rate ============ -->
+<section>
+  <h2><span class="num">1</span>Win Rate — How Often Do You Win?</h2>
+  <p class="subtitle">Win rate answers one question: out of all trades, how many were winners? (胜率只回答一个问题：在所有交易中，赢了多少次？)</p>
+
+  <div class="formula">
+    <span class="term">Win Rate (胜率)</span><span class="op">=</span>
+    <span class="term green">Winning trades (盈利交易次数)</span><span class="op">÷</span>
+    <span class="term orange">Total trades (总交易次数)</span><span class="op">×</span>
+    <span class="term">100%</span>
+  </div>
+
+  <div class="spec c-winrate">
+    <h3><span class="tag">metric</span>Example: 10 trades (假设10笔交易)</h3>
+    <div class="trade-strip">
+      <div class="t win">✓</div>
+      <div class="t loss">✗</div>
+      <div class="t win">✓</div>
+      <div class="t loss">✗</div>
+      <div class="t loss">✗</div>
+      <div class="t loss">✗</div>
+      <div class="t win">✓</div>
+      <div class="t loss">✗</div>
+      <div class="t win">✓</div>
+      <div class="t win">✓</div>
+      <div class="label">→ Wins: 5, Losses: 5, Win Rate = 50%</div>
+    </div>
+
+    <h3>Why win rate alone is misleading (为什么胜率不代表一定盈利)</h3>
+    <div class="compare">
+      <div class="panel good">
+        <h4>Scenario A: lower win rate, but profitable</h4>
+        <ul>
+          <li>Win rate: <b>60%</b></li>
+          <li>Average win: <b>+5%</b></li>
+          <li>Average loss: <b>−2%</b></li>
+          <li>Not winning every time, but <b>long-term profitable</b>!</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>Scenario B: higher win rate, but losing</h4>
+        <ul>
+          <li>Win rate: <b>90%</b></li>
+          <li>Average win: <b>+1%</b></li>
+          <li>Average loss: <b>−10%</b></li>
+          <li>Winning often, but <b>long-term losing</b>!</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 <b>Key point:</b> Win rate tells you "how often" you win — it measures <b>frequency</b> (数量), not <b>quality</b> (质量). Whether a strategy makes money also depends on how much each win earns vs how much each loss costs. Win rate is just the first step in evaluation — far from sufficient! (胜率是"数量"，盈利是"质量"。一个好的策略，赢的时候赚得多，输的时候亏得少。)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. Profit/Loss Ratio ============ -->
+<section>
+  <h2><span class="num">2</span>Profit/Loss Ratio — Win Big, Lose Small?</h2>
+  <p class="subtitle">The profit/loss ratio measures the "size gap" between a typical win and a typical loss. (盈亏比衡量的是：一次盈利和一次亏损的"大小差距"。)</p>
+
+  <div class="formula">
+    <span class="term orange">Profit/Loss Ratio (盈亏比)</span><span class="op">=</span>
+    <span class="term green">Average Win (平均盈利)</span><span class="op">÷</span>
+    <span class="term red">Average Loss (平均亏损)</span>
+    <span style="margin-left:16px; font-size:14px; color:var(--muted)">→ Higher is better (&gt;1 preferred)</span>
+  </div>
+
+  <div class="spec c-ratio">
+    <h3><span class="tag">metric</span>Calculation example (计算示例)</h3>
+    <div class="cols">
+      <div>
+        <b style="font-size:13.5px">Winning trades (4 trades):</b>
+        <div class="trade-strip" style="margin:8px 0">
+          <div class="t win">+8%</div>
+          <div class="t win">+6%</div>
+          <div class="t win">+10%</div>
+          <div class="t win">+9%</div>
+        </div>
+        <table>
+          <tr><td>Average win</td><td class="num">(8+6+10+9) / 4 = <b>8.25%</b></td></tr>
+        </table>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Losing trades (6 trades):</b>
+        <div class="trade-strip" style="margin:8px 0">
+          <div class="t loss">−2%</div>
+          <div class="t loss">−3%</div>
+          <div class="t loss">−2%</div>
+          <div class="t loss">−4%</div>
+          <div class="t loss">−3%</div>
+          <div class="t loss">−1%</div>
+        </div>
+        <table>
+          <tr><td>Average loss</td><td class="num">(2+3+2+4+3+1) / 6 = <b>2.50%</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="formula" style="margin-top:14px">
+      <span class="term orange">P/L Ratio</span><span class="op">=</span>
+      <span class="term green">8.25%</span><span class="op">÷</span>
+      <span class="term red">2.50%</span><span class="op">=</span>
+      <span class="term green">3.3</span>
+      <span style="margin-left:12px; font-size:14px; color:var(--green)">✓ Excellent (属于优秀水平)</span>
+    </div>
+
+    <h3>Why the P/L ratio is critical (为什么盈亏比很重要)</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>Scenario A: high win rate, low P/L ratio</h4>
+        <ul>
+          <li>Win rate: 70%, P/L ratio: <b>0.5</b></li>
+          <li>Win +1 per trade, lose −2 per trade</li>
+          <li>10 trades: 7×1 − 3×2 = <b>+1</b> (barely profitable)</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>Scenario B: low win rate, high P/L ratio</h4>
+        <ul>
+          <li>Win rate: 40%, P/L ratio: <b>3.3</b></li>
+          <li>Win +8.25% per trade, lose −2.5% per trade</li>
+          <li>10 trades: 4×8.25 − 6×2.5 = <b>+18.0%</b> (highly profitable)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 The P/L ratio determines whether one big win can cover multiple small losses. A strategy needs a sufficiently high P/L ratio so that the minority of winners covers the majority of losers. (盈亏比决定了：一次大赚，能否覆盖多次小亏。一个策略要长期赚钱，不能只看胜率有多高，更要看盈亏比是否足够大！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. Expected Return ============ -->
+<section>
+  <h2><span class="num">3</span>Expected Return — Is the Strategy Worth Doing Long-Term?</h2>
+  <p class="subtitle">Expected return answers: if you repeat this strategy many times, will you make money on average? (期望收益衡量的是：长期重复后，这个策略是否值得做。)</p>
+
+  <div class="formula">
+    <span class="term green">Expected Return (期望收益)</span><span class="op">=</span>
+    <span class="term">Win Rate</span><span class="op">×</span>
+    <span class="term green">Avg Win</span><span class="op">−</span>
+    <span class="term red">Loss Rate</span><span class="op">×</span>
+    <span class="term red">Avg Loss</span>
+  </div>
+  <p style="text-align:center; font-size:13px; color:var(--muted); margin-top:-8px">where Loss Rate = 1 − Win Rate (失败率 = 1 − 胜率)</p>
+
+  <div class="spec c-expect">
+    <h3><span class="tag">verdict</span>Three possible outcomes (三种结果)</h3>
+    <div class="compare" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="panel good">
+        <h4>Positive expectancy (正期望)</h4>
+        <p>Expected return &gt; 0</p>
+        <ul>
+          <li>Long-term, account will <b>grow</b></li>
+          <li>Strategy <b>is worth doing</b>!</li>
+        </ul>
+      </div>
+      <div class="panel neutral">
+        <h4>Zero expectancy (零期望)</h4>
+        <p>Expected return = 0</p>
+        <ul>
+          <li>Account stays flat long-term</li>
+          <li>Pointless — fees will eat you!</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>Negative expectancy (负期望)</h4>
+        <p>Expected return &lt; 0</p>
+        <ul>
+          <li>Long-term, account will <b>shrink</b></li>
+          <li>Fix the strategy or abandon it!</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Three worked scenarios (三种场景计算)</h3>
+    <table>
+      <tr><th>Scenario</th><th>Win Rate</th><th>Avg Win</th><th>Avg Loss</th><th>Calculation</th><th>Result</th></tr>
+      <tr>
+        <td><b style="color:var(--green)">Positive</b></td>
+        <td class="num">40%</td><td class="num">8%</td><td class="num">2%</td>
+        <td>40%×8% − 60%×2%</td>
+        <td class="num" style="color:var(--green)"><b>+2.0% ✓</b></td>
+      </tr>
+      <tr>
+        <td><b>Zero</b></td>
+        <td class="num">50%</td><td class="num">4%</td><td class="num">4%</td>
+        <td>50%×4% − 50%×4%</td>
+        <td class="num"><b>0.0% =</b></td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--red)">Negative</b></td>
+        <td class="num">60%</td><td class="num">2%</td><td class="num">3%</td>
+        <td>60%×2% − 40%×3%</td>
+        <td class="num" style="color:var(--red)"><b>−0.0% ✗</b></td>
+      </tr>
+    </table>
+
+    <div class="gauge">
+      <span style="font-size:13px; color:var(--green); font-weight:700">Positive +2.0%</span>
+      <div class="bar"><div class="fill pos" style="width:70%"></div></div>
+      <span class="val" style="color:var(--green)">✓</span>
+    </div>
+    <div class="gauge">
+      <span style="font-size:13px; color:var(--muted); font-weight:700">Zero 0.0%</span>
+      <div class="bar"><div class="fill zero" style="width:50%"></div></div>
+      <span class="val" style="color:var(--muted)">=</span>
+    </div>
+    <div class="gauge">
+      <span style="font-size:13px; color:var(--red); font-weight:700">Negative −0.6%</span>
+      <div class="bar"><div class="fill neg" style="width:30%"></div></div>
+      <span class="val" style="color:var(--red)">✗</span>
+    </div>
+
+    <div class="takeaway"><span class="star">★</span>Win rate tells you how often you win. P/L ratio tells you the gap between a win and a loss. <b>Expected return tells you whether it's worth repeating long-term.</b> Making expected return positive is the key to long-term profitability! (让期望收益为正，才是长期盈利的关键！)</div>
+  </div>
+</section>
+
+<!-- ============ 4. 90% Win Rate Can Still Lose ============ -->
+<section>
+  <h2><span class="num">4</span>Why 90% Win Rate Can Still Lose Money</h2>
+  <p class="subtitle">The key insight: winning too little per trade, while one loss wipes out everything. (关键在于：每次赢得太少，而亏的一次太多！)</p>
+
+  <div class="spec c-warn">
+    <h3><span class="tag">trap</span>The trap of high win rate (高胜率的陷阱)</h3>
+    <p style="font-size:14px; margin-bottom:12px">Suppose 10 trades: 9 small wins, 1 catastrophic loss:</p>
+
+    <div class="trade-strip">
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t win">+1</div>
+      <div class="t loss">−20</div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <table>
+          <tr><th>Metric</th><th>Value</th></tr>
+          <tr><td>Win rate</td><td class="num">9 / 10 = <b style="color:var(--green)">90%</b></td></tr>
+          <tr><td>Total wins</td><td class="num">9 × 1 = +9</td></tr>
+          <tr><td>Total losses</td><td class="num">1 × 20 = −20</td></tr>
+          <tr><td><b>Net result</b></td><td class="num" style="color:var(--red)"><b>+9 − 20 = −11 (LOSS!)</b></td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Core insight (核心洞察)</b>
+          Whether a strategy makes money doesn't depend on <b>how many times</b> you win — it depends on whether your <b>winnings are large enough to cover your losses</b>!<br><br>
+          Strategy profitability depends not on win count, but on whether win amounts cover loss amounts! (策略能否赚钱，不取决于你赢的次数，而取决于你赢得的金额是否足够覆盖你亏的金额！)
+        </div>
+      </div>
+    </div>
+
+    <h3>Three radically different outcomes (三种完全不同的结果)</h3>
+    <div class="compare" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="panel good">
+        <h4>A: Low win rate, high P/L (趋势策略)</h4>
+        <ul>
+          <li>Win rate: 40%</li>
+          <li>Avg win: 8.25%</li>
+          <li>Avg loss: 2.5%</li>
+          <li>P/L ratio: 3.3</li>
+          <li style="color:var(--green)"><b>Expected: +1.80% ✓</b></li>
+        </ul>
+      </div>
+      <div class="panel neutral">
+        <h4>B: Balanced (盈亏相当)</h4>
+        <ul>
+          <li>Win rate: 50%</li>
+          <li>Avg win: 4%</li>
+          <li>Avg loss: 4%</li>
+          <li>P/L ratio: 1.0</li>
+          <li><b>Expected: 0.00% =</b></li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>C: High win rate, low P/L</h4>
+        <ul>
+          <li>Win rate: 60%</li>
+          <li>Avg win: 2%</li>
+          <li>Avg loss: 3%</li>
+          <li>P/L ratio: 0.67</li>
+          <li style="color:var(--red)"><b>Expected: −0.60% ✗</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 <b>90% win rate can still lose money!</b> The key is whether wins are large enough relative to losses. Use expected return to judge long-term viability. Pursue high P/L ratios so the few winners cover the many losers. (90%胜率也可能亏钱，关键看"赚多少，亏多少"。用期望收益判断策略的长期表现，追求高盈亏比，让少数获利覆盖多数亏损。)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Trend Strategies ============ -->
+<section>
+  <h2><span class="num">5</span>Trend Strategies — Why Low Win Rate Still Wins</h2>
+  <p class="subtitle">Trends persist. A few big moves generate outsized returns. Small losses are the cost of waiting for the big one. (趋势有延续性，少数行情能带来巨大收益！)</p>
+
+  <div class="spec c-trend">
+    <h3><span class="tag">strategy</span>Core logic of trend strategies (趋势策略的核心逻辑)</h3>
+    <div class="quote">
+      <strong>Small losses many times, big gains a few times — one big win covers all the small losses.</strong><br>
+      (小亏很多次，靠少数大行情赚大钱，一次大赚覆盖所有小亏！)
+    </div>
+
+    <h3>Typical characteristics (典型特征)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-winrate"><h4>Low win rate (胜率通常不高)</h4><p>Often small losses — typically 20%–40% win rate.</p></div>
+      <div class="mod c-ratio"><h4>High P/L ratio (盈亏比很高)</h4><p>Wins are much larger than losses.</p></div>
+      <div class="mod c-trend"><h4>Few big movers drive returns (靠少数大行情)</h4><p>A handful of trend captures contribute the majority of profit.</p></div>
+    </div>
+
+    <h3>Example: 10% win rate, still profitable (一次大赚如何覆盖多次小亏)</h3>
+    <div class="trade-strip">
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t loss">−1%</div>
+      <div class="t win">+15%</div>
+    </div>
+    <div class="formula">
+      <span class="term red">9 × (−1%)</span><span class="op">+</span>
+      <span class="term green">1 × (+15%)</span><span class="op">=</span>
+      <span class="term green">+6% (profitable!)</span>
+    </div>
+    <p style="font-size:14px">Win rate: only 10% (1 win, 9 losses) — yet the strategy profits because one +15% covers all the −1% losses! (虽然胜率只有10%，但一次+15%覆盖了所有小亏，最终仍然赚钱！)</p>
+
+    <h3>Trend vs high-frequency strategies (趋势策略 vs 高频策略)</h3>
+    <div class="compare">
+      <div class="panel purple">
+        <h4>Trend strategy (趋势策略, low win rate)</h4>
+        <table>
+          <tr><th>Attribute</th><th>Value</th></tr>
+          <tr><td>Win rate</td><td class="num">20%–40%</td></tr>
+          <tr><td>Avg win</td><td class="num">Large (5%–20%+)</td></tr>
+          <tr><td>Avg loss</td><td class="num">Small (0.5%–2%)</td></tr>
+          <tr><td>P/L ratio</td><td class="num">High (3–10+)</td></tr>
+          <tr><td>Profit source</td><td>Few big trend moves (少数大行情)</td></tr>
+          <tr><td>Philosophy</td><td><b>Quality over quantity</b> — hold winners, cut losers</td></tr>
+        </table>
+      </div>
+      <div class="panel neutral">
+        <h4>High-frequency strategy (高频策略, high win rate)</h4>
+        <table>
+          <tr><th>Attribute</th><th>Value</th></tr>
+          <tr><td>Win rate</td><td class="num">70%–90%+</td></tr>
+          <tr><td>Avg win</td><td class="num">Small (0.1%–0.5%)</td></tr>
+          <tr><td>Avg loss</td><td class="num">Small (0.1%–0.5%)</td></tr>
+          <tr><td>P/L ratio</td><td class="num">Low (1–2)</td></tr>
+          <tr><td>Profit source</td><td>Volume accumulation (靠次数累积)</td></tr>
+          <tr><td>Philosophy</td><td><b>Quantity over quality</b> — needs extreme cost control</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>How trend strategies capture big moves (趋势策略如何抓住大行情)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-trend"><h4>Follow the trend (顺势而为)</h4><p>Don't predict tops — follow the trend and let profits run.</p></div>
+      <div class="mod c-expect"><h4>Let profits run (设置合理盈利目标)</h4><p>Don't exit too early — let winners grow.</p></div>
+      <div class="mod c-risk"><h4>Strict stop-loss (严格止损)</h4><p>Small losses cut quickly; control single-trade loss.</p></div>
+      <div class="mod c-winrate"><h4>Patient waiting (耐心等待机会)</h4><p>Trade less, but catch the big ones — quality over quantity.</p></div>
+    </div>
+
+    <div class="takeaway"><span class="star">★</span>Trend strategies don't pursue high win rates — they pursue high P/L ratios and positive expected returns. Small losses are the cost; big wins are the harvest. As long as the big wins appear often enough, the strategy stays profitable long-term. (趋势策略不追求高胜率，而是追求高盈亏比和正期望。小亏是代价，大赚是收获，只要大赚出现的次数足够，策略就能长期盈利。)</div>
+  </div>
+</section>
+
+<!-- ============ 6. Practice & Summary ============ -->
+<section>
+  <h2><span class="num">6</span>Practice &amp; Summary — The Full Calculation</h2>
+  <p class="subtitle">Use real data to compute expected return and determine whether the strategy is worth repeating.</p>
+
+  <div class="spec c-expect">
+    <h3>Practice: 10 trades (实战练习，共10笔交易)</h3>
+    <div class="cols">
+      <div>
+        <b style="font-size:13.5px">Winning trades (4 trades):</b>
+        <div class="trade-strip" style="margin:8px 0">
+          <div class="t win">+8%</div>
+          <div class="t win">+6%</div>
+          <div class="t win">+10%</div>
+          <div class="t win">+9%</div>
+        </div>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Losing trades (6 trades):</b>
+        <div class="trade-strip" style="margin:8px 0">
+          <div class="t loss">−2%</div>
+          <div class="t loss">−3%</div>
+          <div class="t loss">−2%</div>
+          <div class="t loss">−4%</div>
+          <div class="t loss">−3%</div>
+          <div class="t loss">−1%</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step-by-step results (一步步理解期望收益)</h3>
+    <table>
+      <tr><th>Step</th><th>Metric</th><th>Calculation</th><th>Result</th></tr>
+      <tr><td>①</td><td>Win rate (胜率)</td><td>4 / (4+6)</td><td class="num"><b>40%</b></td></tr>
+      <tr><td>②</td><td>Average win (平均盈利)</td><td>(8+6+10+9) / 4</td><td class="num"><b>8.25%</b></td></tr>
+      <tr><td>③</td><td>Average loss (平均亏损)</td><td>(2+3+2+4+3+1) / 6</td><td class="num"><b>2.50%</b></td></tr>
+      <tr><td>④</td><td>P/L ratio (盈亏比)</td><td>8.25 / 2.50</td><td class="num"><b>3.3</b></td></tr>
+      <tr><td>⑤</td><td>Expected return (期望收益)</td><td>40%×8.25% − 60%×2.50%</td><td class="num" style="color:var(--green)"><b>+1.80% ✓</b></td></tr>
+    </table>
+
+    <div class="io-box">
+      <b>Interpretation (解读)</b>
+      ① Win rate 40%: out of 10 trades, average 4 wins and 6 losses.<br>
+      ② P/L ratio 3.3: one win earns 3.3× what one loss costs.<br>
+      ③ Expected return +1.80%: on average, each trade earns +1.80%. Long-term repetition = growth!<br><br>
+      <b style="color:var(--green)">As long as expected return &gt; 0, the strategy has long-term profit potential! (只要期望收益 &gt; 0，长期来看就是赚钱的！)</b>
+    </div>
+
+    <h3>Three strategy archetypes compared (不同组合带来的不同结果)</h3>
+    <div class="compare" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="panel good">
+        <h4>A: Trend strategy (趋势策略)</h4>
+        <p>Win rate: 40% · P/L: 3.3</p>
+        <div class="gauge" style="padding:8px 12px; margin:8px 0">
+          <div class="bar"><div class="fill pos" style="width:72%"></div></div>
+          <span class="val" style="color:var(--green); font-size:14px">+1.80%</span>
+        </div>
+        <p style="font-size:12.5px; color:var(--green)"><b>Long-term: profitable ✓</b></p>
+      </div>
+      <div class="panel bad">
+        <h4>B: High win, low P/L</h4>
+        <p>Win rate: 70% · P/L: 0.5</p>
+        <div class="gauge" style="padding:8px 12px; margin:8px 0">
+          <div class="bar"><div class="fill neg" style="width:10%"></div></div>
+          <span class="val" style="color:var(--red); font-size:14px">−0.10%</span>
+        </div>
+        <p style="font-size:12.5px; color:var(--red)"><b>Long-term: losing ✗</b></p>
+      </div>
+      <div class="panel bad">
+        <h4>C: Very high win, very low P/L</h4>
+        <p>Win rate: 90% · P/L: 0.2</p>
+        <div class="gauge" style="padding:8px 12px; margin:8px 0">
+          <div class="bar"><div class="fill neg" style="width:6%"></div></div>
+          <span class="val" style="color:var(--red); font-size:14px">−0.05%</span>
+        </div>
+        <p style="font-size:12.5px; color:var(--red)"><b>Long-term: losing ✗</b></p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Day 10 Core Summary (Day 10 核心总结)</h3>
+  <table>
+    <tr><th>Concept</th><th>Measures</th><th>Key insight</th></tr>
+    <tr><td><b>Win Rate</b> (胜率)</td><td>How often you win (frequency)</td><td>Only counts frequency, not amounts. First step — but far from sufficient.</td></tr>
+    <tr><td><b>P/L Ratio</b> (盈亏比)</td><td>Win size vs loss size (quality)</td><td>Determines whether one big win can cover many small losses.</td></tr>
+    <tr><td><b>Expected Return</b> (期望收益)</td><td>Long-term average per trade (verdict)</td><td>The ultimate test: is the strategy worth repeating?</td></tr>
+    <tr><td><b>Trend Strategies</b> (趋势策略)</td><td>Low win rate, high P/L ratio</td><td>Small losses are the price; big trend captures are the reward.</td></tr>
+  </table>
+
+  <h3>Action checklist (行动清单)</h3>
+  <div class="flow">
+    <div class="step c-winrate" style="--stepbg:var(--blue-bg)"><div class="icon">📊</div><div class="name">Backtest more data</div><div class="cn">回测更多历史数据</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-expect" style="--stepbg:var(--green-bg)"><div class="icon">🧮</div><div class="name">Compute expectancy</div><div class="cn">计算期望收益</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-ratio" style="--stepbg:var(--orange-bg)"><div class="icon">🔧</div><div class="name">Verify stability</div><div class="cn">验证策略稳定性</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="icon">🛡️</div><div class="name">Optimize risk params</div><div class="cn">优化风控参数</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-trend" style="--stepbg:var(--purple-bg)"><div class="icon">🔄</div><div class="name">Track &amp; iterate</div><div class="cn">长期跟踪与迭代</div></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>What truly matters is not winning every time — it's earning a lot when you win, and losing little when you lose.</b> The key to long-term profitability is keeping expected return positive. Whether a strategy makes money long-term depends on expected return being positive! (真正重要的不是每次都赢，而是赢的时候赚得多，输的时候亏得少！策略能否长期赚钱，关键看期望收益是否为正！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_10_win-rate-profit-ratio-expectancy.html · Distilled from knowledge-base/day_10 (30天学习量化投资 · Day 10: 胜率、盈亏比与期望收益) · 2025-08-30
+</footer>
+
+</div>
+</body>
+</html>

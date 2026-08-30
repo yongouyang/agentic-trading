@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equity Curve, Cumulative Return &amp; Max Drawdown | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  /* module grid */
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-curve { --accent: #1d4ed8; } .c-return { --accent: #15803d; } .c-dd { --accent: #dc2626; }
+  .c-mdd { --accent: #7e22ce; } .c-eq { --accent: #3730a3; } .c-warn { --accent: #c2410c; }
+
+  /* flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  /* two-column compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel.warn { border-top: 4px solid var(--orange); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel.warn h4 { color: var(--orange); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  /* spec cards */
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* formula strip */
+  .formula {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin: 16px 0; font-size: 16px;
+  }
+  .formula .term { background: var(--blue-bg); color: var(--navy); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .formula .term.green { background: var(--green-bg); color: var(--green); }
+  .formula .term.orange { background: var(--orange-bg); color: var(--orange); }
+  .formula .term.red { background: var(--red-bg); color: var(--red); }
+  .formula .term.purple { background: var(--purple-bg); color: var(--purple); }
+  .formula .op { font-size: 20px; font-weight: 700; color: var(--muted); }
+
+  /* equity chart (ASCII-like) */
+  .equity-chart {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; position: relative;
+  }
+  .equity-chart .chart-title { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .equity-chart svg { width: 100%; height: auto; }
+
+  /* metric cards trio */
+  .metric-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+  @media (max-width: 760px) { .metric-trio { grid-template-columns: 1fr; } }
+  .metric-card {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 20px;
+    background: #fff; text-align: center;
+  }
+  .metric-card .metric-icon { font-size: 28px; margin-bottom: 6px; }
+  .metric-card .metric-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .metric-card .metric-cn { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .metric-card .metric-value { font-size: 28px; font-weight: 800; }
+  .metric-card .metric-desc { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Performance Evaluation</div>
+  <h1>Equity Curve, Cumulative Return &amp; Max Drawdown</h1>
+  <p>How much did you earn, and how much pain did you endure along the way? (赚了多少，以及中途承受了多大的亏损？) A strategy must be evaluated not just on returns, but on the suffering endured to achieve them.</p>
+  <div class="src">Source: knowledge-base/day_9 (IMG_6534–IMG_6541), "30天学习量化投资 · Day 9: 收益曲线、累计收益与最大回撤" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ Overview ============ -->
+<section>
+  <h2><span class="num">★</span>Overview — Four Pillars of Performance</h2>
+  <p class="subtitle">Today's goal: understand and compute Equity Curve, Cumulative Return, Current Drawdown, and Maximum Drawdown — and grasp the relationships between them.</p>
+
+  <div class="modules">
+    <div class="mod c-curve"><div class="tag">equity curve</div><h4>Equity Curve (收益曲线)</h4><p>How total equity changes over time — the full story of the strategy's performance.</p></div>
+    <div class="mod c-return"><div class="tag">return</div><h4>Cumulative Return (累计收益)</h4><p>The final answer: how much money was made (or lost) relative to the start.</p></div>
+    <div class="mod c-dd"><div class="tag">drawdown</div><h4>Current Drawdown (当前回撤)</h4><p>How far we've fallen from the all-time high — measures current pain.</p></div>
+    <div class="mod c-mdd"><div class="tag">risk</div><h4>Max Drawdown (最大回撤)</h4><p>The worst drawdown ever — measures the deepest pain the strategy inflicted.</p></div>
+  </div>
+
+  <div class="quote">
+    <strong>Core insight:</strong> A strategy cannot be judged by returns alone. You must also look at how much drawdown was endured to achieve those returns. Returns and drawdowns coexist — they are not mutually exclusive. (收益与回撤可以同时存在，并不冲突。一个策略不能只看赚了多少，还要看为了赚这些钱，曾经承受过多大的回撤。)
+  </div>
+</section>
+
+<!-- ============ 1. Equity Curve ============ -->
+<section>
+  <h2><span class="num">1</span>Equity Curve — The Strategy's Biography</h2>
+  <p class="subtitle">The equity curve plots total equity over time — it is the most fundamental chart in quant investing. (收益曲线就是账户总权益随时间变化所连成的曲线。)</p>
+
+  <div class="spec c-curve">
+    <h3><span class="tag">core</span>What is an Equity Curve? (什么是收益曲线？)</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>Each day, compute <b>Equity = Cash + position market value</b> (每天计算账户的总权益).</li>
+          <li>Plot these points in time order and connect them into a curve.</li>
+          <li>X-axis = time, Y-axis = equity.</li>
+          <li>Shows how the account grows, declines, recovers, and oscillates over the entire period.</li>
+        </ul>
+      </div>
+      <div>
+        <b style="font-size:13.5px">Why is it important?</b>
+        <ul class="duty">
+          <li>See how the account grows or falls over time.</li>
+          <li>Spot volatility, drawdowns, and recovery patterns.</li>
+          <li>Shows the <b>real performance process</b> — not just "how much was earned" but "how it was earned" (不只是最终赚了多少，更看重"怎么赚的").</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Example: 7-day equity curve (示例：某策略7天的收益曲线)</h3>
+    <table>
+      <tr><th>Date</th><th>Equity (万)</th><th>Daily return</th></tr>
+      <tr><td>01-01</td><td class="num">10.00</td><td class="num">—</td></tr>
+      <tr><td>01-02</td><td class="num">10.80</td><td class="num" style="color:var(--green)">+8.00%</td></tr>
+      <tr><td>01-03</td><td class="num">11.50</td><td class="num" style="color:var(--green)">+6.48%</td></tr>
+      <tr><td>01-04</td><td class="num">11.20</td><td class="num" style="color:var(--red)">−2.61%</td></tr>
+      <tr><td>01-05</td><td class="num">12.30</td><td class="num" style="color:var(--green)">+9.82%</td></tr>
+      <tr><td>01-06</td><td class="num">11.80</td><td class="num" style="color:var(--red)">−4.07%</td></tr>
+      <tr><td>01-07</td><td class="num">12.60</td><td class="num" style="color:var(--green)">+6.78%</td></tr>
+    </table>
+
+    <svg viewBox="0 0 700 220" style="width:100%; max-width:700px; display:block; margin:16px auto 0">
+      <!-- axes -->
+      <line x1="60" y1="20" x2="60" y2="190" stroke="#e5e7eb" stroke-width="1.5"/>
+      <line x1="60" y1="190" x2="680" y2="190" stroke="#e5e7eb" stroke-width="1.5"/>
+      <!-- y-axis labels -->
+      <text x="50" y="25" text-anchor="end" font-size="11" fill="#6b7280">14</text>
+      <text x="50" y="67" text-anchor="end" font-size="11" fill="#6b7280">13</text>
+      <text x="50" y="110" text-anchor="end" font-size="11" fill="#6b7280">12</text>
+      <text x="50" y="152" text-anchor="end" font-size="11" fill="#6b7280">11</text>
+      <text x="50" y="194" text-anchor="end" font-size="11" fill="#6b7280">10</text>
+      <!-- y-axis grid lines -->
+      <line x1="60" y1="25" x2="680" y2="25" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="67" x2="680" y2="67" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="110" x2="680" y2="110" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="152" x2="680" y2="152" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <!-- equity line: 10.00, 10.80, 11.50, 11.20, 12.30, 11.80, 12.60 -->
+      <!-- y mapping: y_px = 190 - (equity - 10) * (170/4) = 190 - (equity-10)*42.5 -->
+      <!-- 10.00→190, 10.80→156, 11.50→126.25, 11.20→139, 12.30→92.75, 11.80→113.5, 12.60→79.5 -->
+      <polyline points="80,190 180,156 280,126 380,139 480,93 580,114 680,80"
+                fill="none" stroke="#1e40af" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <!-- data points -->
+      <circle cx="80" cy="190" r="4" fill="#1e40af"/>
+      <circle cx="180" cy="156" r="4" fill="#1e40af"/>
+      <circle cx="280" cy="126" r="4" fill="#1e40af"/>
+      <circle cx="380" cy="139" r="4" fill="#1e40af"/>
+      <circle cx="480" cy="93" r="4" fill="#1e40af"/>
+      <circle cx="580" cy="114" r="4" fill="#1e40af"/>
+      <circle cx="680" cy="80" r="4" fill="#1e40af"/>
+      <!-- x-axis labels -->
+      <text x="80" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-01</text>
+      <text x="180" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-02</text>
+      <text x="280" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-03</text>
+      <text x="380" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-04</text>
+      <text x="480" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-05</text>
+      <text x="580" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-06</text>
+      <text x="680" y="208" text-anchor="middle" font-size="10" fill="#6b7280">01-07</text>
+      <!-- label final -->
+      <text x="685" y="74" font-size="11" fill="#15803d" font-weight="700">12.60</text>
+    </svg>
+
+    <div class="keypoint">💡 The equity curve is one of the most fundamental and important charts in quantitative investing. It lets us intuitively see the strategy's performance across the time dimension. (收益曲线是量化投资中最基础、最核心的图表之一，它让我们直观地看到：策略在时间维度上的表现如何。)</div>
+  </div>
+</section>
+
+<!-- ============ 2. Cumulative Return ============ -->
+<section>
+  <h2><span class="num">2</span>Cumulative Return — The Final Verdict</h2>
+  <p class="subtitle">Cumulative return measures how much money was ultimately made (or lost) relative to the starting capital. (累计收益衡量的是：最终赚了多少钱。)</p>
+
+  <div class="formula">
+    <span class="term green">Cumulative Return (累计收益率)</span><span class="op">=</span>
+    <span class="term">Final Equity − Initial Equity</span><span class="op">÷</span>
+    <span class="term orange">Initial Equity</span>
+  </div>
+
+  <div class="spec c-return">
+    <h3><span class="tag">metric</span>Three possible outcomes (三种结果)</h3>
+    <div class="compare" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="panel good">
+        <h4>Profit case (盈利)</h4>
+        <table>
+          <tr><td>Initial</td><td class="num">100,000</td></tr>
+          <tr><td>Final</td><td class="num">120,000</td></tr>
+          <tr><td>Return</td><td class="num" style="color:var(--green)"><b>+20.00%</b></td></tr>
+        </table>
+      </div>
+      <div class="panel neutral">
+        <h4>Break-even (回本)</h4>
+        <table>
+          <tr><td>Initial</td><td class="num">100,000</td></tr>
+          <tr><td>Final</td><td class="num">100,000</td></tr>
+          <tr><td>Return</td><td class="num"><b>0.00%</b></td></tr>
+        </table>
+      </div>
+      <div class="panel bad">
+        <h4>Loss case (亏损)</h4>
+        <table>
+          <tr><td>Initial</td><td class="num">100,000</td></tr>
+          <tr><td>Final</td><td class="num">80,000</td></tr>
+          <tr><td>Return</td><td class="num" style="color:var(--red)"><b>−20.00%</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 Cumulative return only looks at the <b>result</b> — it doesn't care about the journey in between. Two strategies can have the same final return but wildly different paths! (累计收益只看"结果"，不关心中间经历了多少波动和回撤。两个策略最终收益相同，但过程可能天差地别！)
+    </div>
+
+    <div class="quote">
+      <strong>Remember:</strong> Cumulative return answers "how much was earned in the end?" — it is the core metric for the final result. But looking at return alone is not enough; you must also check drawdowns and volatility! (仅看累计收益还不够，还要看回撤和波动！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. Current Drawdown ============ -->
+<section>
+  <h2><span class="num">3</span>Current Drawdown — How Far From the Peak?</h2>
+  <p class="subtitle">Current drawdown measures how much equity has fallen from the all-time high. (当前回撤：从历史最高权益回落了多少。)</p>
+
+  <div class="formula">
+    <span class="term red">Current Drawdown (当前回撤)</span><span class="op">=</span>
+    <span class="term">Current Equity − Peak Equity</span><span class="op">÷</span>
+    <span class="term orange">Peak Equity (历史最高权益)</span>
+  </div>
+
+  <div class="spec c-dd">
+    <h3><span class="tag">risk</span>Interpreting the result (如何理解结果)</h3>
+    <table>
+      <tr><th>Result</th><th>Meaning</th></tr>
+      <tr><td><b>Negative</b></td><td>Currently in drawdown — equity is below the peak (处于回撤中)</td></tr>
+      <tr><td><b>Zero</b></td><td>Equity has returned to the peak — no drawdown (回到历史高点)</td></tr>
+      <tr><td><b>Positive</b></td><td>New all-time high — no drawdown (创出新高，无回撤)</td></tr>
+    </table>
+
+    <h3>Example (举个例子)</h3>
+    <div class="io-box">
+      <b>Calculation</b>
+      Peak equity: 130,000 (13万)<br>
+      Current equity: 100,000 (10万)<br><br>
+      Current drawdown = (100,000 − 130,000) ÷ 130,000 = <strong style="color:var(--red)">−23.08%</strong><br>
+      → Currently 23.08% below the all-time high. (表示当前比历史高点回落了23.08%)
+    </div>
+
+    <div class="keypoint">
+      💡 Drawdown measures "how far from the peak", not "how much money was lost". Even if you haven't lost money overall, as long as you haven't returned to the peak, you are still in a drawdown! (回撤衡量的是"离最高点有多远"，而不是"亏了多少钱"。即使您目前不亏钱，只要没回到最高点，仍然可能处于回撤中！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. Max Drawdown ============ -->
+<section>
+  <h2><span class="num">4</span>Maximum Drawdown (MDD) — The Worst Pain Ever</h2>
+  <p class="subtitle">Maximum drawdown is the single most severe drawdown across all history — the deepest valley the strategy ever fell into. (最大回撤：在所有历史回撤中，最严重的一次回撤。)</p>
+
+  <div class="spec c-mdd">
+    <h3><span class="tag">risk</span>How to compute MDD (计算思路)</h3>
+    <ol class="roadmap">
+      <li><b>Find every historical peak</b> (找到历史上每一个"高点").</li>
+      <li><b>Calculate the drawdown</b> from each peak to every subsequent trough (计算从该高点回落到之后的每一个低点的回撤).</li>
+      <li><b>The most negative value</b> across all drawdowns is the MDD (所有回撤中，最小/最负的值，就是最大回撤).</li>
+    </ol>
+
+    <div class="formula">
+      <span class="term red">Drawdown</span><span class="op">=</span>
+      <span class="term">Current Equity − Peak Equity</span><span class="op">÷</span>
+      <span class="term orange">Peak Equity</span>
+      <span style="margin-left:20px; color:var(--muted); font-size:14px">→</span>
+      <span class="term purple">MDD = min(all drawdowns)</span>
+    </div>
+
+    <h3>Worked example (举个例子)</h3>
+    <table>
+      <tr><th>Equity sequence (万)</th><th>Peak</th><th>Drawdown</th><th>Note</th></tr>
+      <tr><td>10 → 12 → 11 → 9 → 13 → 10</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Peak 1 = 12, trough = 9</td><td class="num">12</td><td class="num">(9−12)/12 = <b style="color:var(--red)">−25%</b></td><td>Drawdown 1</td></tr>
+      <tr><td>Peak 2 = 13, trough = 10</td><td class="num">13</td><td class="num">(10−13)/13 ≈ −23.08%</td><td>Drawdown 2</td></tr>
+      <tr><td colspan="3"><b>MDD = min(−25%, −23.08%)</b></td><td class="num" style="color:var(--red)"><b>−25%</b></td></tr>
+    </table>
+
+    <svg viewBox="0 0 700 240" style="width:100%; max-width:700px; display:block; margin:16px auto 0">
+      <!-- axes -->
+      <line x1="60" y1="20" x2="60" y2="210" stroke="#e5e7eb" stroke-width="1.5"/>
+      <line x1="60" y1="210" x2="680" y2="210" stroke="#e5e7eb" stroke-width="1.5"/>
+      <!-- y-axis: 7..14 range, 190px for 7 units => 27.14 px per unit -->
+      <!-- y(e) = 210 - (e-7)*27.14 -->
+      <!-- gridlines -->
+      <line x1="60" y1="47" x2="680" y2="47" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="74" x2="680" y2="74" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="101" x2="680" y2="101" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="129" x2="680" y2="129" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="156" x2="680" y2="156" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <line x1="60" y1="183" x2="680" y2="183" stroke="#e5e7eb" stroke-width="0.5" stroke-dasharray="4"/>
+      <!-- y labels -->
+      <text x="50" y="51" text-anchor="end" font-size="10" fill="#6b7280">13</text>
+      <text x="50" y="78" text-anchor="end" font-size="10" fill="#6b7280">12</text>
+      <text x="50" y="105" text-anchor="end" font-size="10" fill="#6b7280">11</text>
+      <text x="50" y="133" text-anchor="end" font-size="10" fill="#6b7280">10</text>
+      <text x="50" y="160" text-anchor="end" font-size="10" fill="#6b7280">9</text>
+      <text x="50" y="187" text-anchor="end" font-size="10" fill="#6b7280">8</text>
+      <!-- data: Day0=10, D1=12, D2=11, D3=9, D4=13, D5=10 -->
+      <!-- y: 10→129, 12→74, 11→101, 9→156, 13→47, 10→129 -->
+      <polyline points="100,129 220,74 340,101 460,156 580,47 680,129"
+                fill="none" stroke="#1e40af" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <!-- data points -->
+      <circle cx="100" cy="129" r="5" fill="#1e40af"/>
+      <circle cx="220" cy="74" r="5" fill="#15803d"/>
+      <circle cx="340" cy="101" r="5" fill="#1e40af"/>
+      <circle cx="460" cy="156" r="5" fill="#b91c1c"/>
+      <circle cx="580" cy="47" r="5" fill="#15803d"/>
+      <circle cx="680" cy="129" r="5" fill="#1e40af"/>
+      <!-- x labels -->
+      <text x="100" y="228" text-anchor="middle" font-size="10" fill="#6b7280">Day 0</text>
+      <text x="220" y="228" text-anchor="middle" font-size="10" fill="#6b7280">Day 1</text>
+      <text x="340" y="228" text-anchor="middle" font-size="10" fill="#6b7280">Day 2</text>
+      <text x="460" y="228" text-anchor="middle" font-size="10" fill="#6b7280">Day 3</text>
+      <text x="580" y="228" text-anchor="middle" font-size="10" fill="#6b7280">Day 4</text>
+      <text x="680" y="228" text-anchor="middle" font-size="10" fill="#6b7280">Day 5</text>
+      <!-- annotate peaks and troughs -->
+      <text x="220" y="65" text-anchor="middle" font-size="11" fill="#15803d" font-weight="700">Peak=12</text>
+      <text x="460" y="172" text-anchor="middle" font-size="11" fill="#b91c1c" font-weight="700">Trough=9</text>
+      <text x="580" y="38" text-anchor="middle" font-size="11" fill="#15803d" font-weight="700">Peak=13</text>
+      <!-- drawdown bracket -->
+      <line x1="220" y1="74" x2="460" y2="74" stroke="#b91c1c" stroke-width="1" stroke-dasharray="4"/>
+      <line x1="460" y1="74" x2="460" y2="156" stroke="#b91c1c" stroke-width="1.5"/>
+      <text x="380" y="120" font-size="11" fill="#b91c1c" font-weight="700">MDD = −25%</text>
+    </svg>
+
+    <h3>Why is MDD so important? (为什么最大回撤很重要？)</h3>
+    <div class="compare">
+      <div class="panel warn">
+        <h4>What MDD tells you</h4>
+        <ul>
+          <li>Measures the <b>maximum pain</b> endured to earn returns (为了赚取收益，策略曾经让你承受的最大痛苦有多大)</li>
+          <li>One of the <b>core risk control metrics</b> (风险控制的核心指标之一)</li>
+          <li>Investors and institutions care deeply about MDD (投资者和机构非常关注最大回撤)</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>Even if profitable, high MDD can cause</h4>
+        <ul>
+          <li><b>Psychological breakdown</b> (心理崩溃)</li>
+          <li><b>Forced stop-loss</b> (被迫止损)</li>
+          <li><b>Capital tied up too long</b> (资金被占用过久)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="takeaway"><span class="star">★</span>MDD is not the final loss — it is the deepest drawdown the strategy experienced during its run. It reflects the strategy's "risk exposure" and "holding experience". When choosing a strategy, returns matter — but MDD matters just as much! (最大回撤不是最终亏损，而是策略在运行过程中经历的最深的一次回撤。它反映了策略的"风险暴露"与"持有体验"。选策略时，收益重要，最大回撤同样关键！)</div>
+  </div>
+</section>
+
+<!-- ============ 5. Returns and Drawdowns Coexist ============ -->
+<section>
+  <h2><span class="num">5</span>Returns &amp; Drawdowns Coexist</h2>
+  <p class="subtitle">Even if the final return is zero, the strategy may have experienced enormous drawdowns along the way. (即使最终没赚钱，中途也可能经历过很大的回撤。)</p>
+
+  <div class="spec c-warn">
+    <h3><span class="tag">insight</span>The classic example (经典例子)</h3>
+    <div class="cols">
+      <div>
+        <table>
+          <tr><td>Initial capital</td><td class="num">100,000</td></tr>
+          <tr><td>Historical peak</td><td class="num">130,000</td></tr>
+          <tr><td>Current capital</td><td class="num">100,000</td></tr>
+        </table>
+        <div class="formula" style="margin-top:14px">
+          <span class="term green">Cumulative return</span><span class="op">=</span>
+          <span class="term">(10−10)/10</span><span class="op">=</span>
+          <span class="term green">0%</span>
+        </div>
+        <div class="formula">
+          <span class="term red">Current drawdown</span><span class="op">=</span>
+          <span class="term">(10−13)/13</span><span class="op">=</span>
+          <span class="term red">−23.08%</span>
+        </div>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Core insight (核心认知)</b>
+          The account returned to its starting capital — that doesn't mean there was no drawdown!<br><br>
+          Drawdown reflects the pain of the journey. The account went from 100k → 130k → back to 100k — a 23% round-trip of suffering, even though the "result" is 0%.<br><br>
+          <strong>Account back to start ≠ no drawdown!</strong><br>
+          (账户回到初始资金，不代表没有回撤！回撤反映的是过程中的痛苦。)
+        </div>
+      </div>
+    </div>
+
+    <h3>Three dimensions of evaluation (三个评价维度)</h3>
+    <div class="compare" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="panel good">
+        <h4>Cumulative Return (累计收益)</h4>
+        <ul>
+          <li>Measures <b>final result</b> — how much was earned</li>
+          <li>Higher is better</li>
+          <li>But doesn't show the journey</li>
+        </ul>
+      </div>
+      <div class="panel warn">
+        <h4>Current Drawdown (当前回撤)</h4>
+        <ul>
+          <li>Measures <b>current pain</b> — how far from peak</li>
+          <li>Lower is better</li>
+          <li>Reflects current risk state</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>Max Drawdown (最大回撤)</h4>
+        <ul>
+          <li>Measures <b>worst experience</b> — deepest pain ever</li>
+          <li>Lower is better</li>
+          <li>Evaluates risk tolerance requirements</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Cumulative return tells you the "result". Current drawdown tells you "how painful right now". Maximum drawdown tells you "how bad the worst time was".</b> An excellent strategy should earn solid returns while keeping drawdowns under control! (一个优秀的策略，应该在获得可观收益的同时，控制好回撤！)</div>
+</section>
+
+<!-- ============ 6. Practice ============ -->
+<section>
+  <h2><span class="num">6</span>Practice — A Full Equity Dataset</h2>
+  <p class="subtitle">Given the following equity data, compute all metrics and understand what they tell you.</p>
+
+  <div class="io-box">
+    <b>Practice data (练习数据, unit: 万元)</b>
+    Day 0: 10 · Day 1: 12 · Day 2: 11 · Day 3: 9 · Day 4: 13 · Day 5: 10
+  </div>
+
+  <h3>Step-by-step analysis</h3>
+  <div class="spec c-eq">
+    <h3>Key values (关键数据点)</h3>
+    <table>
+      <tr><th>Metric</th><th>Value</th><th>Interpretation</th></tr>
+      <tr><td>Initial capital (初始资金)</td><td class="num">10 万</td><td>Starting point</td></tr>
+      <tr><td>Historical peak (历史最高点)</td><td class="num">13 万 (Day 4)</td><td>Highest equity reached</td></tr>
+      <tr><td>Final capital (最终资金)</td><td class="num">10 万 (Day 5)</td><td>Where we ended up</td></tr>
+      <tr><td>Current equity (当前权益)</td><td class="num">10 万</td><td>Same as Day 5</td></tr>
+    </table>
+
+    <h3>Computed results (计算结果)</h3>
+    <div class="metric-trio">
+      <div class="metric-card">
+        <div class="metric-icon">📉</div>
+        <div class="metric-name">Drawdown 1 (回撤1)</div>
+        <div class="metric-cn">From Day 1 peak (12) to Day 3 trough (9)</div>
+        <div class="metric-value" style="color:var(--red)">−25%</div>
+        <div class="metric-desc">(9 − 12) / 12 = −25%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">💀</div>
+        <div class="metric-name">Max Drawdown (最大回撤)</div>
+        <div class="metric-cn">The most severe drawdown in history</div>
+        <div class="metric-value" style="color:var(--red)">−25%</div>
+        <div class="metric-desc">min(−25%, −23.08%) = −25%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📊</div>
+        <div class="metric-name">Cumulative Return (累计收益)</div>
+        <div class="metric-cn">Final result vs initial</div>
+        <div class="metric-value" style="color:var(--muted)">0%</div>
+        <div class="metric-desc">(10 − 10) / 10 = 0%</div>
+      </div>
+    </div>
+
+    <h3>Current state on Day 5 (最后一天的状态)</h3>
+    <table>
+      <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
+      <tr><td>Cumulative return</td><td class="num">0%</td><td>Broke even — neither profit nor loss (不盈利也不亏损)</td></tr>
+      <tr><td>Current drawdown</td><td class="num" style="color:var(--red)">−23.08%</td><td>Still in drawdown — hasn't made a new high (仍处于回撤中)</td></tr>
+    </table>
+
+    <h3>How to interpret these results? (如何理解这些结果？)</h3>
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Cumulative return = 0%</h4>
+        <p>Looks like "no gain, no loss" — but the journey was anything but smooth.</p>
+      </div>
+      <div class="panel bad">
+        <h4>MDD = −25%</h4>
+        <p>From 12万 to 9万, a quarter of the value was wiped out. This period was extremely painful. (从12万跌到9万，亏掉了25%。这段时间非常煎熬。)</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Day 9 Summary (Day 9 总结)</h3>
+  <table>
+    <tr><th>Concept</th><th>Meaning</th><th>What it tells you</th></tr>
+    <tr><td><b>Equity Curve</b> (收益曲线)</td><td>Account equity over time</td><td>The full performance story — ups, downs, recoveries</td></tr>
+    <tr><td><b>Cumulative Return</b> (累计收益)</td><td>Final result vs. initial</td><td>"How much was earned in the end?" — the bottom line</td></tr>
+    <tr><td><b>Current Drawdown</b> (当前回撤)</td><td>Distance from all-time peak</td><td>"How painful is right now?" — current risk state</td></tr>
+    <tr><td><b>Max Drawdown</b> (最大回撤, MDD)</td><td>Worst drawdown ever</td><td>"How bad was the worst time?" — risk tolerance requirement</td></tr>
+  </table>
+
+  <div class="takeaway"><span class="star">★</span><b>The equity curve shows the full journey. Cumulative return tells you the destination. Drawdowns (especially MDD) tell you the price paid — in pain — for that journey.</b> An excellent strategy must not only earn well, but also "survive long enough" (活得久). <br><br>If two strategies have the same return but A has MDD = 10% and B has MDD = 40% — which would you choose? (如果两个策略最终收益相同，但A的最大回撤10%，B的最大回撤40%，你会选择哪个？)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_9_equity-curve-drawdown.html · Distilled from knowledge-base/day_9 (30天学习量化投资 · Day 9: 收益曲线、累计收益与最大回撤) · 2025-08-30
+</footer>
+
+</div>
+</body>
+</html>

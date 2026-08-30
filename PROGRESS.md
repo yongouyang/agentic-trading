@@ -5,6 +5,101 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-30 — Day 11, 12, 13 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_11/` (IMG_6550–6553, 4 slides),
+  `day_12/` (IMG_6554–6557, 4 slides) and `day_13/` (IMG_6558–6565, 8 slides)
+  of "30天学习量化投资" using the macOS Vision OCR tool.
+- Created three self-contained HTML docs in `docs/`, matching the existing style:
+  - `docs/day_11_parameter-optimization-overfitting.html` — 参数优化与过拟合:
+    Overfitting definition and programmer analogy (memorizing vs learning);
+    parameter plateaus vs isolated peaks (with inline SVG bar charts);
+    why the highest-return parameter (MA7=35%) is dangerous while the plateau
+    (MA5/6/8/9=17-20%) is reliable; out-of-sample testing (train on 2015-2022,
+    validate on 2023-2025); decision checklist.
+  - `docs/day_12_volatility-sharpe-ratio.html` — 波动率与夏普比率: Volatility as
+    "bumpiness" (with SVG equity curves for low vs high vol); Sharpe Ratio formula
+    and 5-band visual scale (<0 poor to >3 excellent, with overfitting warning);
+    Sharpe vs Max Drawdown comparison (complementary, not substitutable);
+    Strategy A (18%/9% vol/Sharpe 2.0) vs B (25%/20% vol/Sharpe 1.25) worked
+    comparison.
+  - `docs/day_13_position-sizing.html` — 仓位管理: Position definition and
+    terminology (满仓/半仓/轻仓/空仓 with visual bars); how position amplifies
+    both gains and losses (symmetric tables); fixed position sizing (auto-scaling
+    with equity, 4 advantages, conservative/balanced/aggressive ranges); dynamic
+    position sizing (volatility-based allocation with SVG curve); leverage as
+    multiplier (Sharpe unchanged, no Alpha creation); real Alpha comes from
+    strategy improvement; 3-scenario practice exercise.
+- Verified all three docs render with headless Chrome screenshots (top + full-page);
+  no rendering issues found; temporary screenshots deleted.
+
+### Key decisions
+- Day 11 uses inline SVG bar charts to contrast parameter plateaus (flat green bars)
+  vs isolated peaks (single red spike) — visual communication of the core concept.
+- Day 12 introduces a 5-band Sharpe scale component for quick visual reference.
+- Day 13 introduces `.pos-bar` (position bar) and `.compare-3` (3-column grid)
+  components to visualize capital allocation.
+- All docs continue the bilingual English/Chinese convention.
+
+### What's next (proposed)
+1. Continue extraction for remaining days as folders appear.
+2. Build an index/hub page linking all 13 day docs.
+3. Feed Day 11 overfitting concepts into backtest module validation pipeline.
+4. Feed Day 12 Sharpe/volatility metrics into backtest report outputs.
+5. Feed Day 13 position sizing into portfolio/risk module design (fixed vs dynamic
+   allocation, leverage constraints).
+
+---
+
+## 2026-08-30 — Day 8, 9, 10 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_8/` (IMG_6527–6533 + IMG_6542 cover,
+  8 slides), `day_9/` (IMG_6534–6541, 8 slides) and `day_10/` (IMG_6543–6549,
+  7 slides) of "30天学习量化投资" using the macOS Vision OCR tool from
+  `knowledge-base/day_6/.tools/ocr`.
+- Created three self-contained HTML docs in `docs/`, matching the day_6/7 style:
+  - `docs/day_8_order-trade-fees-slippage.html` — 订单、成交、手续费与滑点:
+    Order vs Trade (intent vs result); the complete Signal→Order→Trade→Portfolio
+    chain; slippage definition, sources, and return impact; commission fee formula
+    and accumulation effect; partial fills and market depth; a full-cost worked
+    calculation (buy 2000 @ 10.05 with 万三 fee); the five hidden costs that make
+    real returns fall short of ideal backtests.
+  - `docs/day_9_equity-curve-drawdown.html` — 收益曲线、累计收益与最大回撤:
+    Equity Curve as the strategy's biography (with SVG chart); cumulative return
+    formula and three outcomes (profit/break-even/loss); current drawdown from
+    peak; Maximum Drawdown (MDD) computation with worked example (with SVG chart);
+    returns and drawdowns coexisting (the classic "back to start but endured -23%"
+    example); full practice exercise with Day 0–5 data.
+  - `docs/day_10_win-rate-profit-ratio-expectancy.html` — 胜率、盈亏比与期望
+    收益: Win rate (frequency ≠ quality); Profit/Loss ratio (win size vs loss
+    size); Expected Return formula (the ultimate verdict); the 90%-win-rate-can-
+    still-lose trap; trend strategies (low win rate, high P/L, one big win covers
+    many small losses); full practice with 10-trade dataset.
+- Verified all three docs render with headless Chrome screenshots (top + full-page);
+  no rendering issues found; temporary screenshots deleted.
+
+### Key decisions
+- Naming follows the existing `day_N_<slug>.html` pattern established by days 1–7.
+- Day 9 includes inline SVG charts for the equity curve and MDD diagrams (instead
+  of ASCII art) for clearer visual communication.
+- Day 10 introduces `.trade-strip` and `.gauge` CSS components for visualizing
+  win/loss sequences and expectancy bars — extensions of the existing design
+  language.
+- All Chinese terms preserved in parentheses alongside English, consistent with
+  previous docs.
+
+### What's next (proposed)
+1. Continue extraction for days 11–12 when ready.
+2. Consider building an index/hub page linking all 10 (soon 12) day docs.
+3. Feed Day 8 execution concepts into the `broker/` module design (slippage
+   models, partial fill handling).
+4. Feed Day 9–10 evaluation metrics into the `backtest/` module (equity curve,
+   MDD, win rate, P/L ratio, expected return as report outputs).
+
+---
+
 ## 2026-08-30 — Day 4, 5, 7 knowledge extraction → topic docs
 
 ### What was done

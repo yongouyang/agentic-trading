@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Position Sizing — Fixed, Dynamic &amp; Leverage | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-pos { --accent: #1d4ed8; } .c-fixed { --accent: #15803d; } .c-dynamic { --accent: #7e22ce; }
+  .c-lev { --accent: #dc2626; } .c-risk { --accent: #c2410c; } .c-alpha { --accent: #0369a1; }
+
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 120px; min-width: 120px; text-align: center; padding: 12px 8px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg)); position: relative;
+  }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 14px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 12px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 6px; font-weight: 700; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .compare-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare-3 { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel.warn { border-top: 4px solid var(--orange); }
+  .panel.purple { border-top: 4px solid var(--purple); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel.warn h4 { color: var(--orange); }
+  .panel.purple h4 { color: var(--purple); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; }
+  .duty li { margin-bottom: 6px; }
+  .keypoint {
+    background: var(--orange-bg); border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .formula {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin: 16px 0; font-size: 16px;
+  }
+  .formula .term { background: var(--blue-bg); color: var(--navy); border-radius: 8px; padding: 6px 14px; font-weight: 700; }
+  .formula .term.green { background: var(--green-bg); color: var(--green); }
+  .formula .term.orange { background: var(--orange-bg); color: var(--orange); }
+  .formula .term.red { background: var(--red-bg); color: var(--red); }
+  .formula .op { font-size: 20px; font-weight: 700; color: var(--muted); }
+
+  /* position bar visual */
+  .pos-bar {
+    display: flex; height: 40px; border-radius: 10px; overflow: hidden;
+    border: 1.5px solid var(--line); margin: 14px 0; font-size: 13px; font-weight: 700; color: #fff;
+  }
+  .pos-bar .invested { display: flex; align-items: center; justify-content: center; }
+  .pos-bar .reserve { display: flex; align-items: center; justify-content: center; background: #f1f5f9; color: var(--muted); }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Risk Management</div>
+  <h1>Position Sizing — Fixed, Dynamic &amp; Leverage</h1>
+  <p>You may be right on direction, but still lose a lot of money — why? (看对方向，为什么还是可能亏很多？) The strategy decides what to do; position size decides how much you bet. (策略决定做什么，仓位决定押多少。)</p>
+  <div class="src">Source: knowledge-base/day_13 (IMG_6558–IMG_6565), "30天学习量化投资 · Day 13: 仓位管理" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ Overview ============ -->
+<section>
+  <h2><span class="num">★</span>Overview — Survive First, Profit Second</h2>
+  <p class="subtitle">Position sizing isn't about earning more — it's about surviving under controlled risk and earning steadily. (仓位管理不是让你赚更多，而是让你在可控风险下，活得久，赚得稳。)</p>
+
+  <div class="modules">
+    <div class="mod c-pos"><div class="tag">basics</div><h4>What is Position (什么是仓位)</h4><p>The proportion of capital deployed in the market.</p></div>
+    <div class="mod c-risk"><div class="tag">impact</div><h4>How Position Affects P&amp;L</h4><p>Bigger position = bigger gains AND bigger losses.</p></div>
+    <div class="mod c-fixed"><div class="tag">method 1</div><h4>Fixed Position (固定仓位)</h4><p>Simple, stable, easy to execute — same ratio every time.</p></div>
+    <div class="mod c-dynamic"><div class="tag">method 2</div><h4>Dynamic Position (动态仓位)</h4><p>Adjust based on market volatility — risk-aware allocation.</p></div>
+    <div class="mod c-lev"><div class="tag">danger</div><h4>Leverage &amp; Alpha (杠杆)</h4><p>Leverage amplifies but doesn't create — real Alpha comes from the strategy.</p></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>In investing, surviving is more important than earning fast money!</b> (在投资中，活下来比赚快钱更重要！) Position sizing is the first line of defense in risk management.</div>
+</section>
+
+<!-- ============ 1. What is Position? ============ -->
+<section>
+  <h2><span class="num">1</span>What is Position?</h2>
+  <p class="subtitle">Position determines how many chips you've placed on the table. (仓位决定你在市场中押了多少筹码。)</p>
+
+  <div class="formula">
+    <span class="term">Position (仓位)</span><span class="op">=</span>
+    <span class="term orange">Capital deployed (投入市场的资金)</span><span class="op">÷</span>
+    <span class="term green">Total equity (账户总权益)</span><span class="op">×</span>
+    <span class="term">100%</span>
+  </div>
+
+  <div class="spec c-pos">
+    <h3><span class="tag">basics</span>What different positions mean</h3>
+
+    <div class="compare-3">
+      <div class="panel good">
+        <h4>20% — Light position (轻仓)</h4>
+        <div class="pos-bar">
+          <div class="invested" style="width:20%; background:var(--green)">20%</div>
+          <div class="reserve" style="width:80%">80% reserve</div>
+        </div>
+        <p style="font-size:13px">High flexibility, strong risk resistance. Only a small portion in the market.</p>
+      </div>
+      <div class="panel neutral">
+        <h4>50% — Half position (半仓)</h4>
+        <div class="pos-bar">
+          <div class="invested" style="width:50%; background:var(--blue)">50%</div>
+          <div class="reserve" style="width:50%">50% reserve</div>
+        </div>
+        <p style="font-size:13px">Balance between offense and defense. Can attack or retreat.</p>
+      </div>
+      <div class="panel warn">
+        <h4>100% — Full position (满仓)</h4>
+        <div class="pos-bar">
+          <div class="invested" style="width:100%; background:var(--red)">100%</div>
+        </div>
+        <p style="font-size:13px">Maximum returns, but also maximum risk exposure. All capital at risk.</p>
+      </div>
+    </div>
+
+    <h3>Common position terminology (常见的仓位表示)</h3>
+    <table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td><b>100% — Full position (满仓)</b></td><td>All account capital is in the market</td></tr>
+      <tr><td><b>50% — Half position (半仓)</b></td><td>Half the capital is in the market</td></tr>
+      <tr><td><b>20% — Light position (轻仓)</b></td><td>Only a small portion in the market</td></tr>
+      <tr><td><b>0% — No position (空仓)</b></td><td>No holdings, all capital waiting for opportunities</td></tr>
+    </table>
+
+    <div class="keypoint">
+      💡 <b>Key insight:</b> The higher the position, the more sensitive the account is to market movements. The lower the position, the less sensitive. There is no absolutely "correct" position — only the one most suited to the current market and your risk tolerance. (仓位越高，账户对市场波动的敏感度越高。没有绝对正确的仓位，只有最适合当下市场和你的风险承受能力的仓位！)<br><br>
+      <b>Position sizing is the first line of defense in risk management!</b> (仓位是风险管理的第一道防线！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. Position Affects Returns ============ -->
+<section>
+  <h2><span class="num">2</span>How Position Affects Returns</h2>
+  <p class="subtitle">Same market move, different positions — completely different results. (同样的行情，不同仓位，收益完全不同。)</p>
+
+  <div class="spec c-pos">
+    <h3><span class="tag">upside</span>Example: market rises 10%, account 1,000,000 (标的上涨10%)</h3>
+    <table>
+      <tr><th>Position</th><th>Capital deployed</th><th>Market move</th><th>Account P&amp;L</th><th>Account return</th></tr>
+      <tr>
+        <td><b>100% (满仓)</b></td><td class="num">1,000,000</td><td class="num">+10%</td>
+        <td class="num" style="color:var(--green)"><b>+100,000</b></td>
+        <td class="num" style="color:var(--green)"><b>+10%</b></td>
+      </tr>
+      <tr>
+        <td><b>50% (半仓)</b></td><td class="num">500,000</td><td class="num">+10%</td>
+        <td class="num" style="color:var(--green)">+50,000</td>
+        <td class="num" style="color:var(--green)">+5%</td>
+      </tr>
+      <tr>
+        <td><b>20% (轻仓)</b></td><td class="num">200,000</td><td class="num">+10%</td>
+        <td class="num" style="color:var(--green)">+20,000</td>
+        <td class="num" style="color:var(--green)">+2%</td>
+      </tr>
+    </table>
+
+    <div class="quote">
+      <strong>Key insight:</strong> Market moves are given by the market — how much you earn is determined by your position. Bigger position = bigger returns; smaller position = smaller returns. (标的涨跌是市场给的，你赚多少，是仓位决定的。仓位越大，收益越大；仓位越小，收益越小。)
+    </div>
+
+    <p style="font-size:13.5px; color:var(--muted)"><b>Tip:</b> When uncertain, rather earn less than take heavy risks. Control position first, then control account volatility. Position management is the key to long-term survival. (不确定时，宁可少赚，也不要重仓冒险。先控制仓位，才能控制账户的波动。)</p>
+  </div>
+</section>
+
+<!-- ============ 3. Position Affects Losses ============ -->
+<section>
+  <h2><span class="num">3</span>How Position Affects Losses</h2>
+  <p class="subtitle">Losses are also amplified by position — so control your position! (亏损也会被仓位放大，所以要控制仓位！)</p>
+
+  <div class="spec c-risk">
+    <h3><span class="tag">downside</span>Example: market drops 10%, account 1,000,000 (标的下跌10%)</h3>
+    <table>
+      <tr><th>Position</th><th>Capital deployed</th><th>Market move</th><th>Account loss</th><th>Loss rate</th></tr>
+      <tr>
+        <td><b>100% (满仓)</b></td><td class="num">1,000,000</td><td class="num">−10%</td>
+        <td class="num" style="color:var(--red)"><b>−100,000</b></td>
+        <td class="num" style="color:var(--red)"><b>−10%</b></td>
+      </tr>
+      <tr>
+        <td><b>50% (半仓)</b></td><td class="num">500,000</td><td class="num">−10%</td>
+        <td class="num" style="color:var(--red)">−50,000</td>
+        <td class="num" style="color:var(--red)">−5%</td>
+      </tr>
+      <tr>
+        <td><b>20% (轻仓)</b></td><td class="num">200,000</td><td class="num">−10%</td>
+        <td class="num" style="color:var(--red)">−20,000</td>
+        <td class="num" style="color:var(--red)">−2%</td>
+      </tr>
+    </table>
+
+    <div class="compare">
+      <div class="panel bad">
+        <h4>High position = big bucket (高仓位 = 桶大)</h4>
+        <p>When markets fall, more water (losses) pours in. Bigger position → bigger damage.</p>
+      </div>
+      <div class="panel good">
+        <h4>Low position = small bucket (低仓位 = 桶小)</h4>
+        <p>When markets fall, less damage. Smaller position → more controllable losses.</p>
+      </div>
+    </div>
+
+    <div class="keypoint">
+      💡 Position doesn't change the market's direction — but it changes how much the loss hurts you. Controlling position = controlling drawdown = protecting your account. (仓位不会改变市场的方向，但会改变亏损对你的伤害。控制仓位，就是控制回撤，就是保护你的账户！)
+    </div>
+
+    <h3>Ultimate reminder (终极提醒)</h3>
+    <div class="quote">
+      <strong>Core goal of position management:</strong> Keep account volatility within tolerable range. Preserve ammunition for the next opportunity. Quantitative investing is not about who bets the most — it's about who survives the longest, stays the steadiest, and earns the most consistently! (量化投资不是比谁押得多，而是比谁活得久、活得稳、赚得久！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. Fixed Position ============ -->
+<section>
+  <h2><span class="num">4</span>Fixed Position — Simple, Stable, Executable</h2>
+  <p class="subtitle">Use a fixed ratio of capital for every trade. Suitable for most ordinary investors. (每次使用固定比例的资金进行交易。简单、好用、易坚持！)</p>
+
+  <div class="spec c-fixed">
+    <h3><span class="tag">method</span>Fixed position = constant ratio of equity deployed</h3>
+    <p>Fixed position (固定仓位): each time you invest a fixed percentage of total account equity. For example: always deploy 30%.</p>
+
+    <h3>How it works: 30% fixed position example</h3>
+    <table>
+      <tr><th>State</th><th>Equity</th><th>Deployed (30%)</th><th>Reserve (70%)</th></tr>
+      <tr><td>Initial (初始)</td><td class="num">1,000,000</td><td class="num">300,000</td><td class="num">700,000</td></tr>
+      <tr><td>After +10% profit</td><td class="num">1,100,000</td><td class="num">330,000</td><td class="num">770,000</td></tr>
+      <tr><td>After −10% loss</td><td class="num">900,000</td><td class="num">270,000</td><td class="num">630,000</td></tr>
+      <tr><td>After another +10%</td><td class="num">990,000</td><td class="num">297,000</td><td class="num">693,000</td></tr>
+    </table>
+    <p style="font-size:13.5px; color:var(--muted)">Note how the deployed amount naturally adjusts with equity — it grows when you profit and shrinks when you lose. The ratio stays at 30%.</p>
+
+    <h3>Advantages of fixed position (固定仓位的优点)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-fixed"><h4>Simple &amp; intuitive (简单易懂)</h4><p>Just set a ratio — execution is straightforward.</p></div>
+      <div class="mod c-fixed"><h4>Easy to backtest (易于回测)</h4><p>Clear, unified rules make backtests more reliable.</p></div>
+      <div class="mod c-fixed"><h4>Stable risk exposure (风险暴露稳定)</h4><p>Risk level stays relatively consistent through ups and downs.</p></div>
+      <div class="mod c-fixed"><h4>Easy to stick with (容易坚持)</h4><p>No need for frequent judgment calls — long-term execution is easier.</p></div>
+    </div>
+
+    <h3>Reference position ranges (常见比例参考)</h3>
+    <table>
+      <tr><th>Style</th><th>Ratio</th><th>Characteristics</th></tr>
+      <tr><td>Conservative (保守型)</td><td class="num">10%–20%</td><td>Low risk, capital preservation focused</td></tr>
+      <tr><td>Balanced (稳健型)</td><td class="num">20%–40%</td><td>Moderate risk, balanced growth</td></tr>
+      <tr><td>Aggressive (积极型)</td><td class="num">40%–70%</td><td>Higher risk, higher potential return</td></tr>
+    </table>
+    <p style="font-size:12.5px; color:var(--muted)">No absolute standard — what fits your risk tolerance is what matters most!</p>
+
+    <div class="keypoint">
+      💡 Fixed position doesn't guarantee profits — it controls risk. Strategy P&amp;L comes from the strategy itself; position only amplifies or dampens the result. <b>Fixed position = simple + stable + executable — a good method for long-term survival!</b> (固定仓位 = 简单 + 稳定 + 可执行，是长期生存的好方法！)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Dynamic Position ============ -->
+<section>
+  <h2><span class="num">5</span>Dynamic Position — Risk-Responsive Allocation</h2>
+  <p class="subtitle">When the market is more uncertain, be more conservative. When it's calmer, be more aggressive. (市场越不确定，越要保守；市场越平稳，可以更积极！)</p>
+
+  <div class="spec c-dynamic">
+    <h3><span class="tag">method</span>Core idea: adjust position based on market risk state</h3>
+    <p>Dynamic position (动态仓位) adjusts the deployed ratio based on current market conditions. Higher volatility → lower position; lower volatility → position can be increased. (波动率越大，仓位越小；波动率越小，仓位可适当增大。)</p>
+
+    <h3>How to dynamically adjust (如何动态调整)</h3>
+    <div class="flow">
+      <div class="step c-dynamic" style="--stepbg:var(--purple-bg)"><div class="icon">📊</div><div class="name">① Assess risk</div><div class="cn">use volatility and other indicators</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-dynamic" style="--stepbg:var(--purple-bg)"><div class="icon">🎯</div><div class="name">② Set target position</div><div class="cn">high risk → reduce; low risk → increase</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-dynamic" style="--stepbg:var(--purple-bg)"><div class="icon">🔄</div><div class="name">③ Execute &amp; update</div><div class="cn">periodically re-evaluate and adjust</div></div>
+    </div>
+
+    <h3>Reference rule: volatility → position mapping (波动率与推荐仓位关系)</h3>
+    <table>
+      <tr><th>Annualized volatility (V)</th><th>Recommended position (示例)</th></tr>
+      <tr><td>V &gt; 40%</td><td class="num"><b>10%–20%</b> (very defensive)</td></tr>
+      <tr><td>20% &lt; V ≤ 40%</td><td class="num"><b>20%–40%</b></td></tr>
+      <tr><td>10% &lt; V ≤ 20%</td><td class="num"><b>40%–60%</b></td></tr>
+      <tr><td>V ≤ 10%</td><td class="num"><b>60%–80%</b> (can be more aggressive)</td></tr>
+    </table>
+
+    <!-- SVG: volatility-position curve -->
+    <svg viewBox="0 0 500 200" style="width:100%; max-width:500px; display:block; margin:16px auto">
+      <line x1="50" y1="10" x2="50" y2="170" stroke="#e5e7eb" stroke-width="1"/>
+      <line x1="50" y1="170" x2="480" y2="170" stroke="#e5e7eb" stroke-width="1"/>
+      <!-- y axis: position 0-100% -->
+      <text x="40" y="18" text-anchor="end" font-size="10" fill="#6b7280">100%</text>
+      <text x="40" y="58" text-anchor="end" font-size="10" fill="#6b7280">75%</text>
+      <text x="40" y="98" text-anchor="end" font-size="10" fill="#6b7280">50%</text>
+      <text x="40" y="138" text-anchor="end" font-size="10" fill="#6b7280">25%</text>
+      <text x="40" y="173" text-anchor="end" font-size="10" fill="#6b7280">0%</text>
+      <!-- x axis: volatility 0-50% -->
+      <text x="50" y="188" text-anchor="middle" font-size="10" fill="#6b7280">0%</text>
+      <text x="150" y="188" text-anchor="middle" font-size="10" fill="#6b7280">10%</text>
+      <text x="250" y="188" text-anchor="middle" font-size="10" fill="#6b7280">20%</text>
+      <text x="350" y="188" text-anchor="middle" font-size="10" fill="#6b7280">30%</text>
+      <text x="450" y="188" text-anchor="middle" font-size="10" fill="#6b7280">40%+</text>
+      <text x="270" y="200" text-anchor="middle" font-size="11" fill="#6b7280">Annualized Volatility →</text>
+      <!-- curve: descending from high position at low vol to low position at high vol -->
+      <polyline points="50,25 100,35 150,50 200,75 250,100 300,120 350,140 400,155 450,160 480,163"
+                fill="none" stroke="#7e22ce" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <!-- annotation -->
+      <text x="80" y="20" font-size="11" fill="#7e22ce" font-weight="700">Low vol → high position</text>
+      <text x="380" y="150" font-size="11" fill="#7e22ce" font-weight="700">High vol → low position</text>
+    </svg>
+
+    <div class="compare">
+      <div class="panel good">
+        <h4>Low-volatility environment (低波动环境)</h4>
+        <ul>
+          <li>Annualized volatility: <b>12%</b></li>
+          <li>Recommended position: <b>~50%</b></li>
+          <li>Market is calm → increase position to capture opportunities</li>
+        </ul>
+      </div>
+      <div class="panel warn">
+        <h4>High-volatility environment (高波动环境)</h4>
+        <ul>
+          <li>Annualized volatility: <b>35%</b></li>
+          <li>Recommended position: <b>~20%</b></li>
+          <li>Market is turbulent → reduce position to protect capital</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Advantages of dynamic position (动态仓位的优点)</h3>
+    <ul class="duty">
+      <li><b>Better drawdown control</b> — reduce exposure when volatility is high (更好地控制回撤)</li>
+      <li><b>Improved capital efficiency</b> — deploy more when conditions are favorable (提高资金使用效率)</li>
+      <li><b>Adapts to different market environments</b> — more flexible and robust (适应不同市场环境)</li>
+      <li><b>Longer survival</b> — risk control enables longer-term participation (长期生存能力更强)</li>
+    </ul>
+
+    <div class="keypoint">
+      💡 Dynamic position is not about predicting the market — it's a <b>dynamic response to risk</b>! Control risk first, then stay in the game long-term. (动态仓位不是预测市场，而是对风险的动态响应！先控制风险，才能在长期留下来。)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. Leverage & Alpha ============ -->
+<section>
+  <h2><span class="num">6</span>Leverage &amp; Alpha — Leverage Doesn't Create Skill</h2>
+  <p class="subtitle">Leverage doesn't create excess returns — it only amplifies what already exists. (杠杆不会创造超额收益，它只是放大已有的收益和风险！)</p>
+
+  <div class="spec c-lev">
+    <h3><span class="tag">danger</span>Leverage amplifies results, not ability</h3>
+    <p>Raising leverage or position size only amplifies both returns AND risk simultaneously — it doesn't make the strategy itself any better. (提高杠杆或仓位，只会同时放大收益和风险，并不能让策略本身变得更优秀。)</p>
+
+    <h3>Same strategy, different leverage (同一策略，不同杠杆)</h3>
+    <table>
+      <tr><th>Metric</th><th>1× (no leverage)</th><th>2× (or 2× position)</th><th>3× (or 3× position)</th></tr>
+      <tr><td>Annual return (年化收益率)</td><td class="num">15%</td><td class="num">30%</td><td class="num">45%</td></tr>
+      <tr><td>Volatility (波动率)</td><td class="num">10%</td><td class="num">20%</td><td class="num">30%</td></tr>
+      <tr><td><b>Sharpe ratio</b></td><td class="num"><b>1.5</b></td><td class="num"><b>1.5</b></td><td class="num"><b>1.5</b></td></tr>
+    </table>
+
+    <div class="formula">
+      <span class="term red">Leverage ↑</span><span class="op">→</span>
+      <span class="term green">Return ↑</span><span class="op">+</span>
+      <span class="term red">Volatility ↑</span><span class="op">=</span>
+      <span class="term">Sharpe unchanged (夏普比率不变)</span>
+    </div>
+    <p style="text-align:center; font-size:13px; color:var(--muted)">The strategy itself hasn't improved — you've just taken on more risk exposure. (策略本身并没有变好！只是承担了更大的风险敞口。)</p>
+
+    <h3>Dangers of excessive leverage (过度杠杆的危险)</h3>
+    <div class="flow" style="padding:14px 10px">
+      <div class="step c-lev" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px; color:var(--red)">Higher leverage</div><div class="cn">杠杆越高</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-lev" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px; color:var(--red)">Bigger volatility</div><div class="cn">波动放大</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-lev" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px; color:var(--red)">Extreme events hit harder</div><div class="cn">极端行情冲击</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-lev" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px; color:var(--red)">Deeper drawdowns / blowup</div><div class="cn">大幅回撤甚至爆仓</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-lev" style="--stepbg:var(--red-bg)"><div class="name" style="font-size:12.5px; color:var(--red)">Long-term returns damaged</div><div class="cn">长期收益受损</div></div>
+    </div>
+
+    <ul class="duty">
+      <li>Short-term may earn more — long-term may die faster. (短期可能赚得多，长期可能死得快。)</li>
+      <li>Leverage amplifies emotional volatility, increasing decision errors. (杠杆会放大情绪波动，增加决策失误。)</li>
+      <li>Once a black swan hits, you may be instantly back to square one. (一旦遇到黑天鹅，可能瞬间回到起跑线。)</li>
+    </ul>
+
+    <h3>Where does real Alpha come from? (Alpha 来自哪里？)</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>✗ Wrong approach: more leverage</h4>
+        <ul>
+          <li>Double the position (40% → 80%)</li>
+          <li>Double the leverage (1× → 2×)</li>
+          <li>Result: returns <b>and</b> risks both double — may earn more, may lose faster!</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>✓ Right approach: improve the strategy</h4>
+        <ul>
+          <li><b>Improve win rate</b> — make the strategy more likely to win</li>
+          <li><b>Improve P/L ratio</b> — earn more when right, lose less when wrong</li>
+          <li><b>Reduce drawdown / volatility</b> — make the strategy more stable</li>
+          <li><b>Improve Sharpe ratio</b> — more sustainable, more controllable</li>
+        </ul>
+        <p style="font-size:13px; color:var(--green); margin-top:8px"><b>This is real Alpha!</b> (这才是真正的 Alpha！)</p>
+      </div>
+    </div>
+
+    <div class="takeaway"><span class="star">★</span><b>Leverage is just a multiplier — it doesn't create excess returns. Get it right first, then scale up! (杠杆只是倍增器，不会创造超额收益。先做对，再做大！)</b> To earn higher returns, improve the strategy's quality — don't blindly add leverage. (想要更高收益，应该提升策略质量，而不是盲目加杠杆！)</div>
+  </div>
+</section>
+
+<!-- ============ 7. Practice & Summary ============ -->
+<section>
+  <h2><span class="num">7</span>Practice &amp; Summary</h2>
+  <p class="subtitle">A 1,000,000 yuan account — experience how different positions create different outcomes under different market conditions.</p>
+
+  <div class="spec c-pos">
+    <h3>Three scenarios (实战练习，账户100万)</h3>
+    <div class="compare-3">
+      <div class="panel good">
+        <h4>Scenario A: Full position, +8%</h4>
+        <table>
+          <tr><td>Position</td><td class="num">100%</td></tr>
+          <tr><td>P&amp;L</td><td class="num">1,000,000 × 100% × 8%</td></tr>
+          <tr><td>Result</td><td class="num" style="color:var(--green)"><b>+80,000</b></td></tr>
+          <tr><td>Final equity</td><td class="num"><b>1,080,000</b></td></tr>
+        </table>
+      </div>
+      <div class="panel neutral">
+        <h4>Scenario B: 40% position, +8%</h4>
+        <table>
+          <tr><td>Position</td><td class="num">40%</td></tr>
+          <tr><td>P&amp;L</td><td class="num">1,000,000 × 40% × 8%</td></tr>
+          <tr><td>Result</td><td class="num" style="color:var(--green)"><b>+32,000</b></td></tr>
+          <tr><td>Final equity</td><td class="num"><b>1,032,000</b></td></tr>
+        </table>
+      </div>
+      <div class="panel warn">
+        <h4>Scenario C: 20% position, −15%</h4>
+        <table>
+          <tr><td>Position</td><td class="num">20%</td></tr>
+          <tr><td>P&amp;L</td><td class="num">1,000,000 × 20% × 15%</td></tr>
+          <tr><td>Result</td><td class="num" style="color:var(--red)"><b>−30,000</b></td></tr>
+          <tr><td>Final equity</td><td class="num"><b>970,000</b></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>"Can we double the returns?" — the wrong vs right approach</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>✗ Wrong: force it with position or leverage</h4>
+        <ul>
+          <li>Double the position (40% → 80%) → returns <b>and</b> risks both double!</li>
+          <li>Increase leverage (1× → 2×) → same amplification problem!</li>
+          <li><b>Result: may earn more, may lose faster!</b></li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>✓ Right: improve the strategy itself</h4>
+        <ul>
+          <li>Improve win rate, P/L ratio, drawdown control</li>
+          <li>Result: strategy becomes stronger, returns improve naturally, risk stays controlled!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3>Day 13 Core Summary</h3>
+  <table>
+    <tr><th>Concept</th><th>Key insight</th></tr>
+    <tr><td><b>Position</b> (仓位)</td><td>= Capital deployed / Total equity. The first line of defense in risk management.</td></tr>
+    <tr><td><b>Position impact</b></td><td>Bigger position = bigger gains AND bigger losses. Position amplifies both directions equally.</td></tr>
+    <tr><td><b>Fixed position</b> (固定仓位)</td><td>Simple, stable risk exposure, easy to execute. Good for most investors.</td></tr>
+    <tr><td><b>Dynamic position</b> (动态仓位)</td><td>Adjust based on volatility — reduce in high-risk, increase in low-risk environments.</td></tr>
+    <tr><td><b>Leverage</b> (杠杆)</td><td>Amplifies returns and risk proportionally; Sharpe unchanged. Does NOT create Alpha.</td></tr>
+    <tr><td><b>Real Alpha</b></td><td>Comes from better strategy logic, stricter risk control, more stable execution, and long-term compounding.</td></tr>
+  </table>
+
+  <h3>Three sentences for quant beginners (给量化投资新手的3句话)</h3>
+  <div class="modules" style="grid-template-columns:1fr">
+    <div class="mod c-pos" style="font-size:15px"><h4>① Preserve capital first — then you have the opportunity to earn. (先保留本金，才有机会赚钱。)</h4></div>
+    <div class="mod c-risk" style="font-size:15px"><h4>② Position management is a survival skill — more important than predicting the market. (仓位管理是生存技能，比预测市场更重要。)</h4></div>
+    <div class="mod c-alpha" style="font-size:15px"><h4>③ In an uncertain market, controlling risk IS the greatest certainty. (在不确定的市场里，控制风险就是最大的确定性。)</h4></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Control position first, then discuss returns. Control risk first, then survive long-term.</b> (先控制仓位，再谈收益；先控制风险，才能长期活下来！)<br><br>Quantitative investing is not about who bets the most — it's about who survives the longest, stays the steadiest, and earns the most consistently. The strategy itself is the core source of excess returns! (策略本身才是获取超额收益的核心！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_13_position-sizing.html · Distilled from knowledge-base/day_13 (30天学习量化投资 · Day 13: 仓位管理) · 2025-08-30
+</footer>
+
+</div>
+</body>
+</html>
