@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go Quant Project Structure &amp; Module Design | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); background: #f8fafc; line-height: 1.65; }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  header.hero { background: linear-gradient(135deg, #0f172a, #1e40af); color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px; }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+  section { margin-bottom: 48px; }
+  h2 { font-size: 24px; color: var(--navy); margin-bottom: 6px; padding-bottom: 10px; border-bottom: 2px solid var(--blue-light); }
+  h2 .num { display: inline-block; background: var(--blue); color: #fff; border-radius: 8px; width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px; }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+  .quote { background: var(--blue-bg); border-left: 4px solid var(--blue); border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px; font-size: 15.5px; color: var(--navy); margin: 18px 0; }
+  .quote strong { font-size: 16px; }
+  .takeaway { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff; border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px; }
+  .takeaway .star { margin-right: 8px; }
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod { border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px; background: #fff; border-top: 4px solid var(--accent, var(--blue)); }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-market { --accent: #1d4ed8; } .c-ind { --accent: #15803d; } .c-strat { --accent: #ea580c; }
+  .c-risk { --accent: #dc2626; } .c-broker { --accent: #0369a1; } .c-port { --accent: #7e22ce; }
+  .c-bt { --accent: #3730a3; }
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0; }
+  .flow .step { flex: 1 1 100px; min-width: 100px; text-align: center; padding: 12px 8px; border-radius: 10px; background: var(--stepbg, var(--blue-bg)); }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 13px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 11px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 4px; font-weight: 700; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); } .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel ul { padding-left: 20px; font-size: 14px; } .panel li { margin-bottom: 8px; }
+  .spec { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue)); }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; } .duty li { margin-bottom: 6px; }
+  .keypoint { background: var(--orange-bg); border-left: 4px solid var(--orange); border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; } td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; overflow-x: auto; margin: 12px 0; line-height: 1.55; }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; } pre .fn { color: #a5f3fc; } pre .st { color: #86efac; }
+  /* directory tree */
+  .tree { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 20px 24px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7; margin: 14px 0; white-space: pre; overflow-x: auto; }
+  .tree .dir { color: #7dd3fc; font-weight: 700; } .tree .file { color: #e2e8f0; } .tree .cm { color: #64748b; }
+  /* test pyramid */
+  .pyramid { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 18px auto; max-width: 400px; }
+  .pyramid .level { text-align: center; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: 600; color: #fff; }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Engineering</div>
+  <h1>Go Quant Project Structure &amp; Module Design</h1>
+  <p>From a single script to a maintainable, extensible quant system. (从一个脚本，走向可维护、可扩展的量化系统。) Good project structure is the starting point for long-term stable iteration.</p>
+  <div class="src">Source: knowledge-base/day_16 (IMG_6599–IMG_6606), "30天学习量化投资 · Day 16: Go量化项目结构" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. Directory Structure ============ -->
+<section>
+  <h2><span class="num">1</span>Project Directory Structure</h2>
+  <p class="subtitle">Clear directory structure is the foundation of a maintainable, extensible quant system.</p>
+
+  <div class="spec c-bt">
+    <h3><span class="tag">structure</span>Directory layout</h3>
+    <div class="cols">
+      <div>
+<div class="tree"><span class="dir">quant/</span>
+├── <span class="dir">cmd/</span>
+│   └── <span class="dir">backtest/</span>
+│       └── <span class="file">main.go</span>       <span class="cm"># backtest entry point</span>
+├── <span class="dir">internal/</span>
+│   ├── <span class="dir">market/</span>     <span class="cm"># market data (K-lines, etc.)</span>
+│   ├── <span class="dir">indicator/</span>  <span class="cm"># technical indicators (MA, vol)</span>
+│   ├── <span class="dir">strategy/</span>   <span class="cm"># trading strategies (signals)</span>
+│   ├── <span class="dir">portfolio/</span>  <span class="cm"># portfolio (account, positions)</span>
+│   ├── <span class="dir">broker/</span>     <span class="cm"># trade execution (simulated)</span>
+│   ├── <span class="dir">risk/</span>       <span class="cm"># risk management (position, rules)</span>
+│   └── <span class="dir">backtest/</span>   <span class="cm"># backtest engine (orchestrator)</span>
+├── <span class="dir">data/</span>            <span class="cm"># CSV data, configs, results</span>
+├── <span class="file">go.mod</span>           <span class="cm"># Go module file</span>
+└── <span class="file">README.md</span>        <span class="cm"># project docs</span></div>
+      </div>
+      <div>
+        <h3 style="margin-top:0">Design principles (目录设计要点)</h3>
+        <ul class="duty">
+          <li><b>Modular split (模块化拆分)</b> — by responsibility, high cohesion, low coupling</li>
+          <li><b>Clear boundaries (清晰职责边界)</b> — each module only cares about its own job, interacts via interfaces</li>
+          <li><b>Easy to extend (便于扩展)</b> — adding strategies/indicators/rules has minimal impact</li>
+          <li><b>Easy to maintain (易于维护)</b> — clear structure aids debugging, testing, and iteration</li>
+          <li><b>Security (安全可控)</b> — <code>internal/</code> restricts imports, protecting core code from misuse</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. Modular Monolith ============ -->
+<section>
+  <h2><span class="num">2</span>Why Modular Monolith, Not Microservices?</h2>
+  <p class="subtitle">In the early stage, a modular monolith is the more pragmatic choice for quant backtesting.</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>✓ Modular Monolith (current choice)</h4>
+      <ul>
+        <li><b>Low call cost, high performance</b> — in-process function calls, no network overhead; faster backtesting</li>
+        <li><b>Simple development, efficient iteration</b> — one codebase, unified build/run; changes validated quickly</li>
+        <li><b>Easier data consistency</b> — shared memory, no distributed transactions needed</li>
+        <li><b>Low deployment cost</b> — single binary, simple environment; ideal for individuals/small teams</li>
+        <li><b>Better fit for backtesting</b> — compute-intensive tasks benefit from in-process collaboration</li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>✗ Microservices (not yet)</h4>
+      <ul>
+        <li><b>Network overhead</b> — inter-service calls slow backtesting significantly</li>
+        <li><b>High deployment complexity</b> — multiple services, containers, configs, dependencies</li>
+        <li><b>Hard data consistency</b> — needs distributed transactions, idempotency, etc.</li>
+        <li><b>High ops cost</b> — requires monitoring, logging, tracing, service discovery</li>
+        <li><b>Premature complexity</b> — increases system complexity, slows iteration when core logic isn't stable</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote"><strong>When to consider splitting?</strong> Team grows → modules stabilize → scale demands independent scaling → ops maturity. Until then: <b>get the system right before making it complex.</b> (先把系统做"正确"，比做"复杂"的架构更重要！)</div>
+</section>
+
+<!-- ============ 3. Seven Core Modules ============ -->
+<section>
+  <h2><span class="num">3</span>Seven Core Modules — Each Does Its Own Job</h2>
+  <p class="subtitle">A complete quant system needs multiple modules collaborating to turn trading ideas into executable strategies.</p>
+
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="mod c-market"><div class="tag">1</div><h4>market (行情)</h4><p>Load historical data (K-lines, volume, etc.). Provide unified data interface. Data alignment, cleaning, caching.</p></div>
+    <div class="mod c-ind"><div class="tag">2</div><h4>indicator (指标)</h4><p>Compute technical indicators (MA, RSI, volatility, etc.). Incremental updates. Result caching.</p></div>
+    <div class="mod c-strat"><div class="tag">3</div><h4>strategy (策略)</h4><p>Receive indicator data. Generate trade signals (buy / sell / hold). Configurable parameters.</p></div>
+    <div class="mod c-risk"><div class="tag">4</div><h4>risk (风控)</h4><p>Position control (single/total limits). Stop-loss/take-profit. Portfolio risk monitoring (drawdown, vol).</p></div>
+    <div class="mod c-broker"><div class="tag">5</div><h4>broker (成交)</h4><p>Receive orders. Simulate matching (open/close/slippage fills). Generate fill reports.</p></div>
+    <div class="mod c-port"><div class="tag">6</div><h4>portfolio (账户)</h4><p>Update positions and cash. Calculate equity, P&amp;L, returns. Record account history.</p></div>
+    <div class="mod c-bt"><div class="tag">7</div><h4>backtest (回测引擎)</h4><p>Event-driven or bar-by-bar simulation. Manage module execution order. Output results &amp; statistics.</p></div>
+  </div>
+
+  <h3>How a backtest runs — time loop (一次回测怎么跑)</h3>
+  <div class="flow">
+    <div class="step c-market" style="--stepbg:var(--blue-bg)"><div class="icon">📈</div><div class="name">market</div><div class="cn">provide bar data</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-ind" style="--stepbg:var(--green-bg)"><div class="icon">🧮</div><div class="name">indicator</div><div class="cn">compute indicators</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="icon">📡</div><div class="name">strategy</div><div class="cn">generate signal</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-risk" style="--stepbg:var(--red-bg)"><div class="icon">🛡️</div><div class="name">risk</div><div class="cn">allow? how much?</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="icon">🛒</div><div class="name">broker</div><div class="cn">simulate fill</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">portfolio</div><div class="cn">update account</div></div>
+  </div>
+  <p style="font-size:13.5px; color:var(--muted); text-align:center">The backtest engine loops through each time step (T0 → T1 → T2 → … → Tn), executing this pipeline at each bar. Everything is data-driven, reproducible, and traceable.</p>
+
+  <div class="keypoint">💡 <b>Summary:</b> Market provides data → Indicator computes results → Strategy produces signals → Risk decides feasibility → Broker simulates execution → Portfolio updates state. All orchestrated by the backtest engine into a complete closed loop. (好的系统不是写一堆 if/else，而是让每个模块只做自己的事！)</div>
+</section>
+
+<!-- ============ 4. Go internal ============ -->
+<section>
+  <h2><span class="num">4</span>Go's <code>internal/</code> Directory — Import Boundaries</h2>
+  <p class="subtitle"><code>internal</code> is Go's built-in mechanism for defining module boundaries — restricting who can import your packages.</p>
+
+  <div class="spec c-bt">
+    <h3><span class="tag">go</span>How <code>internal</code> works</h3>
+    <div class="cols">
+      <div>
+        <p>Packages inside <code>internal/</code> can only be imported by code rooted at the parent of <code>internal</code>. External projects cannot import them.</p>
+        <pre><span class="cm">// ✓ ALLOWED: within parent tree</span>
+<span class="cm">// File: quant/cmd/backtest/main.go</span>
+<span class="kw">import</span> (
+    <span class="st">"quant/internal/strategy"</span>  <span class="cm">// ✓</span>
+    <span class="st">"quant/internal/indicator"</span> <span class="cm">// ✓</span>
+)</pre>
+        <pre><span class="cm">// ✗ FORBIDDEN: external project</span>
+<span class="cm">// File: other-project/main.go</span>
+<span class="kw">import</span> (
+    <span class="st">"quant/internal/strategy"</span> <span class="cm">// ✗ compile error!</span>
+)</pre>
+      </div>
+      <div>
+        <h3 style="margin-top:0">Benefits</h3>
+        <ul class="duty">
+          <li><b>Protect internals</b> — prevent external dependency on implementation details</li>
+          <li><b>Clear module boundaries</b> — signals "these are internal, don't reference externally"</li>
+          <li><b>Reduce coupling</b> — fewer misuses, easier to refactor</li>
+          <li><b>Engineering best practice</b> — standard for large Go projects</li>
+        </ul>
+        <div class="keypoint">💡 Put public/reusable packages at project root or <code>pkg/</code>. Keep internal implementations inside <code>internal/</code>. Interfaces exposed at the outer layer, implementations inside.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Dependency Inversion ============ -->
+<section>
+  <h2><span class="num">5</span>Dependency Inversion — Depend on Interfaces, Not Implementations</h2>
+  <p class="subtitle">The backtest engine is the system's core — it should be stable, generic, and not depend on any specific strategy.</p>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Wrong: backtest depends on concrete strategy</h4>
+      <p>Backtest directly creates MAStrategy. To switch to trend/momentum strategy, you must modify Backtest code — risky, not extensible.</p>
+    </div>
+    <div class="panel good">
+      <h4>✓ Right: backtest depends on Strategy interface</h4>
+      <p>Backtest only depends on the Strategy interface. New strategies just implement the interface — no Backtest changes needed. Follows the Open/Closed Principle.</p>
+    </div>
+  </div>
+
+  <div class="spec c-strat">
+    <h3><span class="tag">go</span>Interface-based design (Go code)</h3>
+    <div class="cols">
+      <div>
+<pre><span class="cm">// strategy/interface.go</span>
+<span class="kw">type</span> <span class="ty">Strategy</span> <span class="kw">interface</span> {
+    <span class="fn">GenerateSignal</span>(data <span class="ty">MarketData</span>) <span class="ty">Signal</span>
+    <span class="fn">Name</span>() <span class="ty">string</span>
+}
+
+<span class="kw">type</span> <span class="ty">Signal</span> <span class="kw">struct</span> {
+    Action <span class="ty">string</span>  <span class="cm">// "BUY","SELL","HOLD"</span>
+    Price  <span class="ty">float64</span>
+}</pre>
+<pre><span class="cm">// strategy/ma_strategy.go</span>
+<span class="kw">type</span> <span class="ty">MAStrategy</span> <span class="kw">struct</span> {
+    ShortPeriod <span class="ty">int</span>
+    LongPeriod  <span class="ty">int</span>
+}
+<span class="kw">func</span> (m *<span class="ty">MAStrategy</span>) <span class="fn">GenerateSignal</span>(
+    data <span class="ty">MarketData</span>) <span class="ty">Signal</span> {
+    <span class="cm">// ... MA calculation logic</span>
+}
+<span class="kw">func</span> (m *<span class="ty">MAStrategy</span>) <span class="fn">Name</span>() <span class="ty">string</span> {
+    <span class="kw">return</span> <span class="st">"MA Strategy"</span>
+}</pre>
+      </div>
+      <div>
+<pre><span class="cm">// backtest/backtest.go</span>
+<span class="kw">type</span> <span class="ty">Backtest</span> <span class="kw">struct</span> {
+    strategy <span class="ty">Strategy</span>    <span class="cm">// depends on interface!</span>
+    data     <span class="ty">MarketData</span>
+}
+
+<span class="kw">func</span> <span class="fn">NewBacktest</span>(s <span class="ty">Strategy</span>, d <span class="ty">MarketData</span>) *<span class="ty">Backtest</span> {
+    <span class="kw">return</span> &<span class="ty">Backtest</span>{strategy: s, data: d}
+}
+
+<span class="kw">func</span> (b *<span class="ty">Backtest</span>) <span class="fn">Run</span>() <span class="ty">Result</span> {
+    <span class="cm">// use b.strategy to generate signals</span>
+    <span class="cm">// and run the backtest</span>
+}</pre>
+<pre><span class="cm">// main.go — runtime composition (DI)</span>
+strategy := strategy.<span class="fn">NewMAStrategy</span>(<span class="ty">5</span>, <span class="ty">20</span>)
+bt := backtest.<span class="fn">NewBacktest</span>(strategy, data)
+result := bt.<span class="fn">Run</span>()</pre>
+        <div class="keypoint">💡 The backtest engine is the system's core — keep it stable and generic. Strategies can be swapped endlessly without modifying the engine. <b>Interfaces make the system extensible, testable, and maintainable.</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. Unit Testing ============ -->
+<section>
+  <h2><span class="num">6</span>Unit Testing — The Quality Foundation</h2>
+  <p class="subtitle">Good tests = fewer bugs + faster refactoring + more confident iteration. (好的测试 = 更少的BUG + 更快的重构 + 更安心的迭代。)</p>
+
+  <div class="spec c-bt">
+    <h3><span class="tag">testing</span>What to test in a backtest system</h3>
+    <table>
+      <tr><th>Priority</th><th>Area</th><th>What to verify</th></tr>
+      <tr><td><b>1</b></td><td>Indicator calculations</td><td>MA, RSI, ATR values are mathematically correct</td></tr>
+      <tr><td><b>2</b></td><td>Signal generation</td><td>Strategy produces correct buy/sell signals under various market conditions</td></tr>
+      <tr><td><b>3</b></td><td>Order &amp; matching logic</td><td>Opening/closing positions, slippage, fee calculations</td></tr>
+      <tr><td><b>4</b></td><td>Backtest result stats</td><td>Returns, max drawdown, Sharpe, win rate, P/L ratio</td></tr>
+    </table>
+
+    <h3>Test pyramid (测试金字塔)</h3>
+    <div class="pyramid">
+      <div class="level" style="background:var(--purple); width:40%">E2E Tests<br><span style="font-weight:400; font-size:11px">few · slow · high value</span></div>
+      <div class="level" style="background:var(--blue); width:60%">Integration Tests<br><span style="font-weight:400; font-size:11px">moderate count</span></div>
+      <div class="level" style="background:var(--green); width:85%">Unit Tests<br><span style="font-weight:400; font-size:11px">many · fast · high coverage</span></div>
+    </div>
+
+    <h3>Go test example</h3>
+<pre><span class="cm">// ma/ma_test.go</span>
+<span class="kw">func</span> <span class="fn">TestSMA</span>(t *testing.T) {
+    period := <span class="ty">3</span>
+    data   := []<span class="ty">float64</span>{<span class="ty">1</span>, <span class="ty">2</span>, <span class="ty">3</span>, <span class="ty">4</span>, <span class="ty">5</span>}
+    want   := []<span class="ty">float64</span>{<span class="ty">0</span>, <span class="ty">0</span>, <span class="ty">2</span>, <span class="ty">3</span>, <span class="ty">4</span>}
+    got    := SMA(data, period)
+    <span class="kw">if</span> !reflect.DeepEqual(got, want) {
+        t.Errorf(<span class="st">"SMA(%v, %d) = %v, want %v"</span>, data, period, got, want)
+    }
+}</pre>
+
+    <h3>Good testing habits</h3>
+    <ul class="duty">
+      <li>Test files end with <code>_test.go</code>; functions start with <code>Test</code></li>
+      <li>Use table-driven tests for covering multiple cases</li>
+      <li>Name tests clearly: <code>TestSMA_NormalCase</code>, <code>TestSMA_EdgeCase</code>, <code>TestSMA_InvalidInput</code></li>
+      <li>Cover normal, boundary, and error cases</li>
+      <li>Keep tests simple, stable, and repeatable</li>
+      <li>Run quickly: <code>go test -v ./...</code></li>
+    </ul>
+
+    <div class="takeaway"><span class="star">★</span><b>Testing isn't wasting time — it's saving countless future debugging hours.</b> Unit tests are the quality foundation; ensure indicators are correct first, then strategies, then backtest results. Good tests let you refactor, iterate, and innovate with confidence. (测试不是浪费时间，而是节省未来调试的无数小时！)</div>
+  </div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_16_go-project-structure.html · Distilled from knowledge-base/day_16 (30天学习量化投资 · Day 16) · 2025-08-30
+</footer>
+</div>
+</body>
+</html>

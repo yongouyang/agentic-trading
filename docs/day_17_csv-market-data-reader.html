@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV Market Data Reader &amp; io.Reader Design | agentic-trading</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); background: #f8fafc; line-height: 1.65; }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  header.hero { background: linear-gradient(135deg, #0f172a, #1e40af); color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 36px; }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 760px; }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .7; }
+  section { margin-bottom: 48px; }
+  h2 { font-size: 24px; color: var(--navy); margin-bottom: 6px; padding-bottom: 10px; border-bottom: 2px solid var(--blue-light); }
+  h2 .num { display: inline-block; background: var(--blue); color: #fff; border-radius: 8px; width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px; }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: var(--ink); }
+  .quote { background: var(--blue-bg); border-left: 4px solid var(--blue); border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px; font-size: 15.5px; color: var(--navy); margin: 18px 0; }
+  .quote strong { font-size: 16px; }
+  .takeaway { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff; border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px; }
+  .takeaway .star { margin-right: 8px; }
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod { border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px; background: #fff; border-top: 4px solid var(--accent, var(--blue)); }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .c-csv { --accent: #1d4ed8; } .c-bar { --accent: #15803d; } .c-reader { --accent: #7e22ce; }
+  .c-loader { --accent: #0369a1; } .c-check { --accent: #dc2626; } .c-ok { --accent: #15803d; }
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 22px 18px; margin: 18px 0; }
+  .flow .step { flex: 1 1 100px; min-width: 100px; text-align: center; padding: 12px 8px; border-radius: 10px; background: var(--stepbg, var(--blue-bg)); }
+  .flow .step .icon { font-size: 22px; }
+  .flow .step .name { font-weight: 700; font-size: 13px; color: var(--accent, var(--blue)); }
+  .flow .step .cn { font-size: 11px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 20px; padding: 0 4px; font-weight: 700; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel.warn { border-top: 4px solid var(--orange); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); } .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); } .panel.warn h4 { color: var(--orange); }
+  .panel ul { padding-left: 20px; font-size: 14px; } .panel li { margin-bottom: 8px; }
+  .spec { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue)); }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .duty { font-size: 14px; padding-left: 20px; } .duty li { margin-bottom: 6px; }
+  .keypoint { background: var(--orange-bg); border-left: 4px solid var(--orange); border-radius: 0 8px 8px 0; padding: 10px 16px; font-size: 13.5px; margin-top: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; } td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; overflow-x: auto; margin: 12px 0; line-height: 1.55; }
+  pre .cm { color: #64748b; } pre .kw { color: #7dd3fc; } pre .ty { color: #fbbf24; } pre .fn { color: #a5f3fc; } pre .st { color: #86efac; }
+  /* source diagram */
+  .sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 14px 0; }
+  .source-box { border: 1.5px solid var(--line); border-radius: 8px; padding: 10px; text-align: center; font-size: 12px; background: #fff; }
+  .source-box .name { font-weight: 700; color: var(--navy); }
+  .source-box .type { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Data Pipeline</div>
+  <h1>CSV Market Data Reader &amp; io.Reader Design</h1>
+  <p>The first gate of a quant system: don't let dirty data enter the backtest. (量化系统的第一关：别让脏数据进入回测。) No matter how good the strategy, if the data is wrong, the results are wrong.</p>
+  <div class="src">Source: knowledge-base/day_17 (IMG_6607–IMG_6614), "30天学习量化投资 · Day 17: CSV行情读取" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. CSV to Bar ============ -->
+<section>
+  <h2><span class="num">1</span>CSV Format &amp; Internal Bar Structure</h2>
+  <p class="subtitle">Transform external CSV data into the system's unified internal Bar representation.</p>
+
+  <div class="spec c-csv">
+    <h3><span class="tag">format</span>CSV format</h3>
+    <table>
+      <tr><th>date</th><th>symbol</th><th>open</th><th>high</th><th>low</th><th>close</th><th>volume</th></tr>
+      <tr><td>2026-07-28</td><td>510300</td><td class="num">4.12</td><td class="num">4.18</td><td class="num">4.09</td><td class="num">4.16</td><td class="num">123,456,789</td></tr>
+      <tr><td>2026-07-29</td><td>510300</td><td class="num">4.15</td><td class="num">4.21</td><td class="num">4.13</td><td class="num">4.20</td><td class="num">987,654,321</td></tr>
+      <tr><td>2026-07-30</td><td>510300</td><td class="num">4.20</td><td class="num">4.25</td><td class="num">4.17</td><td class="num">4.23</td><td class="num">765,432,100</td></tr>
+    </table>
+    <p style="font-size:13px; color:var(--muted)">Each row = one K-line (one trading day). Dates are YYYY-MM-DD. OHLC are float64, volume is int64.</p>
+
+    <h3>Internal Bar struct (Go)</h3>
+<pre><span class="kw">type</span> <span class="ty">Bar</span> <span class="kw">struct</span> {
+    Time   <span class="ty">time.Time</span> <span class="cm">// trading day (00:00:00)</span>
+    Symbol <span class="ty">string</span>    <span class="cm">// instrument code (e.g. "510300")</span>
+    Open   <span class="ty">float64</span>   <span class="cm">// open price</span>
+    High   <span class="ty">float64</span>   <span class="cm">// high price</span>
+    Low    <span class="ty">float64</span>   <span class="cm">// low price</span>
+    Close  <span class="ty">float64</span>   <span class="cm">// close price</span>
+    Volume <span class="ty">int64</span>     <span class="cm">// volume (shares/lots/units)</span>
+}</pre>
+
+    <h3>Conversion pipeline</h3>
+    <div class="flow">
+      <div class="step c-csv" style="--stepbg:var(--blue-bg)"><div class="icon">📄</div><div class="name">CSV file</div><div class="cn">external data source</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-reader" style="--stepbg:var(--purple-bg)"><div class="icon">🔍</div><div class="name">ReadBars</div><div class="cn">parse + validate + convert</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-bar" style="--stepbg:var(--green-bg)"><div class="icon">📊</div><div class="name">[]Bar</div><div class="cn">internal unified structure</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--navy-bg); --accent:var(--navy)"><div class="icon">⚙️</div><div class="name">Backtest</div><div class="cn">enters the system</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. io.Reader ============ -->
+<section>
+  <h2><span class="num">2</span>Why io.Reader? — Decoupling Data Sources</h2>
+  <p class="subtitle">io.Reader is Go's core interface. Any data source can become an io.Reader, so the parser doesn't care where data comes from.</p>
+
+  <div class="spec c-reader">
+    <h3><span class="tag">design</span>The real reason for io.Reader</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>Common misunderstanding</h4>
+        <p>"io.Reader is just for memory efficiency — only big files need streaming; small files can just read into memory."</p>
+      </div>
+      <div class="panel good">
+        <h4>The real reason</h4>
+        <p><b>Decoupling data sources.</b> Whether data comes from files, HTTP, Kafka, S3, or memory — the parser doesn't need to know. It only focuses on parsing. (不管数据来自文件、网络还是消息队列，解析器都不需要关心，它只专注于解析。)</p>
+      </div>
+    </div>
+
+    <h3>Supported data sources</h3>
+    <div class="sources">
+      <div class="source-box"><div class="name">File</div><div class="type">os.File</div></div>
+      <div class="source-box"><div class="name">HTTP</div><div class="type">http.Response.Body</div></div>
+      <div class="source-box"><div class="name">String</div><div class="type">strings.Reader</div></div>
+      <div class="source-box"><div class="name">gzip</div><div class="type">gzip.NewReader</div></div>
+      <div class="source-box"><div class="name">S3/OSS</div><div class="type">s3.GetObject</div></div>
+      <div class="source-box"><div class="name">Kafka</div><div class="type">message body</div></div>
+      <div class="source-box"><div class="name">Buffer</div><div class="type">bytes.Buffer</div></div>
+    </div>
+
+    <div class="flow">
+      <div class="step c-csv" style="--stepbg:var(--blue-bg)"><div class="name">Any source</div><div class="cn">file / HTTP / S3 / Kafka / …</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-reader" style="--stepbg:var(--purple-bg)"><div class="name">io.Reader</div><div class="cn">unified abstraction</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-reader" style="--stepbg:var(--purple-bg)"><div class="name">ReadBars</div><div class="cn">parser</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-bar" style="--stepbg:var(--green-bg)"><div class="name">[]Bar</div><div class="cn">Bar₁, Bar₂, … Barₙ</div></div>
+    </div>
+
+    <h3>Testing benefit</h3>
+<pre><span class="cm">// No temp files needed — test directly from strings!</span>
+csvData := <span class="st">`date,symbol,open,high,low,close,volume
+2026-07-28,510300,4.12,4.18,4.09,4.16,123456789
+2026-07-29,510300,4.15,4.21,4.13,4.20,987654321`</span>
+
+bars, err := <span class="fn">ReadBars</span>(strings.<span class="fn">NewReader</span>(csvData))
+<span class="kw">if</span> err != <span class="kw">nil</span> { t.Fatal(err) }
+<span class="cm">// assert results directly</span></pre>
+
+    <div class="keypoint">💡 <b>Core value:</b> Let the parser focus on "parsing", not "fetching data". (让解析器专注于"解析"，而不是"获取数据"。)</div>
+  </div>
+</section>
+
+<!-- ============ 3. Two-Layer Interface ============ -->
+<section>
+  <h2><span class="num">3</span>Two-Layer Interface: Reader + Loader</h2>
+  <p class="subtitle">Separate "how to get data" from "how to parse data" — cleaner interfaces, simpler tests, better reusability.</p>
+
+  <div class="spec c-loader">
+    <h3><span class="tag">design</span>Layer responsibilities</h3>
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Reader layer — core parser (ReadBars)</h4>
+        <ul>
+          <li><b>Input:</b> any <code>io.Reader</code></li>
+          <li><b>Job:</b> row parsing, field validation, type conversion, time-order checking</li>
+          <li><b>Output:</b> <code>[]Bar</code> or <code>error</code></li>
+        </ul>
+<pre><span class="kw">func</span> <span class="fn">ReadBars</span>(r <span class="ty">io.Reader</span>) ([]<span class="ty">Bar</span>, <span class="ty">error</span>)</pre>
+      </div>
+      <div class="panel" style="border-top:4px solid var(--sky)">
+        <h4 style="color:var(--sky)">Loader layer — data fetcher (LoadBarsFromCSV)</h4>
+        <ul>
+          <li><b>Job:</b> open the file (or other source)</li>
+          <li><b>Calls:</b> <code>ReadBars</code> for actual parsing</li>
+          <li><b>Extensible:</b> future LoadBarsFromHTTP, LoadBarsFromS3…</li>
+        </ul>
+<pre><span class="kw">func</span> <span class="fn">LoadBarsFromCSV</span>(path <span class="ty">string</span>) ([]<span class="ty">Bar</span>, <span class="ty">error</span>) {
+    f, err := os.<span class="fn">Open</span>(path)
+    <span class="kw">if</span> err != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, err }
+    <span class="kw">defer</span> f.<span class="fn">Close</span>()
+    <span class="kw">return</span> <span class="fn">ReadBars</span>(f) <span class="cm">// the key decoupling</span>
+}</pre>
+      </div>
+    </div>
+
+    <h3>Benefits of layered design</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-reader"><h4>Single responsibility</h4><p>Each interface does one thing — logic is clearer.</p></div>
+      <div class="mod c-reader"><h4>Easy testing</h4><p>Reader can use strings.Reader / bytes.Buffer for unit tests.</p></div>
+      <div class="mod c-loader"><h4>Reusable</h4><p>Reader works with HTTP, S3, Kafka — any io.Reader source.</p></div>
+      <div class="mod c-loader"><h4>Extensible</h4><p>Adding a new data source = new Loader only — Reader unchanged.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. Reader Boundaries ============ -->
+<section>
+  <h2><span class="num">4</span>Reader Responsibility Boundaries</h2>
+  <p class="subtitle">The Reader is a "data quality inspector" — it only converts raw data into clean, reliable, usable Bars. Nothing more.</p>
+
+  <div class="spec c-check">
+    <h3><span class="tag">boundary</span>What Reader should / should not do</h3>
+    <div class="compare">
+      <div class="panel good">
+        <h4>✓ Should do</h4>
+        <ul>
+          <li><b>Parse format</b> — parse CSV line by line</li>
+          <li><b>Validate fields</b> — check headers, field count, required fields</li>
+          <li><b>Type conversion</b> — string → float64, int64, time.Time</li>
+          <li><b>Logic validation</b> — price ranges, High/Low relationships</li>
+          <li><b>Time order check</b> — strictly ascending, no duplicates</li>
+          <li><b>Convert to Bar</b> — generate unified internal Bar structure</li>
+          <li><b>Return clear errors</b> — include line number and reason</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>✗ Should not do</h4>
+        <ul>
+          <li><b>Fill missing data</b> — don't auto-fill gaps</li>
+          <li><b>Guess / infer</b> — don't guess missing values</li>
+          <li><b>Auto-fix</b> — don't silently fix bad data</li>
+          <li><b>Trading decisions</b> — no buy/sell logic</li>
+          <li><b>Cash/position handling</b> — no account logic</li>
+          <li><b>Performance tricks</b> — no caching or concurrency in Reader</li>
+          <li><b>Storage</b> — don't persist to database or cache</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="panel bad">
+        <h4>✗ Wrong: Reader oversteps</h4>
+<pre><span class="cm">// Auto-filling missing dates (WRONG!)</span>
+<span class="kw">for</span> date := start; date &lt;= end; ... {
+    <span class="kw">if</span> !hasData(date) {
+        bars = append(bars, fillBar(date))
+    }
+}
+<span class="cm">// Making trade decisions (WRONG!)</span>
+<span class="kw">if</span> bars[i].Close > ma {
+    <span class="cm">// generate buy signal</span>
+}</pre>
+      </div>
+      <div class="panel good">
+        <h4>✓ Right: clear boundaries</h4>
+<pre>bars, err := <span class="fn">ReadBars</span>(reader)
+<span class="kw">if</span> err != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, err }
+<span class="cm">// Reader returns clean Bar list only</span>
+<span class="cm">// Strategy/backtest/risk handle the rest</span>
+signals := strategy.<span class="fn">Generate</span>(bars)
+trades  := backtest.<span class="fn">Run</span>(signals, bars)</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Data Quality Checks ============ -->
+<section>
+  <h2><span class="num">5</span>Data Quality Checklist — The First Line of Defense</h2>
+  <p class="subtitle">Prefer explicit errors over silently "fixing" data. (宁可明确报错，也不要"聪明地"偷偷修数据。)</p>
+
+  <div class="spec c-check">
+    <h3><span class="tag">validation</span>Must-error conditions (必须报错)</h3>
+    <table>
+      <tr><th>Check</th><th>Conditions</th><th>Example problem</th></tr>
+      <tr><td><b>File/header</b></td><td>Empty file, header-only, wrong columns</td><td><code>date,symbol,open,high,low,volume</code> (missing close)</td></tr>
+      <tr><td><b>Field basics</b></td><td>Empty symbol, empty fields, wrong field count</td><td><code>2026-07-28,,4.12,4.18,4.09,4.16,123</code></td></tr>
+      <tr><td><b>Date format</b></td><td>Wrong format, parse failure</td><td><code>2026/07/28</code> (must be YYYY-MM-DD)</td></tr>
+      <tr><td><b>Numeric parse</b></td><td>Non-numeric values, illegal characters</td><td><code>close = "abc"</code></td></tr>
+      <tr><td><b>Value reasonableness</b></td><td>Price ≤ 0, Volume &lt; 0</td><td><code>open = -1.00</code> or <code>volume = -100</code></td></tr>
+      <tr><td><b>OHLC logic</b></td><td>High &lt; Low, Open/Close outside [Low,High]</td><td><code>High=4.05, Low=4.09</code></td></tr>
+      <tr><td><b>Time order</b></td><td>Time reversed, duplicate dates</td><td><code>07-29 → 07-27</code> (going backward)</td></tr>
+    </table>
+
+    <h3>Acceptable conditions (不需要报错)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <div class="mod c-ok"><h4>Weekends &amp; holidays missing</h4><p>CSV records trading days only — no natural-day continuity required.</p></div>
+      <div class="mod c-ok"><h4>Non-consecutive but ordered dates</h4><p>E.g., 07-31 → 08-03 (skips weekend). Strictly increasing is sufficient.</p></div>
+      <div class="mod c-ok"><h4>Volume = 0</h4><p>No trading or data gaps — still valid in some markets.</p></div>
+      <div class="mod c-ok"><h4>Decimal prices</h4><p>E.g., 10.32, 0.1234 are all legal.</p></div>
+    </div>
+
+    <h3>Why so strict?</h3>
+    <div class="flow">
+      <div class="step c-check" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red); font-size:12px">Dirty data enters</div><div class="cn">错误数据</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-check" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red); font-size:12px">Wrong signals</div><div class="cn">错误信号</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-check" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red); font-size:12px">Fake returns</div><div class="cn">虚假收益</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-check" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red); font-size:12px">Wrong conclusions</div><div class="cn">错误结论</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-check" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red); font-size:12px">Real losses</div><div class="cn">真实亏损</div></div>
+    </div>
+
+    <div class="keypoint">💡 Data is the foundation of backtesting. If the foundation is unstable, no strategy can stand. The Reader is a "data quality inspector" — it keeps dirty data out so only clean, valid, trustworthy, ordered Bars enter the system. (数据是回测的地基，地基不稳，再好的策略也没意义。)</div>
+  </div>
+</section>
+
+<!-- ============ 6. Summary ============ -->
+<section>
+  <h2><span class="num">6</span>Day 17 Summary</h2>
+  <p class="subtitle">Two-layer interface design + data quality checks + time-order rules.</p>
+
+  <table>
+    <tr><th>Principle</th><th>Description</th></tr>
+    <tr><td><b>Single responsibility</b> (职责单一)</td><td>Each module does one thing — logic is cleaner</td></tr>
+    <tr><td><b>Clear boundaries</b> (边界清晰)</td><td>Reader parses, Loader fetches — decoupled from each other</td></tr>
+    <tr><td><b>Data is king</b> (数据为王)</td><td>Data must be clean, valid, and usable before entering backtest</td></tr>
+    <tr><td><b>Time ordered</b> (时间有序)</td><td>Strictly ascending is the baseline — disorder causes severe backtest errors</td></tr>
+    <tr><td><b>Easy to extend</b> (易于扩展)</td><td>New data sources = new Loader only, Reader unchanged</td></tr>
+  </table>
+
+  <div class="takeaway"><span class="star">★</span><b>The Reader is a "data quality inspector"; the Loader is a "data mover".</b> Only clean, ordered, reliable Bars can support robust strategies and backtests. (Reader是"数据质检员"，Loader是"数据搬运工"。只有干净、有序、可靠的Bar，才能支撑稳健的策略与回测！)<br><br>No clean data → no reliable backtests → no robust strategies. (没有干净的数据，就没有可靠的回测；没有可靠的回测，就没有稳健的策略。)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_17_csv-market-data-reader.html · Distilled from knowledge-base/day_17 (30天学习量化投资 · Day 17) · 2025-08-30
+</footer>
+</div>
+</body>
+</html>

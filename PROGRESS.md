@@ -5,6 +5,59 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-30 — Day 14, 15, 16, 17 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_14/` (IMG_6583–6590, 8 slides),
+  `day_15/` (IMG_6591–6598, 8 slides), `day_16/` (IMG_6599–6606, 8 slides)
+  and `day_17/` (IMG_6607–6614, 8 slides) of "30天学习量化投资" using the
+  macOS Vision OCR tool.
+- Created four self-contained HTML docs in `docs/`, matching the existing style:
+  - `docs/day_14_risk-control-backtest-framework.html` — 风险控制与第一版回测框架:
+    Three-layer risk control system (single-trade / position / account-level);
+    risk budget → per-share risk → risk-allowed quantity formula; position limit
+    and the min() rule for final buy quantity; account-level brake system (2% daily
+    loss stop, 10% drawdown halve, 15% kill switch); stop-loss reality (gap-down
+    risk); first backtest framework integrating risk into the pipeline.
+  - `docs/day_15_hypothesis-to-strategy.html` — 从假设到策略: The scientific
+    method for strategy development (hypothesis → rules → backtest → OOS →
+    explain → launch); market hypotheses (trend continuity, mean reversion, etc.);
+    translating hypotheses into quantifiable rules (semiconductor ETF trend
+    strategy example); multi-dimensional validation; interpretability as the key
+    to surviving drawdowns; 5-question pre-launch checklist.
+  - `docs/day_16_go-project-structure.html` — Go量化项目结构: Project directory
+    layout with `cmd/` + `internal/` + `data/`; modular monolith vs microservices
+    rationale; 7 core modules with responsibilities; backtest time-loop
+    orchestration; Go `internal/` directory import boundaries; dependency inversion
+    with Strategy interface (Go code examples); unit testing pyramid and Go test
+    patterns.
+  - `docs/day_17_csv-market-data-reader.html` — CSV行情读取: CSV format → Bar
+    struct conversion; io.Reader design for data-source decoupling; two-layer
+    interface (Reader parses, Loader fetches); Reader responsibility boundaries
+    (should/should-not do); comprehensive data quality checklist (7 error
+    categories); trading-day vs natural-day time ordering rules.
+- Verified all four docs render with headless Chrome screenshots; no rendering
+  issues found; temporary screenshots deleted.
+
+### Key decisions
+- Day 14 introduces a `.layers` CSS component for the 3-layer risk control stack
+  and `.compare-3` for the 3 account-level brake rules.
+- Day 15 uses a `.checklist` component for the 5-question pre-launch self-check.
+- Day 16 uses a `.tree` component for directory structure display and a `.pyramid`
+  for the test pyramid visual. Dark-background code blocks for Go code.
+- Day 17 uses a `.sources` grid for data-source types and continues the Go code
+  block style from Day 16.
+- All docs maintain the bilingual English/Chinese convention.
+
+### What's next (proposed)
+1. Continue extraction for remaining days as folders appear.
+2. Build an index/hub page linking all 17 day docs.
+3. Begin implementing the Go project structure from Day 16.
+4. Implement the CSV market data reader from Day 17 as the first module.
+5. Feed Day 14 risk control formulas into the risk module design.
+
+---
+
 ## 2026-08-30 — Day 11, 12, 13 knowledge extraction → topic docs
 
 ### What was done
