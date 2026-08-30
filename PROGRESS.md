@@ -5,6 +5,140 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-30 — Platform architecture decided (stock picker v1)
+
+### What was done
+- Reviewed TradingAgents (v0.3.x) live: a per-ticker decision engine (analyst
+  team → bull/bear debate → trader → risk → PM verdict), no universe
+  screening/execution — the "which stocks deserve attention" gap is ours.
+- Ran a 3-round decision session; all major forks confirmed (see doc).
+- Wrote `docs/architecture-v1.md`: full design, repo layout, daily pipeline,
+  three market lanes, build order (Phases 0–4).
+
+### Key decisions
+- **Objective**: agentic platform, v1 = stock picker; user trades manually.
+  Agents propose, quant core disposes.
+- **Markets**: HK + US stocks/ETFs, plus a separate simple weekly lane for
+  Irish UCITS ETFs (15% dividend WHT per `docs/tax-comparison-hk-us-stocks-etfs.md`).
+  Brokers later: Futu/moomoo + IBKR.
+- **Stack**: pure TypeScript — pnpm monorepo, Nest.js API + Next.js chat UI
+  (consistent with `docs/research-nestjs-vs-go-platform-choice.md`),
+  `packages/quant-core` (the 24-day course in TS) + `packages/agents` (lean
+  TradingAgents pattern reimplemented, not reused). SQLite via Prisma.
+- **Pipeline**: daily after close (16:45 HKT HK / 06:00 HKT US) → data-quality
+  gate → technical-first screen (~800 liquid tickers → top 10–15/market) →
+  lean LLM deep-dive (2 analysts → bull/bear debate → structured verdict,
+  ~6–8 calls/stock) → persisted report.
+- **LLMs**: Kimi (Moonshot) workhorse + budget open models, OpenAI-compatible
+  env-config. Data: `yahoo-finance2` + Alpha Vantage behind Day-17
+  Reader/Loader interface.
+- Out of v1: execution, backtest, portfolio. Phase 4 backtests the screen
+  itself (Day 15/23 discipline).
+
+### What's next (proposed)
+1. Phase 0: scaffold monorepo; data ingestion + quality report. Gate: verify
+   Yahoo data quality for HK/US/LSE tickers before building screening on it.
+2. Phase 1: quant-core indicators + screening engine + daily CLI shortlist.
+
+---
+
+## 2026-08-30 — Research: NestJS vs Go platform choice (supersedes Go decision)
+
+### What was done
+- Created `docs/research-nestjs-vs-go-platform-choice.md` — a context-aware
+  re-evaluation of the language choice given the actual deployment reality:
+  single Mac Mini, daily batch processing, solo developer, no existing code.
+- Quantified the real daily workload: ~30–90s total run time, 99.9% idle,
+  bottleneck is always network I/O (API calls, LLM calls), never compute.
+- Mapped NestJS module system 1:1 to our 7-module architecture — DI +
+  decorators handle wiring that would be manual in Go.
+- Compared ecosystems: TypeScript wins decisively on LLM/AI SDKs (Vercel AI
+  SDK, LangChain.js, official MCP SDK), which are core to an *agentic*
+  platform. Go wins on raw compute but the advantage is irrelevant at daily
+  frequency.
+- Estimated ~40% less code and ~30% faster time-to-first-backtest in NestJS.
+
+### Key decisions
+- **NestJS (TypeScript) recommended over Go** for this project.
+- Go's advantages (single binary, 2–3x speed, concurrency) solve problems
+  we don't have. NestJS's advantages (DI, AI SDKs, full-stack, velocity)
+  solve problems we do have.
+- Money safety via `decimal.js` + Zod + branded types (not as strong as Go's
+  `shopspring/decimal` + compile-time types, but sufficient).
+- SQLite via Prisma as the database (zero-config, single-file, Mac Mini).
+- PM2 as process manager.
+- Go revisited only if: intraday tick-level frequency, multi-machine scaling,
+  or 10K+ parameter sweeps become requirements.
+
+### What's next (proposed)
+- Set up NestJS monorepo with `pnpm` workspace + Turborepo.
+- Scaffold the 7-module architecture in NestJS.
+- Implement `decimal.js` money safety pattern from Day 1.
+- Begin with Market Data module (Day 17 equivalent).
+
+---
+
+## 2026-08-30 — Research: Quant library language choice (Go vs Rust)
+
+### What was done
+- Created `docs/research-quant-library-language-choice.md` — comprehensive
+  analysis of programming language choices for building quant trading systems.
+- Surveyed the open-source quant ecosystem across Python, C++, Go, Rust, C#,
+  and Java with live GitHub star counts.
+- Documented known technology stacks of top hedge funds (Renaissance, Two
+  Sigma, Citadel, DE Shaw, Jane Street, Jump Trading, HRT, etc.) — the
+  universal pattern is polyglot: Python research → C++/Java execution.
+- Deep Go vs Rust comparison covering: performance benchmarks, ecosystem
+  maturity, architecture fit for our 7-module pipeline, hiring, and tooling.
+- Scored our 7-module architecture against both languages — Go wins on
+  breadth (43/55 vs 40/55), Rust wins on compute-intensive modules.
+- Recommended a hybrid approach: Go primary (Phase 1), Rust escape hatch
+  for backtest hot paths (Phase 2, future).
+
+### Key decisions
+- **Go confirmed as primary language** — our strategy frequency (daily/
+  hourly bars), agent integration needs, and existing codebase all favor Go.
+- Rust only needed later if parameter optimization becomes the bottleneck.
+- `shopspring/decimal` recommended for all financial math (never float64).
+- `cinar/indicator` recommended for technical analysis indicators.
+- Study `barter-rs` (Rust) and `freqtrade` (Python) for architecture patterns.
+
+### What's next (proposed)
+- Begin implementing the Go modules using `shopspring/decimal` for money math.
+- Evaluate `cinar/indicator` for integration into the Day-18 indicator module.
+- Use the tax analysis doc to drive asset selection in the strategy layer.
+
+---
+
+## 2026-08-30 — Tax comparison analysis: HK vs US stocks & ETFs
+
+### What was done
+- Created `docs/tax-comparison-hk-us-stocks-etfs.md` — a comprehensive tax
+  analysis for a Hong Kong resident trading HK-listed and US-listed stocks
+  and ETFs.
+- Covers: capital gains (0% both), dividend withholding (0% HK vs 30% US vs
+  15% Irish-domiciled), interest income (portfolio interest exemption), US
+  estate tax exposure (up to 40% on US-situs assets > US$60K), and Irish-
+  domiciled ETFs as the recommended alternative.
+- Includes worked examples, estate tax rate schedule, popular Irish-domiciled
+  ETF ticker list (CSPX.L, VWRA.L, VUSA.L, ISAC.L, EIMI.L), accumulating vs
+  distributing comparison, and 6 action items for decision-making.
+
+### Key decisions
+- Documented in `docs/` (not `knowledge-base/`) as this is reference material
+  for investment decisions, not course-slide extraction.
+- Irish-domiciled ETFs recommended as the default vehicle for US/global equity
+  exposure — saves 15% dividend withholding and eliminates US estate tax.
+- Accumulating ETFs preferred over distributing for additional tax efficiency.
+
+### What's next (proposed)
+- Use this analysis to drive asset allocation decisions when building the
+  portfolio module.
+- Consider integrating tax-aware position sizing into the trading engine
+  (e.g., prefer Irish-domiciled ETFs in signal generation).
+
+---
+
 ## 2026-08-30 — Day 21, 22, 23, 24 knowledge extraction → topic docs
 
 ### What was done
