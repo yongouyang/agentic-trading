@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parameter Optimization &amp; Overfitting Prevention | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-param{--accent:#1d4ed8}.c-overfit{--accent:#dc2626}.c-stable{--accent:#15803d}.c-oos{--accent:#7e22ce}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  /* heatmap-like table styling */
+  .heatmap td.hot{background:#dcfce7;color:#166534;font-weight:700}
+  .heatmap td.warm{background:#fef9c3;color:#854d0e}
+  .heatmap td.cool{background:#fee2e2;color:#991b1b}
+  .heatmap td.peak{background:#bbf7d0;color:#14532d;font-weight:800;font-size:14px}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Research Methodology</div>
+  <h1>Parameter Optimization &amp; Overfitting Prevention</h1>
+  <p>Is the parameter with the highest backtest return necessarily the best? (回测收益最高的参数，就是最好的吗？) Blindly pursuing "optimal" can trap you in overfitting. The goal: find stable parameter regions that survive into the future.</p>
+  <div class="src">Source: knowledge-base/day_23 (IMG_6655–IMG_6662), "30天学习量化投资 · Day 23: 参数优化与防过拟合" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. What Are Parameters? ============ -->
+<section>
+  <h2><span class="num">1</span>What Are Parameters? — The Strategy's "Knobs"</h2>
+  <p class="subtitle">Parameters determine how signals are calculated, thereby affecting trades and ultimately performance. Changing parameters changes everything.</p>
+
+  <div class="spec c-param">
+    <h3><span class="tag">concept</span>Parameters as strategy knobs</h3>
+    <p>In a dual-MA strategy, the parameters are the window sizes: MA5 (short) and MA20 (long). Change MA5→MA10 and buy/sell timing changes → trade count, holding periods, P&amp;L distribution all shift → return, drawdown, Sharpe all change.</p>
+
+    <div class="flow" style="padding:14px 10px">
+      <div class="step" style="--stepbg:var(--blue-bg)"><div class="name">Parameters</div><div class="cn">change</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--orange-bg)"><div class="name">Signals</div><div class="cn">change</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--purple-bg)"><div class="name">Trades</div><div class="cn">change</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--green-bg)"><div class="name">Performance</div><div class="cn">changes</div></div>
+    </div>
+
+    <h3>Common parameter types</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="mod c-param"><h4>Moving average</h4><p>MA windows (5, 10, 20, 60), EMA windows</p></div>
+      <div class="mod c-param"><h4>Volatility</h4><p>ATR period, Bollinger period, volatility thresholds</p></div>
+      <div class="mod c-param"><h4>Filters</h4><p>RSI thresholds, volume thresholds, trend strength</p></div>
+      <div class="mod c-param"><h4>Position management</h4><p>Fixed ratio, volatility target, stop-loss magnitude</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. Batch Parameter Testing ============ -->
+<section>
+  <h2><span class="num">2</span>Parameter Optimization — Multi-Metric Batch Testing</h2>
+  <p class="subtitle">Don't just find the highest-return parameter — compare return, max drawdown, AND Sharpe. Choose the combination with the best risk-adjusted profile.</p>
+
+  <div class="spec c-param">
+    <h3><span class="tag">example</span>Dual-MA parameter sweep (2018–2023, in-sample)</h3>
+    <table>
+      <tr><th>Short MA</th><th>Long MA</th><th>Annual Return</th><th>Max Drawdown</th><th>Sharpe</th><th>Trades</th></tr>
+      <tr><td>MA3</td><td>MA10</td><td class="num">12.35%</td><td class="num">18.20%</td><td class="num">0.78</td><td class="num">56</td></tr>
+      <tr><td>MA4</td><td>MA15</td><td class="num">18.67%</td><td class="num">16.15%</td><td class="num">1.18</td><td class="num">48</td></tr>
+      <tr style="background:var(--green-bg)"><td><b>MA5</b></td><td><b>MA20</b></td><td class="num" style="color:var(--green)"><b>28.41%</b></td><td class="num">24.76%</td><td class="num">1.23</td><td class="num">42</td></tr>
+      <tr><td>MA6</td><td>MA25</td><td class="num">19.32%</td><td class="num">15.90%</td><td class="num" style="color:var(--green)"><b>1.26</b></td><td class="num">40</td></tr>
+      <tr><td>MA8</td><td>MA30</td><td class="num">15.83%</td><td class="num" style="color:var(--green)"><b>13.22%</b></td><td class="num">1.21</td><td class="num">38</td></tr>
+      <tr><td>MA10</td><td>MA40</td><td class="num">11.04%</td><td class="num">10.78%</td><td class="num">1.07</td><td class="num">34</td></tr>
+    </table>
+
+    <p style="font-size:14px">MA5/20 has the highest return — but its drawdown (24.76%) is also the highest. MA6/25 has the best Sharpe (1.26) with a smaller drawdown. <b>Looking at return alone is misleading.</b></p>
+
+    <div class="keypoint">💡 <b>Better selection criteria:</b> return in the top tier + drawdown within acceptable range + Sharpe relatively high + enough trades to avoid randomness. (参数优化不是为了找到历史上赚得最多的组合，而是找到在风险可控下，性价比最高的组合。)</div>
+  </div>
+</section>
+
+<!-- ============ 3. Overfitting ============ -->
+<section>
+  <h2><span class="num">3</span>What is Overfitting? — When the Curve Is "Too Perfect"</h2>
+  <p class="subtitle">The model memorized historical noise as patterns. Looks great on history — very likely to fail in the future. (曲线太完美，反而要警惕！)</p>
+
+  <div class="spec c-overfit">
+    <h3><span class="tag">danger</span>Overfitting characteristics</h3>
+    <div class="compare">
+      <div class="panel bad">
+        <h4>Overfitted strategy</h4>
+        <ul>
+          <li>Equity curve perfectly hugs every historical fluctuation</li>
+          <li>Very high backtest return, but large drawdowns too</li>
+          <li>Change the time period or slightly adjust parameters → performance collapses</li>
+          <li><b>Essence: memorized noise, not real patterns</b></li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>Non-overfitted strategy</h4>
+        <ul>
+          <li>Curve is relatively smooth, doesn't chase every wiggle</li>
+          <li>Return and drawdown are more reasonable</li>
+          <li>Nearby parameters show similar performance — stable</li>
+          <li><b>Essence: captured real patterns</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="quote"><strong>Key warning:</strong> The more perfect the historical curve, the more dangerous the future. Reasonable fluctuations are a sign of a reliable strategy. (历史曲线越完美，未来越危险；合理的波动，才是可靠策略的标志之一！)</div>
+  </div>
+</section>
+
+<!-- ============ 4. Single-Point Trap ============ -->
+<section>
+  <h2><span class="num">4</span>The Single-Point Optimal Trap — Isolated Peaks vs Stable Plateaus</h2>
+  <p class="subtitle">The historically best parameter might just have gotten lucky hitting historical noise.</p>
+
+  <div class="spec c-overfit">
+    <h3><span class="tag">trap</span>Isolated peak (尖峰型) — suspicious!</h3>
+    <table>
+      <tr><th>Short MA</th><th>Return</th><th>Visual pattern</th></tr>
+      <tr><td>MA3</td><td class="num">8.21%</td><td>Low</td></tr>
+      <tr><td>MA4</td><td class="num">19.15%</td><td>Medium</td></tr>
+      <tr style="background:var(--red-bg)"><td><b>MA5</b></td><td class="num" style="color:var(--red)"><b>42.36%</b></td><td style="color:var(--red)"><b>Isolated spike! Neighbors are far worse</b></td></tr>
+      <tr><td>MA6</td><td class="num">17.28%</td><td>Medium</td></tr>
+      <tr><td>MA7</td><td class="num">6.47%</td><td>Low</td></tr>
+    </table>
+    <p style="font-size:14px; color:var(--red)">Like a lone mountain peak — propped up by luck, unreliable. Neighboring parameters vary wildly → likely historical noise.</p>
+
+    <h3>Stable plateau (平台型) — trustworthy</h3>
+    <table>
+      <tr><th>Short MA</th><th>Return</th><th>Visual pattern</th></tr>
+      <tr><td>MA3</td><td class="num">15.23%</td><td>OK</td></tr>
+      <tr style="background:var(--green-bg)"><td>MA4</td><td class="num">18.56%</td><td rowspan="3" style="background:var(--green-bg); color:var(--green); font-weight:700; vertical-align:middle">Stable plateau!<br>Nearby parameters<br>all perform well</td></tr>
+      <tr style="background:var(--green-bg)"><td>MA5</td><td class="num">20.31%</td></tr>
+      <tr style="background:var(--green-bg)"><td>MA6</td><td class="num">19.45%</td></tr>
+      <tr><td>MA7</td><td class="num">16.87%</td><td>OK</td></tr>
+    </table>
+    <p style="font-size:14px; color:var(--green)">A stable plateau — neighboring parameters all perform well → insensitive to small changes → more likely to persist into the future.</p>
+
+    <div class="keypoint">💡 <b>Good parameter region characteristics:</b> return isn't the highest, but "good enough"; nearby parameters don't differ much; more likely to remain effective in the future. (好的参数区域特征：收益不是最高，但足够好；附近参数差异不大；更可能持续有效。)</div>
+  </div>
+</section>
+
+<!-- ============ 5. Stable Parameters ============ -->
+<section>
+  <h2><span class="num">5</span>Finding Stable Parameter Regions</h2>
+  <p class="subtitle">We don't pursue single-point max return — we seek regions where nearby parameters all perform well.</p>
+
+  <div class="spec c-stable">
+    <h3><span class="tag">method</span>2D parameter heatmap example</h3>
+    <p style="font-size:14px; margin-bottom:10px">Short MA (rows) × Long MA (columns) — annual returns:</p>
+    <table class="heatmap">
+      <tr><th>Short\Long</th><th>MA40</th><th>MA30</th><th>MA20</th><th>MA18</th><th>MA15</th></tr>
+      <tr><th>MA3</th><td class="cool">6%</td><td class="cool">10%</td><td class="warm">15%</td><td class="warm">14%</td><td class="cool">10%</td></tr>
+      <tr><th>MA4</th><td class="cool">8%</td><td class="warm">14%</td><td class="hot">18%</td><td class="hot">17%</td><td class="cool">12%</td></tr>
+      <tr><th>MA5</th><td class="cool">9%</td><td class="warm">16%</td><td class="peak">20%</td><td class="hot">18%</td><td class="warm">13%</td></tr>
+      <tr><th>MA6</th><td class="cool">7%</td><td class="warm">15%</td><td class="hot">19%</td><td class="hot">17%</td><td class="cool">12%</td></tr>
+      <tr><th>MA7</th><td class="cool">5%</td><td class="cool">11%</td><td class="warm">17%</td><td class="warm">15%</td><td class="cool">9%</td></tr>
+    </table>
+    <p style="font-size:14px; color:var(--green)">The green zone (short MA 4–6, long MA 18–25) forms a stable plateau — not the absolute highest, but much more reliable!</p>
+
+    <h3>Why stability matters more than peak return</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <div class="mod c-stable"><h4>Future ≠ history</h4><p>Market environments change; "lucky parameters" won't persist.</p></div>
+      <div class="mod c-stable"><h4>Easier to execute</h4><p>Small adjustments in stable regions don't cause dramatic swings.</p></div>
+      <div class="mod c-stable"><h4>Sound research logic</h4><p>We seek patterns, not accidentally-hit points.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. Out-of-Sample Validation ============ -->
+<section>
+  <h2><span class="num">6</span>Out-of-Sample Validation — Testing with "Future" Data</h2>
+  <p class="subtitle">Validate the parameters found in the past against data they've never seen. Only then can we judge if the strategy might continue working.</p>
+
+  <div class="spec c-oos">
+    <h3><span class="tag">validation</span>Time split</h3>
+    <div class="flow">
+      <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">📚</div><div class="name">In-Sample</div><div class="cn">2018-01 → 2023-12<br>optimize parameters</div></div>
+      <div class="arrow" style="color:var(--red); font-size:24px">⫿</div>
+      <div class="step" style="--stepbg:var(--purple-bg)"><div class="icon">🔬</div><div class="name">Out-of-Sample</div><div class="cn">2024-01 → 2025-12<br>validate only, no tuning!</div></div>
+    </div>
+
+    <div class="quote"><strong>Absolute rule:</strong> Test-period data can ONLY be used for validation — NEVER for adjusting parameters. Otherwise the test data has been "learned" too, and validation becomes meaningless. (测试区间的数据只能用来验证，不能用来调整参数！)</div>
+
+    <div class="compare">
+      <div class="panel good">
+        <h4>✓ Correct flow</h4>
+        <ul>
+          <li>Hypothesize → in-sample parameter test → select stable region → out-of-sample validation → if passes → strategy is usable</li>
+          <li>Test interval: validate only, no parameter changes</li>
+          <li>Results more credible, closer to future performance</li>
+        </ul>
+      </div>
+      <div class="panel bad">
+        <h4>✗ Wrong flow (data leakage)</h4>
+        <ul>
+          <li>In-sample test → out-of-sample test → unsatisfied → adjust parameters → re-test out-of-sample</li>
+          <li>Repeated tuning + repeated testing = test data used for optimization = overfitting</li>
+          <li>Looks good but performs poorly in live trading</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Example: dual-MA validation</h3>
+    <table>
+      <tr><th>Period</th><th>Parameters</th><th>Return</th><th>MDD</th><th>Sharpe</th></tr>
+      <tr><td>In-sample (2018–2023)</td><td>MA4/18 · MA5/20 · MA6/22</td><td class="num">16–20%</td><td class="num">15–18%</td><td class="num">1.02–1.21</td></tr>
+      <tr style="background:var(--green-bg)"><td><b>Out-of-sample (2024–2025)</b></td><td><b>MA5/20 selected</b></td><td class="num" style="color:var(--green)"><b>17.6%</b></td><td class="num" style="color:var(--green)"><b>12.3%</b></td><td class="num" style="color:var(--green)"><b>1.15</b></td></tr>
+    </table>
+    <p style="font-size:14px; color:var(--green)">Out-of-sample performance is good → strategy passes validation!</p>
+  </div>
+</section>
+
+<!-- ============ Summary ============ -->
+<section>
+  <h2><span class="num">★</span>Day 23 Summary — Scientific Parameter Optimization</h2>
+
+  <div class="flow">
+    <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">💡</div><div class="name">① Hypothesize</div><div class="cn">market understanding</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">🔧</div><div class="name">② Test</div><div class="cn">batch parameter sweep</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--purple-bg)"><div class="icon">🔬</div><div class="name">③ Validate</div><div class="cn">out-of-sample</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--green-bg)"><div class="icon">✓</div><div class="name">④ Stability</div><div class="cn">select stable regions</div></div>
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Single-point optimal (high risk)</h4>
+      <p>Return is high but unstable. Neighboring parameters vary wildly. Likely overfitting. Future will probably regress.</p>
+    </div>
+    <div class="panel good">
+      <h4>✓ Stable region (low risk)</h4>
+      <p>Return slightly lower but stable. Nearby parameters all perform well. More likely to continue earning in the future.</p>
+    </div>
+  </div>
+
+  <h3>Key principles</h3>
+  <ul class="duty">
+    <li>Don't pursue the historically highest-return parameter</li>
+    <li>Look for stable parameter plateaus, not isolated peaks</li>
+    <li>Strictly separate in-sample optimization from out-of-sample validation</li>
+    <li>Good parameters = reasonable hypothesis + stable region + out-of-sample validation passed</li>
+  </ul>
+
+  <div class="takeaway"><span class="star">★</span><b>Look for stable regions, not isolated peaks. Good parameters = nearby parameters all stable + out-of-sample validation also passes.</b> (寻找稳定区域，而不是孤立的峰值。好的参数 = 附近参数都稳定 + 样本外验证也有效。)<br><br>In quantitative investing, surviving longer matters more than earning faster. (在量化投资中，活得久比赚得快更重要！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_23_parameter-optimization-overfitting.html · Distilled from knowledge-base/day_23 (30天学习量化投资 · Day 23) · 2025-08-30
+</footer>
+</div>
+</body>
+</html>

@@ -5,6 +5,53 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-30 — Day 21, 22, 23, 24 knowledge extraction → topic docs
+
+### What was done
+- Read the JPG slides of `knowledge-base/day_21/` (IMG_6639–6646, 8 slides),
+  `day_22/` (IMG_6647–6654, 8 slides), `day_23/` (IMG_6655–6662, 8 slides)
+  and `day_24/` (IMG_6663–6670, 8 slides) of "30天学习量化投资" using the
+  macOS Vision OCR tool.
+- Created four self-contained HTML docs in `docs/`, matching the existing style:
+  - `docs/day_21_backtest-engine.html` — Backtest Engine (回测引擎): the
+    system orchestrator / director analogy; complete 6-module pipeline (Market →
+    Strategy → Order → Broker → Portfolio → Performance); module I/O table;
+    tracing one Bar through 6 steps; Engine responsibilities vs non-responsibilities;
+    Go Engine struct and Run() pseudocode with the main loop.
+  - `docs/day_22_performance-analyzer.html` — Performance Analyzer (绩效分析):
+    position in pipeline; three core metrics — Return (how much earned), Max
+    Drawdown (worst pain), Sharpe Ratio (risk worth it?); Sharpe reference scale;
+    two-strategy comparison (aggressive vs steady); Go struct design with
+    PerformanceReport; 7-step computation pipeline.
+  - `docs/day_23_parameter-optimization-overfitting.html` — Parameter Optimization
+    & Overfitting Prevention (参数优化与防过拟合): parameters as strategy knobs;
+    multi-metric batch testing; overfitting signs; single-point trap (isolated
+    peaks vs stable plateaus); 2D parameter heatmap with color-coded cells;
+    out-of-sample validation with time split; scientific 4-step optimization flow.
+  - `docs/day_24_strategy-portfolio.html` — Strategy Portfolio (策略组合):
+    Strategy vs Portfolio roles; why combinations are needed (market regime
+    cycling); capital allocation with weight bars; correlation explained;
+    low-correlation profit/loss offset mechanism; more strategies ≠ better
+    diversification (need different return sources); 6-step portfolio construction
+    process.
+- Verified all four docs render with headless Chrome screenshots; no rendering
+  issues found; temporary screenshots deleted.
+
+### Key decisions
+- Day 22 reuses the Sharpe scale component from Day 12 for visual consistency.
+- Day 23 introduces `.heatmap` CSS with color-coded table cells (hot/warm/cool/peak)
+  for the 2D parameter sweep visualization.
+- Day 24 uses `.alloc-bar` for capital allocation visualization and the
+  `.compare-3` grid for three-strategy examples.
+- All docs maintain the bilingual English/Chinese convention.
+
+### What's next (proposed)
+1. Continue extraction for remaining days (25–30) as folders appear.
+2. Build an index/hub page linking all 24 day docs.
+3. Begin implementing the Go modules based on Days 16–21 architecture.
+
+---
+
 ## 2026-08-30 — Day 18, 19, 20 knowledge extraction → topic docs
 
 ### What was done

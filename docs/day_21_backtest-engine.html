@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest Engine — The System Orchestrator | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-market{--accent:#1d4ed8}.c-strat{--accent:#ea580c}.c-order{--accent:#3730a3}
+  .c-broker{--accent:#0369a1}.c-port{--accent:#7e22ce}.c-perf{--accent:#15803d}
+  .c-engine{--accent:#dc2626}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 90px;min-width:90px;text-align:center;padding:10px 6px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:20px}
+  .flow .step .name{font-weight:700;font-size:12px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:10px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:18px;padding:0 3px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:16px 18px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;overflow-x:auto;margin:12px 0;line-height:1.55}
+  pre .cm{color:#64748b}pre .kw{color:#7dd3fc}pre .ty{color:#fbbf24}pre .fn{color:#a5f3fc}pre .st{color:#86efac}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · System Orchestration</div>
+  <h1>Backtest Engine — The System Orchestrator</h1>
+  <p>Who makes the entire quant system run? From data to performance, how do all modules collaborate? Today we build the system's "master dispatcher" — the Backtest Engine. (谁来让整个量化系统跑起来？)</p>
+  <div class="src">Source: knowledge-base/day_21 (IMG_6639–IMG_6646), "30天学习量化投资 · Day 21: Backtest Engine" · Extracted 2025-08-30</div>
+</header>
+
+<!-- ============ 1. What is Backtest? ============ -->
+<section>
+  <h2><span class="num">1</span>What is Backtest? — A Flow Dispatcher, Not a Strategy</h2>
+  <p class="subtitle">Backtesting is simulating a trading system end-to-end on historical data to see "what if we had done this". The Backtest Engine is the dispatcher — it doesn't produce trading ideas or decide buys/sells.</p>
+
+  <div class="spec c-engine">
+    <h3><span class="tag">concept</span>The Engine as Director</h3>
+    <div class="quote">
+      <strong>Think of the Engine as a director (导演).</strong> It decides "when it's each actor's turn on stage" — but never acts for them. The Strategy, Broker, Portfolio, and Performance are the actors; each does their own job. (Engine像导演，决定"什么时候轮到谁上场"，但不替演员演戏。)
+    </div>
+
+    <h3>What the Engine solves</h3>
+    <ul class="duty">
+      <li>Which historical data? From what date to what date?</li>
+      <li>At what frequency? (1-minute / daily / weekly bars)</li>
+      <li>At each time point, which modules should work?</li>
+      <li>How are generated orders handled? How is the account updated after fills?</li>
+      <li>How are the final results evaluated?</li>
+    </ul>
+
+    <div class="keypoint">💡 <b>Engine controls flow ≠ business logic.</b> Modules each handle "what to do"; Engine handles "when to do it and in what order". (模块各自负责"做什么"，Engine 负责"何时做、按什么顺序做"。)</div>
+  </div>
+</section>
+
+<!-- ============ 2. Complete Pipeline ============ -->
+<section>
+  <h2><span class="num">2</span>Complete Backtest Pipeline — 6 Modules in Sequence</h2>
+  <p class="subtitle">Data → Signal → Order → Fill → Position → Performance. The Engine strings all modules together, looping in time order until data ends.</p>
+
+  <div class="flow">
+    <div class="step c-market" style="--stepbg:var(--blue-bg)"><div class="icon">📈</div><div class="name">Market Data</div><div class="cn">historical OHLCV bars</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="icon">🧠</div><div class="name">Strategy</div><div class="cn">generate Signal</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-order" style="--stepbg:var(--navy-bg)"><div class="icon">📝</div><div class="name">Order</div><div class="cn">Signal → Order</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="icon">🤝</div><div class="name">Broker</div><div class="cn">simulate fill</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">Portfolio</div><div class="cn">update positions &amp; cash</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-perf" style="--stepbg:var(--green-bg)"><div class="icon">📊</div><div class="name">Performance</div><div class="cn">evaluate results</div></div>
+  </div>
+
+  <h3>Module I/O summary</h3>
+  <table>
+    <tr><th>#</th><th>Module</th><th>Input</th><th>Output</th><th>Summary</th></tr>
+    <tr><td>1</td><td><b>Market Data</b></td><td>CSV / database</td><td>Bar (OHLCV)</td><td>Market provides data</td></tr>
+    <tr><td>2</td><td><b>Strategy</b></td><td>Bar data, position state</td><td>Signal (BUY/SELL/HOLD)</td><td>Strategy gives signals</td></tr>
+    <tr><td>3</td><td><b>Order</b></td><td>Signal, account state</td><td>Order (direction, qty, …)</td><td>Signal becomes order</td></tr>
+    <tr><td>4</td><td><b>Broker</b></td><td>Order, market data</td><td>Trade (price, qty, fees)</td><td>Broker executes orders</td></tr>
+    <tr><td>5</td><td><b>Portfolio</b></td><td>Trade, current account</td><td>Updated positions &amp; cash</td><td>Portfolio updates holdings</td></tr>
+    <tr><td>6</td><td><b>Performance</b></td><td>Equity curve history</td><td>Return, MDD, Sharpe, …</td><td>Performance evaluates results</td></tr>
+  </table>
+
+  <div class="keypoint">💡 This is a time-driven, looping pipeline — one Bar triggers one full pass. Each module only does its own job and communicates through standard interfaces. (这是一条不断循环的流水线，时间驱动，一根Bar触发一次。)</div>
+</section>
+
+<!-- ============ 3. One Bar's Journey ============ -->
+<section>
+  <h2><span class="num">3</span>What Happens to One Bar?</h2>
+  <p class="subtitle">Let's trace a single K-line through the entire backtest system.</p>
+
+  <div class="spec c-engine">
+    <h3><span class="tag">trace</span>Six steps per Bar</h3>
+    <div class="flow" style="padding:14px 10px">
+      <div class="step c-market" style="--stepbg:var(--blue-bg)"><div class="name" style="font-size:11px">① New Bar</div><div class="cn">market data arrives</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-strat" style="--stepbg:var(--orange-bg)"><div class="name" style="font-size:11px">② Strategy</div><div class="cn">reads data, judges</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-order" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:11px">③ Signal</div><div class="cn">produces Signal</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-order" style="--stepbg:var(--navy-bg)"><div class="name" style="font-size:11px">④ Order</div><div class="cn">generates Order</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-broker" style="--stepbg:var(--sky-bg)"><div class="name" style="font-size:11px">⑤ Broker</div><div class="cn">simulates fill</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name" style="font-size:11px">⑥ Portfolio</div><div class="cn">updates account</div></div>
+    </div>
+
+    <h3>Example: MA5 golden cross MA20</h3>
+    <table>
+      <tr><th>Step</th><th>What happens on this Bar</th><th>Result</th></tr>
+      <tr><td>① New Bar arrives</td><td>Read T-moment OHLCV data</td><td>Got new Bar</td></tr>
+      <tr><td>② Strategy judges</td><td>Update MA5, MA20 → MA5 crosses above MA20</td><td>Buy Signal produced</td></tr>
+      <tr><td>③ Signal → Order</td><td>Convert Signal to Order per strategy rules</td><td>Order: Buy 100 shares</td></tr>
+      <tr><td>④ Broker fills</td><td>Fill at next bar's open, with slippage &amp; fees</td><td>Trade generated</td></tr>
+      <tr><td>⑤ Portfolio updates</td><td>Position +100 shares, cash reduced, equity recalculated</td><td>Account updated</td></tr>
+    </table>
+
+    <div class="keypoint">
+      💡 <b>Time ordering is critical.</b> Signal is generated at time T, but the actual fill typically happens at T+1's open price. Wrong ordering causes: look-ahead bias (未来函数), duplicate fills, incorrect drawdowns, unrealistic returns.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. Engine Responsibilities ============ -->
+<section>
+  <h2><span class="num">4</span>Engine's Responsibilities — Orchestrate, Don't Decide</h2>
+  <p class="subtitle">The Engine is like a conductor — it doesn't play any instrument, but decides who plays when.</p>
+
+  <div class="spec c-engine">
+    <h3><span class="tag">role</span>What the Engine does</h3>
+    <div class="cols">
+      <div>
+        <ul class="duty">
+          <li>① <b>Traverse market data</b> in time order, bar by bar</li>
+          <li>② <b>Call Strategy</b> with latest bar data, receive Signal</li>
+          <li>③ <b>Process order flow</b> — convert Signal to Order</li>
+          <li>④ <b>Update Portfolio</b> based on Trade results</li>
+          <li>⑤ <b>Record all key data</b> — orders, trades, positions, equity curves</li>
+          <li>⑥ <b>Output Performance</b> — compute return, drawdown, Sharpe, etc.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-top:0; color:var(--red)">What the Engine does NOT do</h3>
+        <ul class="duty">
+          <li>✗ Does not decide when to buy or sell (Strategy's job)</li>
+          <li>✗ Does not compute indicators or strategy logic</li>
+          <li>✗ Does not decide position size or stop-loss rules (Strategy/Risk)</li>
+          <li>✗ Does not modify fill prices (Broker's job)</li>
+          <li>✗ Does not directly manipulate account data (Portfolio's job)</li>
+          <li>✗ Does not output strategy conclusions (only objective results)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Go Engine Structure ============ -->
+<section>
+  <h2><span class="num">5</span>Go Implementation — Engine Struct &amp; Run()</h2>
+  <p class="subtitle">Engine holds dependencies (components), not business logic. It's the "director" that controls flow.</p>
+
+  <div class="spec c-engine">
+    <h3><span class="tag">go</span>Engine struct</h3>
+<pre><span class="kw">type</span> <span class="ty">Engine</span> <span class="kw">struct</span> {
+    Strategy  <span class="ty">Strategy</span>    <span class="cm">// generates trade signals</span>
+    Broker    <span class="ty">Broker</span>      <span class="cm">// executes orders, simulates fills</span>
+    Portfolio *<span class="ty">Portfolio</span>   <span class="cm">// manages positions, cash, equity</span>
+    Perf      *<span class="ty">Performance</span> <span class="cm">// records &amp; computes metrics</span>
+    Data      <span class="ty">DataFeed</span>    <span class="cm">// market data source</span>
+    Config    <span class="ty">Config</span>      <span class="cm">// initial capital, fee rates, etc.</span>
+    Logger    *<span class="ty">log.Logger</span>  <span class="cm">// logging</span>
+}</pre>
+
+    <h3>Run() pseudocode — the main loop</h3>
+<pre><span class="kw">func</span> (e *<span class="ty">Engine</span>) <span class="fn">Run</span>() <span class="ty">error</span> {
+    e.Logger.<span class="fn">Info</span>(<span class="st">"backtest start"</span>)
+
+    <span class="kw">for</span> e.Data.<span class="fn">HasNext</span>() {
+        bar := e.Data.<span class="fn">Next</span>()          <span class="cm">// 1. Get next Bar</span>
+        e.Now = bar.Time
+
+        signal := e.Strategy.<span class="fn">OnBar</span>(bar)  <span class="cm">// 2. Strategy processes Bar → Signal</span>
+
+        <span class="kw">if</span> signal != <span class="kw">nil</span> {
+            order := signal.<span class="fn">ToOrder</span>()       <span class="cm">// 3. Signal → Order</span>
+            trade := e.Broker.<span class="fn">Execute</span>(order, bar) <span class="cm">// 4. Broker fills → Trade</span>
+            e.Portfolio.<span class="fn">ApplyTrade</span>(trade)  <span class="cm">// 5. Update Portfolio</span>
+        }
+
+        e.Perf.<span class="fn">Record</span>(bar, e.Portfolio)  <span class="cm">// 6. Record snapshot</span>
+    }
+
+    result := e.Perf.<span class="fn">Calculate</span>(e.Portfolio) <span class="cm">// 7. Compute final performance</span>
+    e.Logger.<span class="fn">Info</span>(<span class="st">"backtest end"</span>)
+    <span class="kw">return</span> result
+}</pre>
+
+    <div class="keypoint">
+      💡 <b>Engine only holds dependencies, not logic.</b> It's the "conductor" — controlling flow without playing any instrument. Changing strategies or brokers requires zero changes to the Engine. (Engine像一条精确的流水线，把每个模块串起来，按正确的时间顺序工作。)
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. Summary ============ -->
+<section>
+  <h2><span class="num">★</span>Day 21 Summary</h2>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Wrong: all logic in Engine</h4>
+      <ul>
+        <li>Engine contains buy/sell conditions</li>
+        <li>Engine computes fees, slippage</li>
+        <li>Engine updates cash and positions</li>
+        <li>Engine grows to thousands of lines</li>
+        <li>Changing a strategy means changing Engine</li>
+        <li>Hard to test, debug, or reuse</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Right: modules handle their own jobs</h4>
+      <ul>
+        <li>Engine only dispatches flow</li>
+        <li>Strategy only produces Signals</li>
+        <li>Broker only handles fills</li>
+        <li>Portfolio only manages accounts</li>
+        <li>Performance only computes metrics</li>
+        <li>Clean, extensible, testable, reusable</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Why this design?</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    <div class="mod c-engine"><h4>Module decoupling</h4><p>Each module is independent — no internal cross-dependencies.</p></div>
+    <div class="mod c-engine"><h4>Easy to extend</h4><p>Swap strategies, brokers, or add risk control trivially.</p></div>
+    <div class="mod c-engine"><h4>Easier to test</h4><p>Every module can be unit-tested in isolation.</p></div>
+    <div class="mod c-engine"><h4>Reusable</h4><p>Modules work across different strategies and instruments.</p></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Backtest Engine is the "director" of the entire system</b> — letting Strategy, Broker, Portfolio, and Performance each do their own job, collaborating in the correct time order, ultimately turning a stretch of history into evaluable investment performance. (Backtest Engine 是整个系统的"导演"，让各"演员"各司其职，按正确的时间顺序合作，最终把一段历史变成可评估的投资绩效。)<br><br>Engine decides "when to call whom" — not "why to trade". (Engine 决定"什么时候调用谁"，不决定"为什么买卖"。)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_21_backtest-engine.html · Distilled from knowledge-base/day_21 (30天学习量化投资 · Day 21) · 2025-08-30
+</footer>
+</div>
+</body>
+</html>
