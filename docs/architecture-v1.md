@@ -33,6 +33,7 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 | Markets | HK stocks/ETFs + US stocks/ETFs + Irish-domiciled UCITS ETFs (LSE-listed; 15% vs 30% dividend withholding tax lane) |
 | Picker mode | **Screen then deep-dive**: quant filters narrow the universe, LLM pipeline deep-dives survivors |
 | Stack | **Pure TypeScript.** Nest.js backend, Next.js frontend. No Python service (no akshare; TradingAgents *pattern* reimplemented, code not reused) |
+| Market data | **One free no-key primary for all three lanes: Yahoo v8** (via `yahoo-finance2`). Other sources are repair/rescue only, never a second daily feed. Store **raw OHLCV + corporate-action events**; derive adjusted series locally with the multiplicative convention (see §4.2) |
 | Output | Interactive chat/session in a local web UI, with charts, tables, signals; plus a daily report view |
 | Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); IBKR covers all three markets for the future paper→live path |
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
@@ -64,8 +65,6 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
 
 ## 4. Data layer
 
-- Primary: `yahoo-finance2` (npm) — covers US, HK (`.HK`), LSE-listed UCITS
-  (`.L`). Fallback: Alpha Vantage.
 - Behind the Day-17 two-layer design (Reader parses / Loader fetches) so a
   broker feed (Futu OpenAPI, IBKR) can slot in later without touching
   downstream code.
@@ -88,19 +87,118 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
   with non-trivial fetch failures is marked **degraded**, and the daily report
   leads with a data-integrity header (e.g. *"782/800 screened; 11 Yahoo 429s
   retried; 7 halted; 3 excluded for bad adjustments"*).
-- Source selection is declarative: a **data-routing table** (source → markets →
-  auth env key → constraints) with a test asserting it matches the loader
-  registry — no per-module hard-coded provider choices. Fallbacks if the
-  Phase 0 gate finds Yahoo HK/LSE insufficient: **tencent** (HK/US, reported
-  "never-banned"), **longbridge** (HK/US OHLCV, key-based).
-- Known weakness: HK small-cap Yahoo data quality (adjusted close, halts) and
-  HK-specific news depth. Phase 0 gate validates this before we build on it.
+- Source selection stays declarative: a **data-routing table** (source →
+  markets → auth env key → constraints, as in §4.1) with a test asserting it
+  matches the loader registry — no per-module hard-coded provider choices.
+- Known weakness, now measured: Yahoo HK **bars** are strong (above); Yahoo HK
+  **corporate-action data** is suspect — HSBC dividends come back as
+  `0.783188` / `0.78378403`, 8 decimals and unequal between two quarters on a
+  HKD-quoted stock, i.e. Yahoo FX-converts a USD-declared dividend (HSBC
+  declares in USD; ~$0.10 × a varying USD/HKD rate). Per-event
+  noise ~0.1%, tolerable but it is why the weekly sentinel (§4.3) exists. HK
+  small-cap halts and HK-specific news depth remain unvalidated.
+
+### 4.1 Routing table (free, no-key) — revised 2026-08-31 after live probing
+
+| Role | Source | Markets | Auth | Probed status |
+|---|---|---|---|---|
+| **Primary — sole daily feed** | `yahoo-finance2` (v8 chart API) | US, HK (`.HK`), LSE (`.L`) | none | ✅ 1227 daily bars on `0005.HK` / 5y; raw closes within **0.27%** of eastmoney; 100% of bars aligned by date |
+| Repair / rescue (raw bars only) | eastmoney `push2his` kline | HK | none | ✅ good bars (`fqt=0` raw) · ⚠️ **hard-drops the TCP connection** (temp IP ban) after ~5 requests at 0.35s spacing → ≥2s + jitter |
+| Repair / rescue (raw bars only) | tencent `hkfqkline` | HK | none | ✅ works · ⚠️ code is **5-digit** (`hk00005`) where Yahoo is **4-digit** (`0005.HK`); ≤1200 bars per call; a wrong-but-plausible code shape returns **HTTP 200 + empty bar array** |
+| ~~US fallback~~ | ~~stooq~~ | — | — | ❌ **dropped**: the CSV endpoint serves a JavaScript proof-of-work challenge page (HTTP 200 + HTML, `__verify` SHA-256 leading-zero mine) instead of data — unusable headless |
+| Later (Phase 4 / broker era) | Futu OpenD, **IBKR** | HK / US / LSE | local | IBKR is the genuinely single-provider option for all three lanes; §4.2 storage rules are what make that migration a re-fetch, not a rewrite |
+
+Dropped as bulk fallbacks: **Alpha Vantage** (free tier ≈25 req/day — per-ticker
+rescue at best), **stooq** (PoW-gated, above), akshare/tushare (A-share scope
+excluded), and any paid source in v1.
+
+**Yahoo is the only source whose *adjusted* prices we may use.** Every CN
+source's adjusted series uses the additive convention that mis-states returns
+(§4.2). Operational constraint: the request `User-Agent` must be pinned in the
+loader (a long Chrome UA drew an immediate 429; a short `Mozilla/5.0` returns
+200 in ~130ms), with ~200ms/request spacing — throttling is a design element,
+not a retry policy.
+
+### 4.2 Price-adjustment convention — four invariants (agreed 2026-08-31)
+
+Providers do not agree on adjustment, and the disagreement is not a convention
+nuance — it is a returns error. Measured on `0005.HK` (HSBC), 5y daily, which
+cumulatively paid **55% of its oldest price** in dividends:
+
+| Series | 2021 bar | today | implied 5y total return |
+|---|---|---|---|
+| raw | 41.45 | 161.00 | +288% |
+| Yahoo `adjclose` (multiplicative) | 30.74 | 161.00 | **+369.9%** |
+| tencent/eastmoney 前复权 `qfq` (additive) | 23.31 / 18.91 | 161.00 | **+590.8%** |
+
+*(Window note: the "2021 bar" and raw +288% are measured from 2021-08-31; the
+adjusted-vs-qfq return columns use the **common** oldest date 2021-10-18,
+because tencent caps at 1200 bars. Same-direction either way; compare columns,
+not rows.)*
+
+Yahoo-adj vs tencent-qfq: mean **−12.3%**, max **40.2%**, **86% of bars** off by
+>1%. Even on a low-yield mega-cap (`0700.HK`, 3.9% cumulative div) the max
+deviation is **9.2%** and 40% of bars breach 1%, and the error **peaks at the
+price trough** — precisely where RSI / reversal / dip signals fire. Additive
+adjustment subtracts a fixed amount from depressed past prices, so it inflates
+returns (and can go negative over long windows). Rolling 20d-momentum error on
+HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
+
+- **R1 — store raw, adjust locally.** Persist unadjusted OHLCV plus a
+  corporate-action table (ex-date, amount, currency, type — **dividends and
+  splits**). The adjusted series is *derived* in `quant-core` by one documented
+  multiplicative back-adjustment anchored at the latest bar:
+  `adj_t = raw_t × Π_{i>t}(1 − D_i/P_i) × Π_{j>t}(1/S_j)` where `S_j` is the
+  split ratio (e.g. 10 for a 10:1 split). Dividends alone are not enough — a
+  split name (NVDA went 10:1 in 2024) silently breaks a dividend-only
+  adjustment.
+  No provider's convention is ever allowed into signal math; the series stays
+  reproducible across provider history rewrites; the UCITS lane gets the
+  dividend events it needs anyway; Phase 4 gets Day-17 total-return
+  correctness. Feasibility verified: a provider's full adjusted series was
+  reconstructed from Yahoo's own event list to within 0.6pp.
+- **R2 — dual series, different jobs.** Signals and screening read the derived
+  adjusted series; every displayed price, and everything the user types an
+  order against, is the **raw** series (161.00, not an adjusted number).
+- **R3 — never blend providers inside one instrument's series (no-splice
+  rule).** Given ~40% divergence, splicing Yahoo→eastmoney at a mid-window hole
+  injects a phantom ~12% jump that the momentum ranker reads as a breakout. A
+  fallback may only supply **raw** bars, after which the whole series is
+  re-derived locally.
+- **R4 — cross-source validation compares convention-free quantities only**
+  (raw closes, session-date index, CA event sets). **Never** adjusted prices.
+
+Rejected alternative: "trust Yahoo's `adjclose` and defer local adjustment to
+Phase 4" — rejected because it leaves the signal layer dependent on a provider
+factor table we cannot inspect (and, per §4.1's HK dividend finding, one that
+silently FX-converts), and because it makes every fallback unusable under R3.
+
+### 4.3 Single-provider posture and the weekly sentinel
+
+Yahoo is the only source whose free, no-key coverage spans US + HK + LSE-UCITS
+in one API, one response shape, and the one mathematically correct convention —
+and probing showed every free alternative to be *more* fragile, not less
+(stooq PoW wall, tencent silent-empty 200s, eastmoney IP bans). So: **one
+provider for data, second sources for two narrow jobs only** —
+
+1. **per-ticker repair** of `FETCH_FAILED` / `GENUINELY_ABSENT` bars (raw only,
+   R3), and
+2. a **weekly 10-ticker sentinel diff** — raw close + session dates + CA event
+   count against eastmoney/tencent, ≈10 requests/week. (Scope: HK lane only —
+   the repair sources have no US/LSE coverage, so those lanes rely on G2d's
+   same-provider check plus Yahoo-internal consistency.)
+
+Bulk cross-source validation is out of v1. What the single-provider posture
+sacrifices is detection of a provider *silently rewriting history* between
+runs; the sentinel is the cheap insurance for that **where a second source
+exists**, and is not optional.
 
 ## 5. Daily pipeline
 
 ```
 ~16:45 HKT (HK close) / ~06:00 HKT (US close)
-  1. Update OHLCV for ~800 tickers
+  1. Update **raw** OHLCV + corporate actions for ~800 tickers (Yahoo; rescue
+     paths per §4.1) → re-derive the adjusted series locally (R1/R3)
   2. Data-quality gate (Day 17 checklist) → typed DataOutcome per ticker;
      non-trivial FETCH_FAILED count marks the run degraded (see §4)
   3. Technical screen (deterministic, quant-core):
@@ -189,3 +287,11 @@ the backtest module from Days 21–23 gets built there.
    decisions auditable; temperature pinned low for verdicts.
 3. Data quality asymmetry across markets — Phase 0 gate + Day-17 checks.
 4. HK news depth — accept asymmetry in v1; revisit sources in Phase 2.
+5. **Silent provider revision** — Yahoo can rewrite history (dividends,
+   adjustments) between runs, invisible from inside a single feed. Mitigated by
+   R1 (history is derived, so re-derivation is free and inspectable) plus the
+   §4.3 weekly sentinel.
+6. **Free-source fragility** — the no-key sources we depend on throttle by IP,
+   return 200-with-empty-body on bad request shapes, and change anti-bot rules
+   (stooq is already PoW-gated). Mitigated by single-provider routing, loud
+   typed outcomes, and the §4.1 probed-status table kept current.

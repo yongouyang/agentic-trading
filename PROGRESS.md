@@ -5,6 +5,176 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-08-31 (review) — Pre-spike probing reviewed; 3 open items decided
+
+### What was done
+- Independent review of the earlier "Pre-spike data probing" session (docs +
+  `docs/probes/adjustment-convention.py`). **Re-ran the probe live**
+  (`--no-eastmoney`): every headline number in Appendix A reproduced exactly
+  (HSBC mean −12.31% / max 40.16% / 86% bars >1%; +369.9% vs +590.8%; p95
+  momentum error 10.84pp; CSPX.L USD, 0 events). Verdict: G2 withdrawal and
+  invariants R1–R4 are sound and measured, not asserted.
+- Fixed four nits found by the review, all in `architecture-v1.md`:
+  HSBC dividends are **USD**-declared, not GBP (§4); R1's formula now includes
+  the **split factor** (§4.2 — dividends-only adjustment silently breaks on
+  split names like NVDA 10:1); window footnote on the §4.2 evidence table
+  (raw column from 2021-08-31, return columns from the 2021-10-18 common
+  start); sentinel explicitly scoped to the **HK lane only** (§4.3 — US/LSE
+  rely on G2d + Yahoo-internal consistency).
+- Decided the session's three open items (user-approved):
+  (a) spike deps in a **throwaway gitignored `spike/` dir**;
+  (b) sample slots filled: US mid-caps **PKG, RYL, FDS**; fake **NOSUCHTICKER**;
+  delisted **TWTR**; HK edge = 2 lowest-turnover names picked by the spike at
+  runtime from a candidate list (choice logged);
+  (c) gate **G1** = ≥98% overall **and ≤1 failure per market lane**.
+
+### What's next (proposed)
+1. Hand the spike to the **fast tier**: `spike/data-probe.ts` (tsx +
+   yahoo-finance2), porting the check logic from the committed Python probe;
+   run the ~30-ticker sample against G1–G5; write
+   `docs/phase-0-verification-report.md`.
+2. Only if gates pass: scaffold the pnpm monorepo (pin `packageManager`; the
+   spike install doubles as the pnpm-12 acceptance test).
+
+---
+
+## 2026-08-31 (later) — Pre-spike data probing: gate G2 rewritten, routing table revised
+
+### What was done
+- Confirmed the agreed order of work: **spike first, scaffold second**
+  (phase-0 doc §3 + this file's own "what's next"). Checked the environment:
+  node 22.23 / pnpm 12.0.0 / tsx 4.23.13 present, and Yahoo + stooq + tencent
+  endpoints all answered HTTP 200 from this machine → spike is runnable today.
+- Found that **gate G2 as written was not a valid test**, so ran the decisive
+  part of the spike early with throwaway Python probes: pulled `0005.HK`,
+  `0700.HK`, `MSFT`, `CSPX.L` (5y daily) from Yahoo (raw + `adjclose` +
+  dividend events), tencent `hkfqkline`, and eastmoney `push2his` at three
+  `fqt` settings, and compared them bar by bar.
+- **Measured the adjustment problem on HSBC (0005.HK, 5y):** Yahoo is
+  multiplicative (2021 bar 41.45 → adj 30.74), tencent/eastmoney 前复权 is
+  additive (→ 23.31 / 18.91). Same stock, same dates: mean deviation
+  **−12.3%**, max **40.2%**, **86% of bars beyond 1%**, and implied 5y total
+  return **+369.9% vs +590.8%**. Even `0700.HK` (3.9% cumulative dividends)
+  hits **9.2%** max deviation with 40% of bars beyond 1%, with the error
+  **peaking at the 2022 price trough** — where reversal/dip signals fire.
+  Rolling 20d-momentum error p95 **10.8pp** on HSBC: enough to re-order a
+  shortlist. Mechanism proved exactly (Yahoo Σ dividends 22.89 = eastmoney
+  `raw − qfq` 22.89), and the additive series was reconstructed from Yahoo's
+  own event list to within 0.6pp → **local adjustment is feasible**.
+- **Convention-free comparison works:** raw closes Yahoo vs eastmoney agree at
+  mean **0.00%**, max **0.27%**, 1226/1227 dates aligned. That is what a
+  cross-source gate can actually test.
+- Probed the fallback paths and found three real hazards: **stooq serves a
+  JavaScript proof-of-work challenge page instead of CSV** (HTTP 200 + HTML,
+  `POST /__verify`) → dropped from the routing table, leaving the US lane with
+  no free second source; **tencent needs 5-digit `hk00005`** (Yahoo needs
+  4-digit `0005.HK`) and returns **HTTP 200 with an empty bar array** for the
+  4-digit form — a bad request that looks like "no data exists"; **eastmoney
+  hard-drops the connection** (IP ban) after ~5 requests at 0.35s spacing.
+  Also: Yahoo 429s instantly on a long Chrome `User-Agent` but returns 200 in
+  130ms with `Mozilla/5.0` → UA must be pinned in the loader.
+- Confirmed Yahoo's HK **corporate actions** are the actual weak spot, not its
+  bars: HSBC dividends arrive as `0.783188` / `0.78378403` — 8 decimals,
+  unequal across quarters, on an HKD-quoted stock ⇒ Yahoo FX-converts a
+  GBP-declared dividend. Re-scoped the risk from "HK data quality" to "HK CA
+  data quality".
+- De-risked gate G3 partially: `CSPX.L` reports `currency: USD` with **0**
+  dividend events (USD-accumulating share class), so the GBX/pence 100× trap
+  mostly threatens GBP *ordinaries*, which are not in the UCITS lane.
+- Rewrote the affected docs: `phase-0-data-verification.md` (§1 routing table,
+  §2 risk statuses, §3.3 validation method, gate **G2 → G2a–G2d**, §3.4 probes,
+  new **Appendix A** with all measured numbers), `architecture-v1.md` (§2 new
+  Market-data decision row, §4.1 probed routing table, new **§4.2 invariants
+  R1–R4** with the evidence table, new **§4.3** single-provider posture +
+  weekly sentinel, §5 pipeline steps 1–2, §11 risks 5–6).
+
+### Key decisions
+- **R1 store raw + corporate-action events; derive the adjusted series locally**
+  with one documented multiplicative back-adjustment. No provider's convention
+  enters signal math. *(The alternative — trust Yahoo's `adjclose` and defer
+  local adjustment to Phase 4 — was explicitly rejected: it leaves the screen
+  dependent on an uninspectable provider factor table that silently
+  FX-converts, and makes every fallback unusable.)*
+- **R2 dual series with different jobs:** adjusted for signals, **raw** for
+  every displayed price and order entry.
+- **R3 no-splice rule:** one instrument's series comes from one provider only;
+  a fallback may supply raw bars, after which the whole series is re-derived
+  (a mid-window splice would inject a phantom ~12% jump into momentum).
+- **R4 cross-source validation compares only convention-free quantities** —
+  raw closes, session-date index, CA event sets. Never adjusted prices.
+- **Single provider confirmed as the design:** Yahoo is the only free no-key
+  source spanning US + HK + LSE-UCITS in one API with the correct convention,
+  and probing showed every alternative is more fragile, not less. Second
+  sources are demoted to **per-ticker repair** plus a **weekly 10-ticker
+  sentinel** (~10 req/week) that exists to catch a provider silently rewriting
+  history. Bulk cross-source validation is out of v1.
+- **Gate G2 replaced** by G2a (raw close ≥99% within 0.1%, none beyond 0.5%),
+  G2b (date index ≥99.5%, every mismatch named), G2c (CA events; **no hard
+  fail** — it is the measurement of Yahoo HK event quality), G2d (our own
+  adjustment vs Yahoo `adjclose` ≤0.05%, i.e. tests our code, not the feed).
+- **G5 extended**: HTTP 200 + empty bar array, and dropped connection, both map
+  to `FETCH_FAILED` — never `GENUINELY_ABSENT`.
+- If G1 forces a per-market demotion to eastmoney/tencent, two providers must
+  coexist and R1's local adjustment becomes blocking from day one rather than
+  phased.
+
+### What's next (proposed)
+1. Hand the spike to the **fast tier** (`qwen3.8 flash`) — design questions are
+   now closed and recorded; `scripts/data-probe.ts` + `docs/phase-0-verification-report.md`
+   are execution. The check logic already exists and is committed at
+   `docs/probes/adjustment-convention.py` (re-verified: reproduces every
+   Appendix A number) — port it rather than rewrite it.
+2. Three small items still need the user's nod before coding (they are spec
+   holes, not design forks): (a) spike deps live in a throwaway gitignored
+   `spike/` dir so a root `package.json` isn't the back door into monorepo
+   scaffolding; (b) the 4 unfilled sample slots in §3.1 (2–3 S&P mid-caps, 1–2
+   illiquid/halted HK names, one fake + one delisted symbol); (c) G1's "≥98%"
+   granularity — 1 failure in a 30-ticker sample is 96.7%, so state per-market
+   minimums or an absolute failure count.
+3. **Unagreed side finding (pnpm):** v12 *is* the Rust rewrite (verified: the
+   npm package is a wrapper that links a 32MB Mach-O from `@pnpm/exe.*`, its
+   strings contain `pnpm/crates/*.rs`, and its own `--help` banner says
+   "Experimental"). But it is 5 days old and not the npm `latest` tag (11.24.0),
+   `--ignore-scripts` leaves a broken placeholder binary, and v11+'s default
+   `minimumReleaseAge: 1 day` will reject a <24h-old dep version with a
+   misleading "no matching version". Performance is not a reason to care here
+   (~20ms warm either way). Proposal: keep 12.x locally, pin `packageManager`
+   in the root `package.json` at scaffold time, note the
+   `minimumReleaseAge` gotcha in `AGENTS.md`, and let the 2-dep spike install be
+   the acceptance test (rollback = one line, pin `11.24.0`).
+
+---
+
+## 2026-08-31 — Phase 0 data verification plan documented
+
+### What was done
+- Read the vendored `data-routing` and `yfinance` skills end-to-end; extracted
+  operational intelligence that reshapes Phase 0 (Vibe-Trading ranks yfinance
+  last for HK; Yahoo IP-ban behavior; 4-digit HK padding; auto_adjust
+  semantics; stooq/tencent as free no-key fallbacks).
+- Wrote `docs/phase-0-data-verification.md`: spike-first verification plan —
+  ~30-ticker stratified sample (US/HK/LSE + edge cases), automated Day-17
+  checks per ticker, cross-source validation (yahoo vs stooq/tencent, 1%
+  tolerance), rate-limit probe, and 5 acceptance gates (G1–G5) with explicit
+  fallback actions per gate.
+
+### Key decisions
+- **Free no-key sources only** for v1 routing: Yahoo primary, stooq (US) +
+  tencent (HK) fallbacks. Alpha Vantage dropped as bulk fallback (free tier
+  ≈ 25 req/day — per-ticker rescue at best). A-share sources (akshare/
+  tushare) out of scope entirely.
+- **Spike before scaffold**: a throwaway `tsx` script verifies the stack
+  empirically before any monorepo code; its check functions later seed
+  `packages/quant-core`'s data-quality module.
+- LSE **GBX/GBP trap** added as gate G3 (100× scale risk on `.L` tickers).
+
+### What's next (proposed)
+1. Execute the spike: build `scripts/data-probe.ts`, run the sample, write
+   `docs/phase-0-verification-report.md` with gate verdicts.
+2. Only after gates pass: scaffold the pnpm monorepo (Phase 0 build).
+
+---
+
 ## 2026-08-31 — Skills-reuse review → architecture amendments + vendored corpora
 
 ### What was done
