@@ -95,7 +95,7 @@ back door into monorepo scaffolding before the gates pass.
 |---|---|---|
 | US mega | AAPL, MSFT, NVDA | baseline quality |
 | US ETF/index | SPY, QQQ, ^GSPC | ETF + index handling |
-| US mid-liquidity | PKG, RYL, FDS | adjustment consistency |
+| US mid-liquidity | PKG, FDS, SLGN *(SLGN replaces RYL — RYL is defunct, Ryland merged 2015; found by the spike)* | adjustment consistency |
 | HK blue chips | 0700.HK, 9988.HK, 0005.HK | 4-digit padding, HK calendar |
 | HK ETF | 2800.HK (Tracker Fund) | HK ETF data |
 | HK edge | 2 lowest-turnover HK names, picked by the spike at runtime from a small candidate list (choice logged in the report) | absence vs failure typing |

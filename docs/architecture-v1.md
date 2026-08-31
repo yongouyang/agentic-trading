@@ -91,12 +91,19 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
   markets → auth env key → constraints, as in §4.1) with a test asserting it
   matches the loader registry — no per-module hard-coded provider choices.
 - Known weakness, now measured: Yahoo HK **bars** are strong (above); Yahoo HK
-  **corporate-action data** is suspect — HSBC dividends come back as
-  `0.783188` / `0.78378403`, 8 decimals and unequal between two quarters on a
-  HKD-quoted stock, i.e. Yahoo FX-converts a USD-declared dividend (HSBC
-  declares in USD; ~$0.10 × a varying USD/HKD rate). Per-event
-  noise ~0.1%, tolerable but it is why the weekly sentinel (§4.3) exists. HK
-  small-cap halts and HK-specific news depth remain unvalidated.
+  **corporate-action data** is broken for USD-declaring names — HSBC dividends
+  come back FX-converted (`0.783188`, 8 decimals, on an HKD-quoted stock), and
+  worse, Yahoo's *own* `adjclose` applies USD amounts unconverted against HKD
+  prices (9988.HK: all 4 events, 5.45% error; 0005.HK's newest event; proven by
+  implied-amount analysis in `docs/phase-0-verification-report.md`). HKD-native
+  payers are exact (2800.HK: 0.0000%). ⇒ **Yahoo HK event amounts cannot drive
+  local adjustment for USD-declaring HK names**. **Decided (2026-09-01): defer
+  with a degraded flag** — v1 ships with Yahoo events; USD-declaring HK names
+  carry a `CA_DEGRADED` flag and their long-window signals are annotated
+  (short-window momentum is barely affected by a single event). A proper HK CA
+  source is revisited in Phase 2; eastmoney-for-events was rejected as a
+  blocking dependency after its per-IP ban proved to fire on the first request.
+  HK small-cap halts and HK-specific news depth remain unvalidated.
 
 ### 4.1 Routing table (free, no-key) — revised 2026-08-31 after live probing
 
@@ -145,13 +152,16 @@ returns (and can go negative over long windows). Rolling 20d-momentum error on
 HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
 
 - **R1 — store raw, adjust locally.** Persist unadjusted OHLCV plus a
-  corporate-action table (ex-date, amount, currency, type — **dividends and
-  splits**). The adjusted series is *derived* in `quant-core` by one documented
-  multiplicative back-adjustment anchored at the latest bar:
-  `adj_t = raw_t × Π_{i>t}(1 − D_i/P_i) × Π_{j>t}(1/S_j)` where `S_j` is the
-  split ratio (e.g. 10 for a 10:1 split). Dividends alone are not enough — a
-  split name (NVDA went 10:1 in 2024) silently breaks a dividend-only
-  adjustment.
+  corporate-action table (ex-date, amount, currency, type). The adjusted series
+  is *derived* in `quant-core` by one documented multiplicative back-adjustment
+  anchored at the latest bar: `adj_t = raw_t × Π_{i>t}(1 − D_i/P_prev,i)` where
+  `P_prev` is the **previous session's close**. **No split factor is applied**:
+  measured 2026-08-31 (verification report, Surprise 2), Yahoo v8 raw closes
+  are *already split-adjusted* — applying a split factor double-counts (NVDA:
+  +900% error). We store raw **as delivered** and adjust for dividend events
+  only; if a future provider delivers split-unadjusted raw bars, that provider's
+  loader must normalize before storage so the invariant "stored raw is
+  split-adjusted" holds at the store boundary.
   No provider's convention is ever allowed into signal math; the series stays
   reproducible across provider history rewrites; the UCITS lane gets the
   dividend events it needs anyway; Phase 4 gets Day-17 total-return

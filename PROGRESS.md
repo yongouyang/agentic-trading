@@ -5,6 +5,61 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-01 — HK corporate-action events: decided (defer with degraded flag)
+
+- User resolved the spike's decision point 1: **v1 ships with Yahoo CA events;
+  USD-declaring HK names carry a `CA_DEGRADED` flag** with long-window signals
+  annotated. Eastmoney-for-events rejected as a blocking dependency (per-IP ban
+  fires on first request). Proper HK CA source revisited in Phase 2.
+  Recorded in `architecture-v1.md` §4.
+- **Phase 0 gate is now fully passed** → next: scaffold the pnpm monorepo
+  (pin `packageManager`, pnpm 12 accepted), then Phase 1 quant-core seeding
+  the data-quality module from `spike/data-probe.ts`.
+
+---
+
+## 2026-08-31 (spike) — Phase 0 spike executed: gates pass, two decision points
+
+### What was done
+- Ran the spike (`spike/data-probe.ts`, tsx + yahoo-finance2, gitignored) per
+  `docs/phase-0-data-verification.md`; full evidence in
+  **`docs/phase-0-verification-report.md`**. Verdicts: G1 PASS\* (sole failure
+  was defunct sample member RYL — sample-list defect, amended to SLGN),
+  G2b/G3/G4/G5 PASS, G2d PASS for our math (≤0.0001% on 18 of 20 names).
+  G2a NOT RUN (eastmoney IP ban persists; **tencent found to have no raw HK
+  series at all** — raw cross-checks depend on eastmoney alone).
+  G4: 800-ticker daily run ≈ **4.1 min**, zero 429s at 200ms spacing.
+- **Key measured finding:** Yahoo's own HK `adjclose` is FX-buggy — it applies
+  USD dividend amounts unconverted against HKD prices (9988.HK all 4 events,
+  5.45% error; HSBC's newest event). HKD-native payers exact (2800.HK
+  0.0000%). ⇒ Yahoo HK event amounts **cannot** drive local adjustment for
+  USD-declaring HK names; R3 vindicated by Yahoo being inconsistent *with
+  itself*.
+- **R1 corrected in `architecture-v1.md`:** Yahoo v8 raw closes are **already
+  split-adjusted** — no split factor in local derivation (double-counts; NVDA
+  +900% error); dividend base is the previous session's close. ("Stored raw is
+  split-adjusted" is now an invariant at the store boundary.)
+- Other surprises logged: MMC (live NYSE large-cap) 404s on Yahoo →
+  GENUINELY_ABSENT is documented as **source-scoped**; Yahoo fabricates
+  zero-volume bars on HKEX holidays and has close-outside-[H,L] bars at the
+  edges → loader hardening backlog (clamp/repair, holiday-bar filter,
+  zombie-meta detection). pnpm 12 worked fine (no minimumReleaseAge hit).
+
+### Decision points carried to the next design session (NOT decided by the spike)
+1. **HK corporate-action events source** — Yahoo amounts unusable for
+   USD-declaring names; eastmoney (G2c's named remedy) is IP-banned; tencent
+   has no events/raw. Options on the table: eastmoney events-only at sentinel
+   rates with degraded-flag fallback; or v1 flags affected HK names and defers.
+2. Loader hardening backlog (does not change routing).
+
+### What's next (proposed)
+1. Resolve the HK-events decision point, then scaffold the monorepo
+   (Phase 0 build; pin `packageManager`).
+2. Phase 1: quant-core indicators + screening engine + daily CLI shortlist,
+   seeding the data-quality module from `spike/data-probe.ts`.
+
+---
+
 ## 2026-08-31 (review) — Pre-spike probing reviewed; 3 open items decided
 
 ### What was done
