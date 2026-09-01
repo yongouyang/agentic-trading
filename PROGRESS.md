@@ -5,6 +5,29 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-01 (plan) — Phase 1 hardening plan pinned
+
+### What was done
+- Wrote `docs/phase-1-hardening-plan.md` for the deferred Phase 1 items.
+  Decisions (user): rescue loaders fire automatically in-run; sentinel is a
+  manual CLI with a fixed 10-name HK sample; **coverage ledger skipped**
+  (full-window rewrites are cheap and self-healing; revisit trigger
+  documented); HSCEI universe expansion in scope (verify-then-add).
+- Key design pin: **eastmoney is the only raw-bar HK rescue source** —
+  tencent serves no raw HK series (200+empty on `fq=''`; dates-only role).
+  Rescue follows a whole-series rule (full replace + `Instrument.dataSource`
+  provenance column, never a splice, R3); ≤5 eastmoney calls/run at ≥2s +
+  jitter (IP-ban protection); US lane has no rescue source by design.
+- Sentinel checks pinned: Yahoo-fresh-vs-stored rewrite detector (ALARM on
+  any overlap mismatch), eastmoney raw-close diff (alarm >1% max dev, warn
+  >0.27% mean), tencent date-overlap only (closes never compared).
+
+### What's next
+- Execute the hardening plan (fast tier OK — parameters are pinned), then
+  Phase 2 design (deep tier).
+
+---
+
 ## 2026-09-01 (research) — openalgo reference analysis
 
 ### What was done
