@@ -1,0 +1,3340 @@
+{
+  "_meta": {
+    "source": "Union of S&P 500 and Nasdaq-100 constituents (hand-compiled from public constituent lists, 2026-09-01), deduped, plus ~55 major US-listed ETFs.",
+    "compiled": "2026-09-01",
+    "note": "Refresh manually; index membership drift accepted in v1 (see docs/phase-1-spec.md §1). Stale symbols surface as GENUINELY_ABSENT at runtime.",
+    "maintenance": "2026-09-01: removed 9 tickers Yahoo 404s (M&A/renames — verified live): MMC FI BK SEE HOLX K ANSS CMA CTRA; added BNY (renamed BK)."
+  },
+  "symbols": [
+    {
+      "symbol": "A",
+      "name": "Agilent Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AAL",
+      "name": "American Airlines Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ABBV",
+      "name": "AbbVie Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ABNB",
+      "name": "Airbnb Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ABT",
+      "name": "Abbott Laboratories",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ACN",
+      "name": "Accenture plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ADBE",
+      "name": "Adobe Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ADI",
+      "name": "Analog Devices Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ADM",
+      "name": "Archer-Daniels-Midland Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ADP",
+      "name": "Automatic Data Processing Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ADSK",
+      "name": "Autodesk Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AEE",
+      "name": "Ameren Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AEP",
+      "name": "American Electric Power Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AES",
+      "name": "AES Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AFL",
+      "name": "Aflac Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AGG",
+      "name": "iShares Core U.S. Aggregate Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "AIG",
+      "name": "American International Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AIZ",
+      "name": "Assurant Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AJG",
+      "name": "Arthur J. Gallagher & Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AKAM",
+      "name": "Akamai Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ALB",
+      "name": "Albemarle Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ALGN",
+      "name": "Align Technology Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ALL",
+      "name": "Allstate Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMAT",
+      "name": "Applied Materials Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMCR",
+      "name": "Amcor plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMD",
+      "name": "Advanced Micro Devices Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AME",
+      "name": "AMETEK Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMGN",
+      "name": "Amgen Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMP",
+      "name": "Ameriprise Financial Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMT",
+      "name": "American Tower Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon.com Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ANET",
+      "name": "Arista Networks Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AON",
+      "name": "Aon plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AOS",
+      "name": "A.O. Smith Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "APA",
+      "name": "APA Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "APD",
+      "name": "Air Products and Chemicals Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "APO",
+      "name": "Apollo Global Management Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "APP",
+      "name": "AppLovin Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "APTV",
+      "name": "Aptiv plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ARE",
+      "name": "Alexandria Real Estate Equities Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ARES",
+      "name": "Ares Management Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ARKK",
+      "name": "ARK Innovation ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "ARM",
+      "name": "ARM Holdings plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ASML",
+      "name": "ASML Holding NV",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ATO",
+      "name": "Atmos Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AVB",
+      "name": "AvalonBay Communities Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AVGO",
+      "name": "Broadcom Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AVY",
+      "name": "Avery Dennison Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AWK",
+      "name": "American Water Works Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AXON",
+      "name": "Axon Enterprise Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AXP",
+      "name": "American Express Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AZN",
+      "name": "AstraZeneca plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "AZO",
+      "name": "AutoZone Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BA",
+      "name": "Boeing Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BAC",
+      "name": "Bank of America Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BALL",
+      "name": "Ball Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BAX",
+      "name": "Baxter International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BBWI",
+      "name": "Bath & Body Works Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BBY",
+      "name": "Best Buy Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BDX",
+      "name": "Becton Dickinson and Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BEN",
+      "name": "Franklin Resources Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BF-B",
+      "name": "Brown-Forman Corp. Class B",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BG",
+      "name": "Bunge Global SA",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BIDU",
+      "name": "Baidu Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BIIB",
+      "name": "Biogen Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BKNG",
+      "name": "Booking Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BKR",
+      "name": "Baker Hughes Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BLDR",
+      "name": "Builders FirstSource Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BLK",
+      "name": "BlackRock Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BMY",
+      "name": "Bristol-Myers Squibb Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BND",
+      "name": "Vanguard Total Bond Market ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "BNY",
+      "name": "The Bank of New York Mellon Corporation",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BR",
+      "name": "Broadridge Financial Solutions Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BRK-B",
+      "name": "Berkshire Hathaway Inc. Class B",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BRO",
+      "name": "Brown & Brown Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BSX",
+      "name": "Boston Scientific Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BX",
+      "name": "Blackstone Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "BXP",
+      "name": "BXP Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "C",
+      "name": "Citigroup Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CAG",
+      "name": "Conagra Brands Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CAH",
+      "name": "Cardinal Health Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CARR",
+      "name": "Carrier Global Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CAT",
+      "name": "Caterpillar Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CB",
+      "name": "Chubb Ltd.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CBOE",
+      "name": "Cboe Global Markets Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CBRE",
+      "name": "CBRE Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CCEP",
+      "name": "Coca-Cola Europacific Partners plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CCI",
+      "name": "Crown Castle Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CCL",
+      "name": "Carnival Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CDNS",
+      "name": "Cadence Design Systems Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CE",
+      "name": "Celanese Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CEG",
+      "name": "Constellation Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CF",
+      "name": "CF Industries Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CFG",
+      "name": "Citizens Financial Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CHD",
+      "name": "Church & Dwight Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CHRW",
+      "name": "C.H. Robinson Worldwide Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CHTR",
+      "name": "Charter Communications Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CI",
+      "name": "Cigna Group",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CINF",
+      "name": "Cincinnati Financial Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CL",
+      "name": "Colgate-Palmolive Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CLX",
+      "name": "Clorox Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CMCSA",
+      "name": "Comcast Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CME",
+      "name": "CME Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CMG",
+      "name": "Chipotle Mexican Grill Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CMI",
+      "name": "Cummins Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CMS",
+      "name": "CMS Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CNC",
+      "name": "Centene Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CNP",
+      "name": "CenterPoint Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "COF",
+      "name": "Capital One Financial Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "COIN",
+      "name": "Coinbase Global Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "COO",
+      "name": "Cooper Companies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "COP",
+      "name": "ConocoPhillips",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "COR",
+      "name": "Cencora Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "COST",
+      "name": "Costco Wholesale Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CPAY",
+      "name": "Corpay Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CPB",
+      "name": "Campbell's Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CPRT",
+      "name": "Copart Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CPT",
+      "name": "Camden Property Trust",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CRL",
+      "name": "Charles River Laboratories International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CRM",
+      "name": "Salesforce Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CRWD",
+      "name": "CrowdStrike Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CSCO",
+      "name": "Cisco Systems Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CSX",
+      "name": "CSX Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CTAS",
+      "name": "Cintas Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CTSH",
+      "name": "Cognizant Technology Solutions Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CTVA",
+      "name": "Corteva Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CVS",
+      "name": "CVS Health Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CVX",
+      "name": "Chevron Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "CW",
+      "name": "Curtiss-Wright Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "D",
+      "name": "Dominion Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DAL",
+      "name": "Delta Air Lines Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DASH",
+      "name": "DoorDash Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DBC",
+      "name": "Invesco DB Commodity Index Tracking Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "DD",
+      "name": "DuPont de Nemours Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DDOG",
+      "name": "Datadog Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DE",
+      "name": "Deere & Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DECK",
+      "name": "Deckers Outdoor Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DELL",
+      "name": "Dell Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DG",
+      "name": "Dollar General Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DGX",
+      "name": "Quest Diagnostics Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DHI",
+      "name": "D.R. Horton Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DHR",
+      "name": "Danaher Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DIA",
+      "name": "SPDR Dow Jones Industrial Average ETF Trust",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "DIS",
+      "name": "Walt Disney Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DLR",
+      "name": "Digital Realty Trust Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DLTR",
+      "name": "Dollar Tree Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DOV",
+      "name": "Dover Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DOW",
+      "name": "Dow Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DPZ",
+      "name": "Domino's Pizza Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DRI",
+      "name": "Darden Restaurants Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DTE",
+      "name": "DTE Energy Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DUK",
+      "name": "Duke Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DVA",
+      "name": "DaVita Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DVN",
+      "name": "Devon Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "DXCM",
+      "name": "DexCom Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EA",
+      "name": "Electronic Arts Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EBAY",
+      "name": "eBay Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ECL",
+      "name": "Ecolab Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ED",
+      "name": "Consolidated Edison Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EEM",
+      "name": "iShares MSCI Emerging Markets ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "EFA",
+      "name": "iShares MSCI EAFE ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "EFX",
+      "name": "Equifax Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EIX",
+      "name": "Edison International",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EL",
+      "name": "Estee Lauder Companies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ELV",
+      "name": "Elevance Health Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EMN",
+      "name": "Eastman Chemical Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EMR",
+      "name": "Emerson Electric Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ENPH",
+      "name": "Enphase Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EOG",
+      "name": "EOG Resources Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EPAM",
+      "name": "EPAM Systems Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EQIX",
+      "name": "Equinix Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EQR",
+      "name": "Equity Residential",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EQT",
+      "name": "EQT Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ES",
+      "name": "Eversource Energy",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ESS",
+      "name": "Essex Property Trust Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ETN",
+      "name": "Eaton Corp. plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ETR",
+      "name": "Entergy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EVRG",
+      "name": "Evergy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EW",
+      "name": "Edwards Lifesciences Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EXC",
+      "name": "Exelon Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EXPD",
+      "name": "Expeditors International of Washington Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EXPE",
+      "name": "Expedia Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "EXR",
+      "name": "Extra Space Storage Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "F",
+      "name": "Ford Motor Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FANG",
+      "name": "Diamondback Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FAST",
+      "name": "Fastenal Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FCX",
+      "name": "Freeport-McMoRan Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FDS",
+      "name": "FactSet Research Systems Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FDX",
+      "name": "FedEx Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FE",
+      "name": "FirstEnergy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FFIV",
+      "name": "F5 Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FICO",
+      "name": "Fair Isaac Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FIS",
+      "name": "Fidelity National Information Services Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FITB",
+      "name": "Fifth Third Bancorp",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FMC",
+      "name": "FMC Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FOX",
+      "name": "Fox Corp. Class B",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FOXA",
+      "name": "Fox Corp. Class A",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FRT",
+      "name": "Federal Realty Investment Trust",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FSLR",
+      "name": "First Solar Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FTNT",
+      "name": "Fortinet Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "FTV",
+      "name": "Fortive Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GD",
+      "name": "General Dynamics Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GDX",
+      "name": "VanEck Gold Miners ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "GE",
+      "name": "GE Aerospace",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GEHC",
+      "name": "GE HealthCare Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GEN",
+      "name": "Gen Digital Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GEV",
+      "name": "GE Vernova Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GFS",
+      "name": "GlobalFoundries Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GILD",
+      "name": "Gilead Sciences Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GIS",
+      "name": "General Mills Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GL",
+      "name": "Globe Life Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GLD",
+      "name": "SPDR Gold Shares",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "GM",
+      "name": "General Motors Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GNRC",
+      "name": "Generac Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GOOG",
+      "name": "Alphabet Inc. Class C",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc. Class A",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GPC",
+      "name": "Genuine Parts Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GPN",
+      "name": "Global Payments Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GRMN",
+      "name": "Garmin Ltd.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GS",
+      "name": "Goldman Sachs Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "GWW",
+      "name": "W.W. Grainger Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HAL",
+      "name": "Halliburton Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HAS",
+      "name": "Hasbro Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HBAN",
+      "name": "Huntington Bancshares Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HCA",
+      "name": "HCA Healthcare Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HD",
+      "name": "Home Depot Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HEI",
+      "name": "HEICO Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HIG",
+      "name": "Hartford Financial Services Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HII",
+      "name": "Huntington Ingalls Industries Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HLT",
+      "name": "Hilton Worldwide Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HON",
+      "name": "Honeywell International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HOOD",
+      "name": "Robinhood Markets Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HPE",
+      "name": "Hewlett Packard Enterprise Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HPQ",
+      "name": "HP Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HRL",
+      "name": "Hormel Foods Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HSIC",
+      "name": "Henry Schein Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HST",
+      "name": "Host Hotels & Resorts Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HSY",
+      "name": "Hershey Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HUBB",
+      "name": "Hubbell Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HUM",
+      "name": "Humana Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HWM",
+      "name": "Howmet Aerospace Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "HYG",
+      "name": "iShares iBoxx $ High Yield Corporate Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IBM",
+      "name": "International Business Machines Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ICE",
+      "name": "Intercontinental Exchange Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IDXX",
+      "name": "IDEXX Laboratories Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IEF",
+      "name": "iShares 7-10 Year Treasury Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IEMG",
+      "name": "iShares Core MSCI Emerging Markets ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IEX",
+      "name": "IDEX Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IFF",
+      "name": "International Flavors & Fragrances Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IJH",
+      "name": "iShares Core S&P Mid-Cap ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IJR",
+      "name": "iShares Core S&P Small-Cap ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "ILMN",
+      "name": "Illumina Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "INTC",
+      "name": "Intel Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "INTU",
+      "name": "Intuit Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IP",
+      "name": "International Paper Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IQV",
+      "name": "IQVIA Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IR",
+      "name": "Ingersoll Rand Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ISRG",
+      "name": "Intuitive Surgical Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IT",
+      "name": "Gartner Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ITW",
+      "name": "Illinois Tool Works Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IVV",
+      "name": "iShares Core S&P 500 ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IVW",
+      "name": "iShares S&P 500 Growth ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IVZ",
+      "name": "Invesco Ltd.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "IWF",
+      "name": "iShares Russell 1000 Growth ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "IWM",
+      "name": "iShares Russell 2000 ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "J",
+      "name": "Jacobs Solutions Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "JBHT",
+      "name": "J.B. Hunt Transport Services Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "JCI",
+      "name": "Johnson Controls International plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "JKHY",
+      "name": "Jack Henry & Associates Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "JNJ",
+      "name": "Johnson & Johnson",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "JNK",
+      "name": "SPDR Bloomberg High Yield Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "JPM",
+      "name": "JPMorgan Chase & Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KDP",
+      "name": "Keurig Dr Pepper Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KEY",
+      "name": "KeyCorp",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KEYS",
+      "name": "Keysight Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KHC",
+      "name": "Kraft Heinz Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KIM",
+      "name": "Kimco Realty Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KKR",
+      "name": "KKR & Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KLAC",
+      "name": "KLA Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KMB",
+      "name": "Kimberly-Clark Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KMI",
+      "name": "Kinder Morgan Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KMX",
+      "name": "CarMax Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KO",
+      "name": "Coca-Cola Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KR",
+      "name": "Kroger Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KVUE",
+      "name": "Kenvue Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "KWEB",
+      "name": "KraneShares CSI China Internet ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "L",
+      "name": "Loews Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LDOS",
+      "name": "Leidos Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LEN",
+      "name": "Lennar Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LH",
+      "name": "Labcorp Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LHX",
+      "name": "L3Harris Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LIN",
+      "name": "Linde plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LKQ",
+      "name": "LKQ Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LLY",
+      "name": "Eli Lilly and Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LMT",
+      "name": "Lockheed Martin Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LNG",
+      "name": "Cheniere Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LNT",
+      "name": "Alliant Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LOW",
+      "name": "Lowe's Companies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LQD",
+      "name": "iShares iBoxx $ Investment Grade Corporate Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "LRCX",
+      "name": "Lam Research Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LULU",
+      "name": "Lululemon Athletica Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LUV",
+      "name": "Southwest Airlines Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LVS",
+      "name": "Las Vegas Sands Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LYB",
+      "name": "LyondellBasell Industries NV",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "LYV",
+      "name": "Live Nation Entertainment Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MA",
+      "name": "Mastercard Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MAA",
+      "name": "Mid-America Apartment Communities Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MAR",
+      "name": "Marriott International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MAS",
+      "name": "Masco Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MAT",
+      "name": "Mattel Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MCD",
+      "name": "McDonald's Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MCHP",
+      "name": "Microchip Technology Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MCK",
+      "name": "McKesson Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MCO",
+      "name": "Moody's Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MDLZ",
+      "name": "Mondelez International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MDT",
+      "name": "Medtronic plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MDY",
+      "name": "SPDR S&P MidCap 400 ETF Trust",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "MELI",
+      "name": "MercadoLibre Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MET",
+      "name": "MetLife Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "META",
+      "name": "Meta Platforms Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MGM",
+      "name": "MGM Resorts International",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MKC",
+      "name": "McCormick & Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MKTX",
+      "name": "MarketAxess Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MLM",
+      "name": "Martin Marietta Materials Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MMM",
+      "name": "3M Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MNST",
+      "name": "Monster Beverage Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MO",
+      "name": "Altria Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MOH",
+      "name": "Molina Healthcare Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MOS",
+      "name": "Mosaic Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MPC",
+      "name": "Marathon Petroleum Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MPWR",
+      "name": "Monolithic Power Systems Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MRK",
+      "name": "Merck & Co. Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MRNA",
+      "name": "Moderna Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MRVL",
+      "name": "Marvell Technology Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MS",
+      "name": "Morgan Stanley",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MSCI",
+      "name": "MSCI Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MSI",
+      "name": "Motorola Solutions Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MSTR",
+      "name": "Strategy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MTB",
+      "name": "M&T Bank Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MTD",
+      "name": "Mettler-Toledo International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "MU",
+      "name": "Micron Technology Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NCLH",
+      "name": "Norwegian Cruise Line Holdings Ltd.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NDAQ",
+      "name": "Nasdaq Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NDSN",
+      "name": "Nordson Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NEE",
+      "name": "NextEra Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NEM",
+      "name": "Newmont Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NET",
+      "name": "Cloudflare Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NFLX",
+      "name": "Netflix Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NI",
+      "name": "NiSource Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NKE",
+      "name": "NIKE Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NOC",
+      "name": "Northrop Grumman Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NOW",
+      "name": "ServiceNow Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NRG",
+      "name": "NRG Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NSC",
+      "name": "Norfolk Southern Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NTAP",
+      "name": "NetApp Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NTRS",
+      "name": "Northern Trust Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NUE",
+      "name": "Nucor Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NVR",
+      "name": "NVR Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NWS",
+      "name": "News Corp. Class B",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NWSA",
+      "name": "News Corp. Class A",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "NXPI",
+      "name": "NXP Semiconductors NV",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "O",
+      "name": "Realty Income Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "OC",
+      "name": "Owens Corning",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ODFL",
+      "name": "Old Dominion Freight Line Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "OKE",
+      "name": "ONEOK Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "OMC",
+      "name": "Omnicom Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ON",
+      "name": "ON Semiconductor Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ORCL",
+      "name": "Oracle Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ORLY",
+      "name": "O'Reilly Automotive Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "OTIS",
+      "name": "Otis Worldwide Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "OXY",
+      "name": "Occidental Petroleum Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PANW",
+      "name": "Palo Alto Networks Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PAYC",
+      "name": "Paycom Software Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PAYX",
+      "name": "Paychex Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PCAR",
+      "name": "PACCAR Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PCG",
+      "name": "PG&E Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PDD",
+      "name": "PDD Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PEG",
+      "name": "Public Service Enterprise Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PEP",
+      "name": "PepsiCo Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PFE",
+      "name": "Pfizer Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PG",
+      "name": "Procter & Gamble Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PGR",
+      "name": "Progressive Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PH",
+      "name": "Parker-Hannifin Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PHM",
+      "name": "PulteGroup Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PKG",
+      "name": "Packaging Corp. of America",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PLD",
+      "name": "Prologis Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PLTR",
+      "name": "Palantir Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PM",
+      "name": "Philip Morris International Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PNC",
+      "name": "PNC Financial Services Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PNR",
+      "name": "Pentair plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PNW",
+      "name": "Pinnacle West Capital Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PODD",
+      "name": "Insulet Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "POOL",
+      "name": "Pool Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PPG",
+      "name": "PPG Industries Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PPL",
+      "name": "PPL Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PRU",
+      "name": "Prudential Financial Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PSA",
+      "name": "Public Storage",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PSKY",
+      "name": "Paramount Skydance Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PSX",
+      "name": "Phillips 66",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PTC",
+      "name": "PTC Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PVH",
+      "name": "PVH Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PWR",
+      "name": "Quanta Services Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "PYPL",
+      "name": "PayPal Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "QCOM",
+      "name": "Qualcomm Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "QRVO",
+      "name": "Qorvo Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RCL",
+      "name": "Royal Caribbean Cruises Ltd.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "REG",
+      "name": "Regency Centers Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "REGN",
+      "name": "Regeneron Pharmaceuticals Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RF",
+      "name": "Regions Financial Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RJF",
+      "name": "Raymond James Financial Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RL",
+      "name": "Ralph Lauren Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RMD",
+      "name": "ResMed Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ROK",
+      "name": "Rockwell Automation Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ROL",
+      "name": "Rollins Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ROP",
+      "name": "Roper Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ROST",
+      "name": "Ross Stores Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RSG",
+      "name": "Republic Services Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RSP",
+      "name": "Invesco S&P 500 Equal Weight ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "RTX",
+      "name": "RTX Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "RVTY",
+      "name": "Revvity Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SCHD",
+      "name": "Schwab U.S. Dividend Equity ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "SCHW",
+      "name": "Charles Schwab Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SHW",
+      "name": "Sherwin-Williams Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SHY",
+      "name": "iShares 1-3 Year Treasury Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "SJM",
+      "name": "J.M. Smucker Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SLB",
+      "name": "Schlumberger NV",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SLV",
+      "name": "iShares Silver Trust",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "SMCI",
+      "name": "Super Micro Computer Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SMH",
+      "name": "VanEck Semiconductor ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "SNA",
+      "name": "Snap-on Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SNPS",
+      "name": "Synopsys Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SO",
+      "name": "Southern Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SOLV",
+      "name": "Solventum Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SOXX",
+      "name": "iShares Semiconductor ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "SPG",
+      "name": "Simon Property Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SPGI",
+      "name": "S&P Global Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SPY",
+      "name": "SPDR S&P 500 ETF Trust",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "SRE",
+      "name": "Sempra",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "STE",
+      "name": "STERIS plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "STLD",
+      "name": "Steel Dynamics Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "STT",
+      "name": "State Street Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "STX",
+      "name": "Seagate Technology Holdings plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "STZ",
+      "name": "Constellation Brands Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SW",
+      "name": "Smurfit Westrock plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SWK",
+      "name": "Stanley Black & Decker Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SWKS",
+      "name": "Skyworks Solutions Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SYF",
+      "name": "Synchrony Financial",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SYK",
+      "name": "Stryker Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "SYY",
+      "name": "Sysco Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "T",
+      "name": "AT&T Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TAP",
+      "name": "Molson Coors Beverage Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TDG",
+      "name": "TransDigm Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TEAM",
+      "name": "Atlassian Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TECH",
+      "name": "Bio-Techne Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TEL",
+      "name": "TE Connectivity plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TER",
+      "name": "Teradyne Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TFC",
+      "name": "Truist Financial Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TFX",
+      "name": "Teleflex Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TGT",
+      "name": "Target Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TIP",
+      "name": "iShares TIPS Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "TJX",
+      "name": "TJX Companies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TLT",
+      "name": "iShares 20+ Year Treasury Bond ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "TMO",
+      "name": "Thermo Fisher Scientific Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TMUS",
+      "name": "T-Mobile US Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TOL",
+      "name": "Toll Brothers Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TPG",
+      "name": "TPG Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TPL",
+      "name": "Texas Pacific Land Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TPR",
+      "name": "Tapestry Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TRGP",
+      "name": "Targa Resources Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TRMB",
+      "name": "Trimble Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TROW",
+      "name": "T. Rowe Price Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TRV",
+      "name": "Travelers Companies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TSCO",
+      "name": "Tractor Supply Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TSN",
+      "name": "Tyson Foods Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TT",
+      "name": "Trane Technologies plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TTD",
+      "name": "Trade Desk Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TTWO",
+      "name": "Take-Two Interactive Software Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TXN",
+      "name": "Texas Instruments Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TXT",
+      "name": "Textron Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "TYL",
+      "name": "Tyler Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UAL",
+      "name": "United Airlines Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UBER",
+      "name": "Uber Technologies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UDR",
+      "name": "UDR Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UHS",
+      "name": "Universal Health Services Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ULTA",
+      "name": "Ulta Beauty Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UNG",
+      "name": "United States Natural Gas Fund LP",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "UNH",
+      "name": "UnitedHealth Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UNP",
+      "name": "Union Pacific Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "UPS",
+      "name": "United Parcel Service Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "URI",
+      "name": "United Rentals Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "USB",
+      "name": "U.S. Bancorp",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "USO",
+      "name": "United States Oil Fund LP",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "V",
+      "name": "Visa Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VEA",
+      "name": "Vanguard FTSE Developed Markets ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VICI",
+      "name": "VICI Properties Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VIG",
+      "name": "Vanguard Dividend Appreciation ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VLO",
+      "name": "Valero Energy Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VMC",
+      "name": "Vulcan Materials Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VNQ",
+      "name": "Vanguard Real Estate ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VRSK",
+      "name": "Verisk Analytics Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VRSN",
+      "name": "VeriSign Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VRTX",
+      "name": "Vertex Pharmaceuticals Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VST",
+      "name": "Vistra Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VTR",
+      "name": "Ventas Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VTRS",
+      "name": "Viatris Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "VTV",
+      "name": "Vanguard Value ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VUG",
+      "name": "Vanguard Growth ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VWO",
+      "name": "Vanguard FTSE Emerging Markets ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VYM",
+      "name": "Vanguard High Dividend Yield ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "VZ",
+      "name": "Verizon Communications Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WAB",
+      "name": "Westinghouse Air Brake Technologies Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WAT",
+      "name": "Waters Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WBD",
+      "name": "Warner Bros. Discovery Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WDAY",
+      "name": "Workday Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WDC",
+      "name": "Western Digital Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WEC",
+      "name": "WEC Energy Group Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WELL",
+      "name": "Welltower Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WFC",
+      "name": "Wells Fargo & Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WHR",
+      "name": "Whirlpool Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WM",
+      "name": "Waste Management Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WMB",
+      "name": "Williams Companies Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WMT",
+      "name": "Walmart Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WRB",
+      "name": "W.R. Berkley Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WST",
+      "name": "West Pharmaceutical Services Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WTW",
+      "name": "Willis Towers Watson plc",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WY",
+      "name": "Weyerhaeuser Co.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "WYNN",
+      "name": "Wynn Resorts Ltd.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "XBI",
+      "name": "SPDR S&P Biotech ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XEL",
+      "name": "Xcel Energy Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "XLB",
+      "name": "Materials Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLE",
+      "name": "Energy Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLF",
+      "name": "Financial Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLI",
+      "name": "Industrial Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLK",
+      "name": "Technology Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLP",
+      "name": "Consumer Staples Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLRE",
+      "name": "Real Estate Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLU",
+      "name": "Utilities Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLV",
+      "name": "Health Care Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLY",
+      "name": "Consumer Discretionary Select Sector SPDR Fund",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XOM",
+      "name": "Exxon Mobil Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "XOP",
+      "name": "SPDR S&P Oil & Gas Exploration & Production ETF",
+      "currency": "USD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "XYL",
+      "name": "Xylem Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "XYZ",
+      "name": "Block Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "YUM",
+      "name": "Yum! Brands Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ZBH",
+      "name": "Zimmer Biomet Holdings Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ZBRA",
+      "name": "Zebra Technologies Corp.",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ZION",
+      "name": "Zions Bancorp NA",
+      "currency": "USD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "ZTS",
+      "name": "Zoetis Inc.",
+      "currency": "USD",
+      "kind": "stock"
+    }
+  ]
+}

@@ -23,3 +23,6 @@ generated/
 playwright-report/
 test-results/
 coverage/
+
+# Phase 1 daily-screen report artifacts
+apps/api/reports/

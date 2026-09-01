@@ -40,12 +40,12 @@ describe("MarketDataService — measured failure taxonomy (verification report G
     expect(result.bars).toEqual([]);
   });
 
-  it("fx-inconsistent-dividends: USD-declared dividend on an HK name → caDegraded (9988.HK case)", async () => {
+  it("fx-inconsistent-dividends: FX-converted >4dp dividend on an HK name → caDegraded (9988.HK case)", async () => {
     const service = serviceWith({ "9988.HK": "fx-inconsistent-dividends" });
     const result = await service.getDailyBars("9988.HK");
     expect(result.outcome).toBe(DataOutcome.OK);
     expect(result.caDegraded).toBe(true);
-    expect(result.corporateActions[0]).toMatchObject({ type: "DIVIDEND", currency: "USD" });
+    expect(result.corporateActions[0]).toMatchObject({ type: "DIVIDEND", currency: "HKD", amount: 0.9800875 });
   });
 
   it("fx-inconsistent-dividends: non-HK names are not flagged", async () => {

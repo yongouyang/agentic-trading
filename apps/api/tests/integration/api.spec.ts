@@ -92,7 +92,7 @@ describe("API integration (dummy provider + throwaway SQLite)", () => {
     const body = await res.json();
     expect(body.outcome).toBe(DataOutcome.OK);
     expect(body.caDegraded).toBe(true);
-    expect(body.corporateActions[0]).toMatchObject({ type: "DIVIDEND", currency: "USD" });
+    expect(body.corporateActions[0]).toMatchObject({ type: "DIVIDEND", currency: "HKD", amount: 0.9800875 });
   });
 
   it("holiday-phantom → OK with the phantom bar dropped (RULE L1)", async () => {

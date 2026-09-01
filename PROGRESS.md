@@ -5,6 +5,150 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-01 — Phase 1 apps/api implemented (loader + daily CLI)
+
+### What was done
+- **Prisma migration `20260901132915_phase1_screen_runs`**: added `ScreenRun`
+  + `ScreenResult` (per phase-1-spec §5); fixed the stale `"US" | "HK" | "LSE"`
+  schema comment (LSE lane dropped).
+- **`YahooMarketDataProvider`** (`src/market-data/yahoo-market-data.provider.ts`):
+  ported from spike/data-probe.ts — pinned UA `Mozilla/5.0`, full 5y window by
+  default, 200ms+0–50% jitter sequential throttle, one 5s in-run retry on
+  429/timeout/5xx, yahoo-finance2 schema-validation → raw v8 fetch fallback,
+  splits counted (`splitCount`) never stored. Never throws on provider
+  failure; spacing/backoff/sleep/chart/fetch injectable for tests.
+- **Seam change**: `fetchDailyBars(symbol, opts?: { period1?, period2? })`;
+  dummy provider ignores opts. `MarketDataService` passes opts through and now
+  applies RULE L1 with the matching calendar (HKEX for `.HK`, NYSE otherwise).
+- **deps.ts**: real Yahoo provider is now the default; dummy under
+  `MARKET_DATA_PROVIDER=dummy` or `MARKET_DATA_TEST_MODE=1`; fail-closed
+  production rules unchanged. deps.spec updated to match.
+- **Daily CLI** (`src/cli/daily-screen.ts`, `pnpm -C apps/api screen:daily --
+  --market us|hk|all`, tsx): plain script wiring PrismaService + env-selected
+  provider + MarketDataService; universe upsert → ingest/classify/L1/L2 →
+  bar+dividend persistence (full-window delete+createMany rewrite) →
+  CA_DEGRADED auto-detection → runChecks → tallies → deriveAdjustedBars →
+  runScreen → ScreenRun/ScreenResult persist → integrity-led stdout report +
+  `apps/api/reports/<date>-<MARKET>.json` (gitignored). Pipeline factored into
+  exported `runDailyScreen(deps, opts)` for in-process tests.
+- **Tests**: 11 new yahoo-provider unit tests (mocked chart/fetch, zero
+  spacing/backoff), 3 runDailyScreen integration tests (8 dummy behaviors →
+  tallies ok=4/fetchFailed=4/absent=1/degraded; HK CA_DEGRADED + phantom drop;
+  6 trending names → persisted ranked shortlist), live-Yahoo smoke gated
+  behind `YAHOO_LIVE_TEST=1` (never default). `pnpm -C apps/api test`: 47
+  passed, 1 skipped; `pnpm -C apps/api build` green; `pnpm -w test` green.
+- Added deps: `yahoo-finance2 ^4.0.2` (matches spike), `tsx ^4.20.3` (dev).
+
+### Deviations / notes
+- `RawMarketDataResponse` gained optional `splitCount` (spec requires split
+  counts in the run report; they must cross the provider seam).
+- deps.ts default flipped dummy→yahoo per the Phase 1 tasking; the old
+  deps.spec default test was updated accordingly.
+- Playwright e2e not run (needs built apps/ports); the only e2e-relevant
+  change is the provider default — e2e sets `MARKET_DATA_TEST_MODE=1`, which
+  still selects the dummy, so no e2e impact expected.
+- **Post-implementation fix (same session):** the live smoke failed —
+  `yahooFinance.chart called with invalid options`. The provider passed
+  `includeAdjustedClose: true` (rejected by the yahoo-finance2 v4 options
+  schema) and omitted `return: "array"`. Fixed to the spike's exact verified
+  option set (`period1, period2, interval, events: "div|split",
+  return: "array"`); adjclose is unneeded since we derive locally (R1).
+  Live probe after fix: 0005.HK → 1227 bars/5y (matches the Phase-0 spike
+  measurement exactly), AAPL → 1255 bars, both `OK`; gated live test passes;
+  full suite + build re-verified green. Lesson: unit tests mock the chart
+  function, so only the gated live test catches option-schema drift.
+
+### What's next
+- Run the gate: real `screen:daily -- --market all` against live Yahoo and
+  review the integrity report (warnings must be explainable).
+- Follow-up (explicitly out of Phase 1): eastmoney/tencent rescue loaders,
+  weekly sentinel, Phase 2 LLM layer.
+
+---
+
+## 2026-09-01 (gate) — Phase 1 gate run: live seed + screen, three bugs found and fixed
+
+### Gate run results (live Yahoo, both lanes, 5y)
+- US: **555/555 screened, 0 fetch-failed, 0 absent, 0 clamped** — full top-15
+  shortlist (CRL, MPC, VLO, PSX, ABNB …), not degraded.
+- HK: **121/121 screened, 0 fetch-failed**, 253 L2-clamped bars (concentrated
+  in 8 thin ETFs — 3074.HK alone ~150; the known Yahoo H/L feed bug on edge
+  names, loud in warnings), not degraded.
+- Warnings reviewed, all explainable: L1 dropped the measured 2022-01-31
+  HKEX phantom bar lane-wide; >20% outlier flags match real events
+  (NVDA +24.4% 2023-05-25 per Phase-0 report); split audit counts logged,
+  never stored (R1).
+
+### Bugs found by the live run (all fixed, all covered by new/updated tests)
+1. **yahoo-finance2 option schema**: provider passed `includeAdjustedClose`
+   (rejected by v4) — fixed to the spike's exact verified option set. Only
+   the gated live test catches this; unit tests mock the chart fn.
+2. **advDollar too strict**: one null-volume bar in the 20-bar window → null
+   → 489/554 US names failed LOW_LIQUIDITY (run happened during US market
+   hours; Yahoo serves a partial in-progress bar). Now tolerates sparse
+   nulls (null only if <⌈n/2⌉ usable). Post-fix US exclusions: LOW_LIQUIDITY 1.
+   (Operational caveat recorded: production cadence is post-close; the
+   full-window rewrite self-heals any partial bar on the next run.)
+3. **CA_DEGRADED detection was unfireable**: spec said "dividend currency ≠
+   HKD", but Yahoo's event `currency` echoes meta.currency (always HKD). Live
+   probing showed the real fingerprint — FX-converted amounts with >4 decimal
+   places (0005.HK 0.783188 6dp, 9988.HK 0.9800875 7dp, 2888.HK 8dp; clean
+   HKD payers ≤4dp: 2800.HK 2dp, 1299.HK AIA not flagged ✓). Detection now
+   currency-mismatch OR >4dp; dummy `fx-inconsistent-dividends` behavior
+   updated to the realistic shape; spec §2/§3 amended. Post-fix: 33 HK names
+   flagged (HSBC, Alibaba, CNY-declaring Chinese banks, several ETFs) and
+   annotated `⚠CA` in the shortlist.
+
+### Universe hygiene (from the run's GENUINELY_ABSENT tally — taxonomy worked)
+- Removed 9 US tickers Yahoo 404s (M&A/renames, verified live): MMC, FI, BK,
+  SEE, HOLX, K, ANSS, CMA, CTRA; added BNY (renamed BK). Added 2888.HK
+  (Standard Chartered, HSI member missed in curation) → HK universe 122.
+
+### What's next
+- Phase 1 gate: **passed** per spec §0 (seeded store, explainable warnings,
+  deterministic shortlists, 86 tests green across quant-core + api).
+- Follow-ups (out of Phase 1): eastmoney/tencent rescue loaders + weekly
+  sentinel; consider HSCEI additions if HK universe breadth is wanted (121→~140).
+- Phase 2: lean LLM agent pipeline + persisted daily reports.
+
+---
+
+## 2026-09-01 — Phase 1 spec drafted and pinned
+
+### What was done
+- Audited Phase 1 implementation-readiness (loader ready; indicator params,
+  screen rules, universe source, CLI shape were unspecified).
+- Wrote `docs/phase-1-spec.md` pinning every parameter implementation must
+  not improvise. Key pinned decisions:
+  - **Universe**: static curated JSON (`apps/api/data/universe.{us,hk}.json`),
+    no scraping in v1; ~550 US + ~140 HK entries.
+  - **Loader**: always fetch the full 5y window and upsert (self-healing vs
+    silent provider revision; ~3 min/run at 200ms+jitter, concurrency 1);
+    one 5s-backoff retry then `FETCH_FAILED`; yahoo-finance2 validation
+    rejection → raw v8 fetch fallback; splits never stored; CA_DEGRADED
+    auto-detected at ingest (HK name with non-HKD dividend currency).
+  - **Indicators**: batch pure functions (Day-18 incremental deferred to
+    Phase 4); SMA20/50/200, mom20/60, vol60, sharpe252 (rf=0), adv20 (raw),
+    mdd252; `null` on insufficient history.
+  - **Screen [H1 hypothesis]**: eligibility (≥252 bars, adv20 ≥ $20M/HK$100M,
+    vol60 ≤ 60%, mdd252 ≥ −50%) → signals (close>SMA50>SMA200, mom60>0,
+    sharpe252>0) → rank by 0.50·z(mom60)+0.25·z(mom20)+0.25·z(sharpe252),
+    top 15/market. Numbers explicitly marked as Phase-4 backtest targets.
+  - **CLI**: `pnpm -C apps/api screen:daily -- --market us|hk|all`, plain tsx
+    script (no Nest), degraded if FETCH_FAILED > 2%, persists `ScreenRun` +
+    `ScreenResult` (one new migration), stdout integrity header + JSON
+    artifact in gitignored `apps/api/reports/`.
+  - Seed depth formally pinned at **5 years**.
+- Non-goals recorded: no LLM, no scheduler, no repair-source loaders
+  (eastmoney/tencent sentinel is a post-gate follow-up), no UI changes.
+
+### What's next (proposed)
+1. Switch to fast tier (k3-256k) and execute `docs/phase-1-spec.md` top to
+   bottom: universe JSONs → Prisma migration → Yahoo provider → indicators →
+   screener → CLI → tests.
+
+---
+
 ## 2026-09-01 — Scope narrowed to HK + US; broker data research recorded
 
 ### What was done

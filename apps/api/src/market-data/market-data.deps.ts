@@ -1,12 +1,15 @@
 /**
  * Dependency wiring for market data (controllable-dummy pattern, mirroring
  * the reference project's deps.ts). Selection is env-driven:
- *   MARKET_DATA_PROVIDER = "dummy" (default) | "yahoo"   (yahoo lands in Phase 1)
- * Defaults to the dummy so local dev and e2e run with zero network.
+ *   MARKET_DATA_PROVIDER = "yahoo" | "dummy"
+ * Default: the real Yahoo provider; the dummy is selected explicitly
+ * (MARKET_DATA_PROVIDER=dummy) or implicitly under MARKET_DATA_TEST_MODE=1,
+ * so local dev, tests, and e2e can run with zero network.
  * Fail-closed: dummy wiring AND a set MARKET_DATA_TEST_MODE are refused when
  * NODE_ENV=production unless MARKET_DATA_ALLOW_DUMMY=1 is set explicitly.
  */
 import { DummyMarketDataProvider } from "./dummy-market-data.provider.js";
+import { YahooMarketDataProvider } from "./yahoo-market-data.provider.js";
 import type { MarketDataProvider } from "./market-data.types.js";
 
 export const MARKET_DATA_DEPS = "MARKET_DATA_DEPS";
@@ -21,7 +24,7 @@ export interface MarketDataDeps {
 }
 
 export function getMarketDataDeps(env: Record<string, string | undefined> = process.env): MarketDataDeps {
-  const kind = env.MARKET_DATA_PROVIDER ?? "dummy";
+  const kind = env.MARKET_DATA_PROVIDER ?? (env.MARKET_DATA_TEST_MODE === "1" ? "dummy" : "yahoo");
 
   if (env.NODE_ENV === "production" && env.MARKET_DATA_ALLOW_DUMMY !== "1") {
     if (kind === "dummy") {
@@ -44,8 +47,11 @@ export function getMarketDataDeps(env: Record<string, string | undefined> = proc
     };
   }
   if (kind === "yahoo") {
-    // Phase 1: real Yahoo loader (pinned UA, 200ms spacing, L1–L4 rules).
-    throw new Error('[market-data] MARKET_DATA_PROVIDER=yahoo is not implemented yet (Phase 1) — use "dummy"');
+    return {
+      provider: new YahooMarketDataProvider(),
+      testMode: env.MARKET_DATA_TEST_MODE === "1",
+      dummyMode: false,
+    };
   }
   throw new Error(`[market-data] MARKET_DATA_PROVIDER must be "dummy" or "yahoo" (got "${kind}")`);
 }

@@ -15,7 +15,7 @@ datasource db {
 model Instrument {
   id        Int     @id @default(autoincrement())
   symbol    String  @unique // provider-native, e.g. "0005.HK", "CSPX.L", "AAPL"
-  market    String // "US" | "HK" | "LSE"
+  market    String // "US" | "HK"
   currency  String
   name      String?
   // CA_DEGRADED: Yahoo event amounts unusable for USD-declaring HK names
@@ -50,4 +50,35 @@ model CorporateAction {
   instrument Instrument @relation(fields: [instrumentId], references: [id])
 
   @@id([instrumentId, date, type])
+}
+
+// Phase 1 daily screen persistence (phase-1-spec §5). One ScreenRun per market
+// lane per run; warningsJson enumerates every warning (expected on edge
+// names — explainable, not absent). ScreenResult.metricsJson carries all
+// indicator values (Phase 4 backtests read them).
+model ScreenRun {
+  id              Int      @id @default(autoincrement())
+  runAt           DateTime @default(now())
+  market          String // "US" | "HK"
+  universeSize    Int
+  ok              Int
+  genuinelyAbsent Int
+  fetchFailed     Int
+  // FETCH_FAILED > 2% of the lane's universe ⇒ degraded (phase-1-spec §5).
+  degraded        Boolean
+  warningsJson    String
+
+  results ScreenResult[]
+}
+
+model ScreenResult {
+  runId       Int
+  symbol      String
+  rank        Int
+  score       Float
+  metricsJson String
+
+  run ScreenRun @relation(fields: [runId], references: [id])
+
+  @@id([runId, symbol])
 }

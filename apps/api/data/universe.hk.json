@@ -1,0 +1,742 @@
+{
+  "_meta": {
+    "source": "Hang Seng Index and Hang Seng Tech Index constituents (hand-compiled from Hang Seng Indexes public constituent lists, 2026-09-01) plus liquid HKEX-listed ETFs, including HK-domiciled US-index trackers.",
+    "compiled": "2026-09-01",
+    "note": "Refresh manually; index membership drift accepted in v1 (see docs/phase-1-spec.md §1). Stale symbols surface as GENUINELY_ABSENT at runtime.",
+    "maintenance": "2026-09-01: added 2888.HK Standard Chartered (HSI constituent missed in initial curation)."
+  },
+  "symbols": [
+    {
+      "symbol": "0001.HK",
+      "name": "CK Hutchison Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0002.HK",
+      "name": "CLP Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0003.HK",
+      "name": "Hong Kong and China Gas Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0004.HK",
+      "name": "Wharf (Holdings) Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0005.HK",
+      "name": "HSBC Holdings plc",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0006.HK",
+      "name": "Power Assets Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0012.HK",
+      "name": "Henderson Land Development Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0016.HK",
+      "name": "Sun Hung Kai Properties Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0017.HK",
+      "name": "New World Development Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0020.HK",
+      "name": "SenseTime Group Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0027.HK",
+      "name": "Galaxy Entertainment Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0066.HK",
+      "name": "MTR Corp. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0083.HK",
+      "name": "Sino Land Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0101.HK",
+      "name": "Hang Lung Properties Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0144.HK",
+      "name": "China Merchants Port Holdings Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0151.HK",
+      "name": "Want Want China Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0175.HK",
+      "name": "Geely Automobile Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0241.HK",
+      "name": "Alibaba Health Information Technology Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0267.HK",
+      "name": "CITIC Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0268.HK",
+      "name": "Kingdee International Software Group Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0285.HK",
+      "name": "BYD Electronic (International) Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0288.HK",
+      "name": "WH Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0291.HK",
+      "name": "China Resources Beer (Holdings) Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0293.HK",
+      "name": "Cathay Pacific Airways Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0300.HK",
+      "name": "Midea Group Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0316.HK",
+      "name": "Orient Overseas (International) Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0322.HK",
+      "name": "Tingyi (Cayman Islands) Holding Corp.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0386.HK",
+      "name": "China Petroleum & Chemical Corp. (Sinopec)",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0388.HK",
+      "name": "Hong Kong Exchanges and Clearing Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0522.HK",
+      "name": "ASMPT Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0669.HK",
+      "name": "Techtronic Industries Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0688.HK",
+      "name": "China Overseas Land & Investment Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0700.HK",
+      "name": "Tencent Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0762.HK",
+      "name": "China Unicom (Hong Kong) Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0772.HK",
+      "name": "China Literature Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0780.HK",
+      "name": "Tongcheng Travel Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0823.HK",
+      "name": "Link Real Estate Investment Trust",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0857.HK",
+      "name": "PetroChina Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0868.HK",
+      "name": "Xinyi Glass Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0881.HK",
+      "name": "Zhongsheng Group Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0883.HK",
+      "name": "CNOOC Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0939.HK",
+      "name": "China Construction Bank Corp.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0941.HK",
+      "name": "China Mobile Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0960.HK",
+      "name": "Longfor Group Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0968.HK",
+      "name": "Xinyi Solar Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0981.HK",
+      "name": "Semiconductor Manufacturing International Corp. (SMIC)",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "0992.HK",
+      "name": "Lenovo Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1024.HK",
+      "name": "Kuaishou Technology",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1038.HK",
+      "name": "CK Infrastructure Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1044.HK",
+      "name": "Hengan International Group Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1088.HK",
+      "name": "China Shenhua Energy Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1093.HK",
+      "name": "CSPC Pharmaceutical Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1099.HK",
+      "name": "Sinopharm Group Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1109.HK",
+      "name": "China Resources Land Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1113.HK",
+      "name": "CK Asset Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1177.HK",
+      "name": "Sino Biopharmaceutical Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1199.HK",
+      "name": "COSCO SHIPPING Ports Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1209.HK",
+      "name": "China Resources Mixc Lifestyle Services Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1211.HK",
+      "name": "BYD Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1299.HK",
+      "name": "AIA Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1347.HK",
+      "name": "Hua Hong Semiconductor Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1378.HK",
+      "name": "China Hongqiao Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1398.HK",
+      "name": "Industrial and Commercial Bank of China Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1810.HK",
+      "name": "Xiaomi Corp.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1833.HK",
+      "name": "Ping An Healthcare and Technology Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1876.HK",
+      "name": "Budweiser Brewing Co. APAC Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1928.HK",
+      "name": "Sands China Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1929.HK",
+      "name": "Chow Tai Fook Jewellery Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1997.HK",
+      "name": "Wharf Real Estate Investment Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2015.HK",
+      "name": "Li Auto Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2018.HK",
+      "name": "AAC Technologies Holdings Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2020.HK",
+      "name": "ANTA Sports Products Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2269.HK",
+      "name": "WuXi Biologics (Cayman) Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2313.HK",
+      "name": "Shenzhou International Group Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2318.HK",
+      "name": "Ping An Insurance (Group) Co. of China Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2319.HK",
+      "name": "China Mengniu Dairy Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2331.HK",
+      "name": "Li Ning Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2382.HK",
+      "name": "Sunny Optical Technology (Group) Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2388.HK",
+      "name": "BOC Hong Kong (Holdings) Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2628.HK",
+      "name": "China Life Insurance Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2688.HK",
+      "name": "ENN Energy Holdings Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2800.HK",
+      "name": "Tracker Fund of Hong Kong",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2801.HK",
+      "name": "iShares Core MSCI China ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2819.HK",
+      "name": "ABF Hong Kong Bond Index Fund",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2822.HK",
+      "name": "CSOP FTSE China A50 ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2823.HK",
+      "name": "iShares FTSE A50 China ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2828.HK",
+      "name": "Hang Seng China Enterprises Index ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2836.HK",
+      "name": "iShares Core S&P BSE SENSEX India ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2840.HK",
+      "name": "SPDR Gold Trust",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2846.HK",
+      "name": "iShares Core CSI 300 ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "2888.HK",
+      "name": "Standard Chartered PLC",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2899.HK",
+      "name": "Zijin Mining Group Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "3032.HK",
+      "name": "Hang Seng TECH Index ETF (Hang Seng Investment)",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3033.HK",
+      "name": "CSOP Hang Seng TECH Index ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3067.HK",
+      "name": "iShares Hang Seng TECH ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3074.HK",
+      "name": "iShares Core MSCI Taiwan ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3081.HK",
+      "name": "Value Gold ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3110.HK",
+      "name": "Global X Hang Seng High Dividend Yield ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3188.HK",
+      "name": "ChinaAMC CSI 300 Index ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3195.HK",
+      "name": "Hang Seng S&P 500 ETF",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "3328.HK",
+      "name": "Bank of Communications Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "3690.HK",
+      "name": "Meituan",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "3692.HK",
+      "name": "Hansoh Pharmaceutical Group Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "3888.HK",
+      "name": "Kingsoft Corp. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "3968.HK",
+      "name": "China Merchants Bank Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "3988.HK",
+      "name": "Bank of China Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "6618.HK",
+      "name": "JD Health International Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "6690.HK",
+      "name": "Haier Smart Home Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "6862.HK",
+      "name": "Haidilao International Holding Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "7226.HK",
+      "name": "CSOP Hang Seng TECH Index Daily (2x) Leveraged Product",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "7552.HK",
+      "name": "CSOP Hang Seng TECH Index Daily (-2x) Inverse Product",
+      "currency": "HKD",
+      "kind": "etf"
+    },
+    {
+      "symbol": "9618.HK",
+      "name": "JD.com Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9626.HK",
+      "name": "Bilibili Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9633.HK",
+      "name": "Nongfu Spring Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9660.HK",
+      "name": "Horizon Robotics",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9866.HK",
+      "name": "NIO Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9868.HK",
+      "name": "XPeng Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9888.HK",
+      "name": "Baidu Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9961.HK",
+      "name": "Trip.com Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9988.HK",
+      "name": "Alibaba Group Holding Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9992.HK",
+      "name": "Pop Mart International Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9999.HK",
+      "name": "NetEase Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    }
+  ]
+}

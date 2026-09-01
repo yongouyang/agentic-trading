@@ -13,7 +13,7 @@
  *    (wired in market-data.deps.ts, fail-closed in production).
  */
 import type { Bar } from "@agentic-trading/quant-core";
-import type { DummyBehavior, MarketDataProvider, RawMarketDataResponse } from "./market-data.types.js";
+import type { DummyBehavior, FetchWindow, MarketDataProvider, RawMarketDataResponse } from "./market-data.types.js";
 
 /** HKEX holiday with a measured Yahoo phantom bar (verification report §HK). */
 export const PHANTOM_BAR_DATE = "2022-01-31";
@@ -78,7 +78,8 @@ export class DummyMarketDataProvider implements MarketDataProvider {
     this.behaviors.set(symbol, behavior);
   }
 
-  async fetchDailyBars(symbol: string): Promise<RawMarketDataResponse> {
+  /** The dummy ignores the window — bars are synthetic and deterministic. */
+  async fetchDailyBars(symbol: string, _opts?: FetchWindow): Promise<RawMarketDataResponse> {
     const behavior = this.behaviors.get(symbol) ?? "ok";
     switch (behavior) {
       case "rate-limited":
@@ -92,12 +93,14 @@ export class DummyMarketDataProvider implements MarketDataProvider {
       case "not-found":
         return { httpStatus: 404, hasTimestamps: false, bars: [], corporateActions: [], providerSaysNotFound: true, failureReason: "no-data-found" };
       case "fx-inconsistent-dividends":
-        // 9988.HK case: USD-declared dividends on an HK name — Yahoo's event
-        // amounts are FX-inconsistent, unusable for local adjustment.
+        // 9988.HK case, as measured live 2026-09-01: USD-declared dividends
+        // on an HK name come back FX-converted into HKD-labeled amounts with
+        // >4 decimal places (real: 0.9800875) — the currency field echoes
+        // meta.currency, it is NOT "USD". Unusable for local adjustment.
         return {
           ...OK_BASE,
           bars: syntheticBars(symbol),
-          corporateActions: [{ date: "2024-06-13", type: "DIVIDEND", amount: 0.66, currency: "USD" }],
+          corporateActions: [{ date: "2024-06-13", type: "DIVIDEND", amount: 0.9800875, currency: "HKD" }],
         };
       case "holiday-phantom":
         // HKEX closed 2022-01-31 (Lunar New Year) — Yahoo fabricates a
