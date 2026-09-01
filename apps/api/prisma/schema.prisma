@@ -21,6 +21,10 @@ model Instrument {
   // CA_DEGRADED: Yahoo event amounts unusable for USD-declaring HK names
   // (architecture §4, decided 2026-09-01).
   caDegraded Boolean @default(false)
+  // Which provider owns the stored series — single-source invariant
+  // (phase-1-hardening-plan §A.2: rescue rewrite flips to "eastmoney";
+  // any later successful Yahoo fetch flips it back to "yahoo").
+  dataSource String @default("yahoo")
 
   bars             Bar[]
   corporateActions CorporateAction[]

@@ -5,6 +5,67 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-02 — Hardening workstream A: HK rescue loaders
+
+### What was done
+- **`hkSymbolMaps`** (`src/market-data/hk-symbol-map.ts`): pure `0005.HK` →
+  `{ eastmoneySecid: "116.00005", tencentCode: "hk00005" }`; throws loudly on
+  non-`.HK` / wrong digit counts (programming error, not provider failure).
+- **`EastmoneyRepairProvider`** (`src/market-data/eastmoney-repair.provider.ts`):
+  narrow `RepairProvider` interface (`fetchRawBars` → `{bars} | {failure}`,
+  never throws on provider failure). Spike's push2his `fqt=0` request shape
+  verbatim, fields2 extended to f51–f56 for full OHLCV (spike only fetched
+  date+close) and beg=0/end=20500101 for the full window. ≥2s + 0–50% jitter
+  sequential throttle (ban protection — hard TCP drop after ~5 rapid calls,
+  measured); spacing/sleep/fetch injectable like YahooMarketDataProvider.
+- **Prisma migration `20260901155827_instrument_data_source`**: added
+  `Instrument.dataSource String @default("yahoo")`.
+- **`runDailyScreen` rescue pass** (HK lane only, after the main ingest pass,
+  max 5 calls/run in-list order): non-OK outcomes collected to `needsRepair`;
+  successful rescue ⇒ L2 clamp + runChecks, whole-series bar rewrite,
+  `dataSource="eastmoney"`, keep stored Yahoo CAs (none ⇒ caDegraded=true +
+  "rescue-filled without CA history" warning), ticker joins today's screen,
+  tallies move failure→ok; rescue failure keeps the original outcome loudly;
+  gate-failing rescue series is stored but excluded; successful Yahoo fetch
+  for a non-yahoo instrument flips `dataSource` back. Header gains
+  `· N rescued via eastmoney (…)`, LaneReport/report JSON gain `rescued[]`.
+  Deps: `repairProvider` optional — real eastmoney by default, disabled under
+  MARKET_DATA_TEST_MODE=1 unless injected (fail-closed).
+- **Tests**: 17 unit (symbol map + parsing incl. TCP-drop/non-200/empty-klines
+  → `{failure}`, throw only on programming error); 6 integration (rescue
+  happy path + screened + flip + header; repair failure stays FETCH_FAILED;
+  cap 5 of 6; US never repaired; GENUINELY_ABSENT without CA history ⇒
+  caDegraded; flip-back to yahoo). `pnpm -C apps/api test`: 70 passed, 1
+  skipped; build green; `pnpm -w test` green.
+
+### Deviations
+- eastmoney URL: spike verbatim except fields2 f51–f56 (needed for OHLCV
+  Bars) and beg/end widened to full window; noted in the provider header.
+- The `rescued via eastmoney` header segment appears only when N > 0.
+
+### Live validation blocked: eastmoney IP ban persists
+- Probed 2026-09-02: `push2his.eastmoney.com` (and `push2`, all numbered
+  subdomains) drop our connections at TCP level on **every** request — exact
+  spike URL, HTTP/1.1 vs 2, plain HTTP, browser headers, Referer, and cookies
+  from a successful `quote.eastmoney.com` visit all fail identically.
+  Controls fine (`www`/`quote` 200, tencent OK) ⇒ host-specific IP-level ban,
+  still in effect ~36h after the 2026-08-31 spike ban. Failed probes may
+  extend it — probing stopped.
+- Decision (user): commit the work, park live validation ~48h, no probing
+  meanwhile. Open risk for the plan: bans outlasting a day undermine the
+  "rescue in the next daily run" premise, and eastmoney is the only raw-bar
+  HK rescue source. If still banned when re-checked, re-open the rescue-source
+  decision.
+
+### What's next
+- Re-check eastmoney ban ~2026-09-04 with a single throttled request; then
+  one live rescue-path validation.
+- Workstream B: weekly sentinel CLI (`screen:sentinel`, fixed 10-name sample,
+  three diff checks, non-zero exit on ALARM).
+- Workstream C: HSCEI universe expansion (verify-then-add against Yahoo v8).
+
+---
+
 ## 2026-09-01 (plan) — Phase 1 hardening plan pinned
 
 ### What was done

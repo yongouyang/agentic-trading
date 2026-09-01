@@ -24,6 +24,15 @@ rescue source.** Tencent's role is date-overlap cross-checks only (qfq dates
 are convention-free). The US lane has **no rescue source at all** —
 `FETCH_FAILED` there stays excluded and loud, retry next run (§4.1).
 
+**Update 2026-09-02 — live validation parked:** the 2026-08-31 spike ban was
+still in effect ~36h later (all `push2his`/`push2` hosts TCP-drop every
+request regardless of headers/cookies; `www`/`quote` unaffected). Rescue
+loader A was committed with unit+integration tests green but **no live
+eastmoney validation**. Re-check with a single throttled request ~48h after
+last probe (≈2026-09-04). If bans routinely outlast a day, the "rescue in the
+next daily run" premise is weak and the rescue-source decision must be
+re-opened.
+
 ### A.1 Endpoint facts (from spike/data-probe.ts, keep these exact)
 
 - eastmoney:
