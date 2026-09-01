@@ -207,6 +207,29 @@ compelling middle ground for HK residents seeking global/US market exposure.
 
 ---
 
+## Addendum (2026-09-01): HK-listed US trackers — check the domicile, not the venue
+
+HKEX lists two economically similar but tax-opposite ways to track US indices:
+
+- **Cross-listed US-domiciled funds** — e.g. **3455.HK** (Invesco QQQ Trust,
+  cross-listed on HKEX Feb 2025; ISIN `US46090E…`). Buying in HKD during HK
+  hours changes nothing tax-wise: **still US-situs (estate tax applies above
+  US$60k) and still 30% dividend WHT**. Venue ≠ domicile.
+- **HK-domiciled US-index trackers** — e.g. **3195.HK** (Hang Seng S&P 500,
+  Hang Seng Investment Management, HKD counter). Not US-situs ⇒ **no US
+  estate tax**. But HK has no US tax treaty, so US dividends are hit **30%
+  WHT inside the fund** (vs 15% for Irish UCITS) — an embedded drag of ≈
+  (yield × 15pp): ~0.08%/yr on QQQ-yield (~0.55%), ~0.2%/yr on a ~1.3%
+  broad-market yield. ⚠️ Also compare **TERs per fund** — 3195.HK's is ~0.90%
+  vs ~0.07% for CSPX; on low-yield indices the TER gap can exceed the WHT gap.
+
+Project decision (2026-09-01): the agentic-trading platform dropped its
+LSE/UCITS lane; tax-efficient US exposure uses the **HK-domiciled** trackers,
+accepting the ~0.2%/yr drag for simplicity. Irish UCITS remains the
+tax-optimal wrapper (15% + no estate tax) if a third venue is ever acceptable.
+
+---
+
 ## References
 
 - HK Inland Revenue Ordinance (Cap. 112) — Salaries Tax, territorial principle

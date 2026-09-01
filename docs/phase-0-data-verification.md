@@ -10,6 +10,10 @@ stock picker *before* scaffolding the monorepo. This is the Phase 0 gate from
 > tolerance (mean −12.3%, max **40%** divergence on HSBC); see §3.3, §4 and
 > Appendix A. The routing table also lost its designated US fallback (stooq is
 > proof-of-work gated). No change to the spike-first method or to G1/G3/G4/G5.
+>
+> **Superseded 2026-09-01:** the LSE/UCITS lane was dropped from scope
+> (`architecture-v1.md` §2/§6). The LSE stratum in §3.1 and gate **G3** (GBX
+> trap) are therefore moot going forward — kept below as executed history.
 
 ## 1. Context: what the design assumes
 

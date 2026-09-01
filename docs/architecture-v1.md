@@ -30,12 +30,12 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 
 | Fork | Decision |
 |---|---|
-| Markets | HK stocks/ETFs + US stocks/ETFs + Irish-domiciled UCITS ETFs (LSE-listed; 15% vs 30% dividend withholding tax lane) |
+| Markets | **HK stocks/ETFs + US stocks/ETFs only** (LSE/UCITS lane dropped 2026-09-01). Tax-efficient US exposure via **HK-domiciled US-index trackers** (e.g. 3195.HK Hang Seng S&P 500) — no US estate tax; 30% WHT embedded at fund level (~0.2%/yr extra drag vs Irish UCITS, accepted for simplicity). ⚠️ HK cross-listings of *US-domiciled* funds (3455.HK = QQQ, ISIN `US…`) give **no** tax benefit: still US-situs + 30% WHT |
 | Picker mode | **Screen then deep-dive**: quant filters narrow the universe, LLM pipeline deep-dives survivors |
 | Stack | **Pure TypeScript.** Nest.js backend, Next.js frontend. No Python service (no akshare; TradingAgents *pattern* reimplemented, code not reused) |
-| Market data | **One free no-key primary for all three lanes: Yahoo v8** (via `yahoo-finance2`). Other sources are repair/rescue only, never a second daily feed. Store **raw OHLCV + corporate-action events**; derive adjusted series locally with the multiplicative convention (see §4.2) |
+| Market data | **One free no-key primary for both lanes: Yahoo v8** (via `yahoo-finance2`). Other sources are repair/rescue only, never a second daily feed. Store **raw OHLCV + corporate-action events**; derive adjusted series locally with the multiplicative convention (see §4.2) |
 | Output | Interactive chat/session in a local web UI, with charts, tables, signals; plus a daily report view |
-| Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); IBKR covers all three markets for the future paper→live path |
+| Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); either covers both markets for the future paper→live path |
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
 | Cadence | **Daily after close** — two runs: ~16:45 HKT (HK), ~06:00 HKT (post US close) |
 | LLM providers | Kimi (Moonshot) as workhorse; budget/open models (DeepSeek/Qwen) optional for cheap summarization. OpenAI-compatible client, swappable via env vars |
@@ -109,11 +109,11 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
 
 | Role | Source | Markets | Auth | Probed status |
 |---|---|---|---|---|
-| **Primary — sole daily feed** | `yahoo-finance2` (v8 chart API) | US, HK (`.HK`), LSE (`.L`) | none | ✅ 1227 daily bars on `0005.HK` / 5y; raw closes within **0.27%** of eastmoney; 100% of bars aligned by date |
+| **Primary — sole daily feed** | `yahoo-finance2` (v8 chart API) | US, HK (`.HK`) | none | ✅ 1227 daily bars on `0005.HK` / 5y; raw closes within **0.27%** of eastmoney; 100% of bars aligned by date. (LSE (`.L`) was also verified clean, but the lane was dropped 2026-09-01.) |
 | Repair / rescue (raw bars only) | eastmoney `push2his` kline | HK | none | ✅ good bars (`fqt=0` raw) · ⚠️ **hard-drops the TCP connection** (temp IP ban) after ~5 requests at 0.35s spacing → ≥2s + jitter |
 | Repair / rescue (raw bars only) | tencent `hkfqkline` | HK | none | ✅ works · ⚠️ code is **5-digit** (`hk00005`) where Yahoo is **4-digit** (`0005.HK`); ≤1200 bars per call; a wrong-but-plausible code shape returns **HTTP 200 + empty bar array** |
 | ~~US fallback~~ | ~~stooq~~ | — | — | ❌ **dropped**: the CSV endpoint serves a JavaScript proof-of-work challenge page (HTTP 200 + HTML, `__verify` SHA-256 leading-zero mine) instead of data — unusable headless |
-| Later (Phase 4 / broker era) | Futu OpenD, **IBKR** | HK / US / LSE | local | IBKR is the genuinely single-provider option for all three lanes; §4.2 storage rules are what make that migration a re-fetch, not a rewrite |
+| Later (Phase 4 / broker era) | Futu OpenD, **IBKR** | HK / US (IBKR also LSE, if ever re-added) | local | Researched 2026-09-01 (`docs/research-broker-market-data.md`): **neither is free** — IBKR historical bars need paid per-exchange subscriptions; Futu is quota-capped (100–1000 tickers/7d by asset tier) so it's repair-tier at best, and has no LSE coverage. §4.2 storage rules make the migration a re-fetch, not a rewrite |
 
 Dropped as bulk fallbacks: **Alpha Vantage** (free tier ≈25 req/day — per-ticker
 rescue at best), **stooq** (PoW-gated, above), akshare/tushare (A-share scope
@@ -163,8 +163,8 @@ HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
   loader must normalize before storage so the invariant "stored raw is
   split-adjusted" holds at the store boundary.
   No provider's convention is ever allowed into signal math; the series stays
-  reproducible across provider history rewrites; the UCITS lane gets the
-  dividend events it needs anyway; Phase 4 gets Day-17 total-return
+  reproducible across provider history rewrites; dividend events are stored
+  anyway for every lane that needs them; Phase 4 gets Day-17 total-return
   correctness. Feasibility verified: a provider's full adjusted series was
   reconstructed from Yahoo's own event list to within 0.6pp.
 - **R2 — dual series, different jobs.** Signals and screening read the derived
@@ -185,7 +185,7 @@ silently FX-converts), and because it makes every fallback unusable under R3.
 
 ### 4.3 Single-provider posture and the weekly sentinel
 
-Yahoo is the only source whose free, no-key coverage spans US + HK + LSE-UCITS
+Yahoo is the only source whose free, no-key coverage spans US + HK
 in one API, one response shape, and the one mathematically correct convention —
 and probing showed every free alternative to be *more* fragile, not less
 (stooq PoW wall, tencent silent-empty 200s, eastmoney IP bans). So: **one
@@ -195,7 +195,7 @@ provider for data, second sources for two narrow jobs only** —
    R3), and
 2. a **weekly 10-ticker sentinel diff** — raw close + session dates + CA event
    count against eastmoney/tencent, ≈10 requests/week. (Scope: HK lane only —
-   the repair sources have no US/LSE coverage, so those lanes rely on G2d's
+   the repair sources have no US coverage, so the US lane relies on G2d's
    same-provider check plus Yahoo-internal consistency.)
 
 Bulk cross-source validation is out of v1. What the single-provider posture
@@ -229,17 +229,21 @@ Cost estimate: 20–30 deep-dives/day × 6–8 calls ≈ pennies/day at Moonshot
 pricing. Multi-model split: cheap model for analyst summaries, stronger model
 for debate + verdict.
 
-## 6. The three market lanes
+## 6. The two market lanes
 
 - **US stocks/ETFs** — full pipeline (screen + deep-dive). Best data/news
   coverage; TradingAgents' native vendors all apply.
 - **HK stocks/ETFs** — full pipeline, with thinner news sources in v1 (Yahoo
   news, Google News RSS, HKEX announcements where feasible). Kimi's Chinese
-  strength is an asset here.
-- **Irish UCITS ETFs** — separate, simpler lane: curated list (~15 tickers,
-  CSPX/VUAA class), **weekly** review. The question is allocation and
-  tax-wrapper selection, not stock debate — no debate tokens spent on index
-  trackers.
+  strength is an asset here. **HK-domiciled US-index trackers** (3195.HK etc.)
+  are just members of this lane — the tax-efficient US-exposure vehicle
+  (no US estate tax; 30% fund-level WHT accepted per §2). No separate
+  allocation lane in v1.
+
+*(Dropped 2026-09-01: the third lane — Irish UCITS ETFs via LSE — after
+confirming HK-domiciled trackers capture most of the tax benefit (estate tax)
+with acceptable drag, and that HK cross-listings of US-domiciled funds
+(3455.HK) confer none. The GBX/GBP trap dies with the lane.)*
 
 ## 7. Agent layer (packages/agents)
 
@@ -282,7 +286,7 @@ the backtest module from Days 21–23 gets built there.
 ## 10. Build order
 
 - **Phase 0** — monorepo scaffold; data ingestion + quality report.
-  *Gate: Yahoo data verified good enough for HK/US/LSE before building on it.*
+  *Gate: Yahoo data verified good enough for HK/US before building on it.*
 - **Phase 1** — quant-core indicators + screening engine + daily CLI shortlist
   (no LLM yet). Validates the trusted core end-to-end.
 - **Phase 2** — lean agent pipeline + persisted daily reports (CLI-readable).

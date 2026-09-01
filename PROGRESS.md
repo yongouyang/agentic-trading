@@ -5,6 +5,32 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-01 — Scope narrowed to HK + US; broker data research recorded
+
+### What was done
+- Researched whether IBKR / Futu provide free HK/US market data →
+  `docs/research-broker-market-data.md`. **Neither is free for our use:**
+  IBKR historical bars require paid per-exchange subscriptions (only delayed
+  streaming ticks are free); Futu has free quote rights (HK LV1, US LV3 promo)
+  but a 100–1000 tickers/7d historical-kline quota by asset tier, no LSE
+  coverage, and a Python/OpenD-only protocol. No routing-table change; the
+  §4.1 "Later" row now carries the findings.
+- **Scope change (user decision): dropped the LSE/UCITS lane** → v1 is HK + US
+  stocks/ETFs only. Tax-efficient US exposure moves to **HK-domiciled US-index
+  trackers** (3195.HK etc.): no US estate tax, 30% WHT embedded at fund level
+  (~0.2%/yr drag vs Irish UCITS — accepted for simplicity). Verified caveat:
+  3455.HK (QQQ cross-listing) is **US-domiciled** (ISIN US…) — it confers no
+  tax benefit at all. Recorded in `architecture-v1.md` §2/§6, the phase-0 doc
+  (G3/LSE stratum marked moot), and a tax-doc addendum ("venue ≠ domicile").
+
+### What's next (proposed)
+1. Phase 1: Yahoo loader (through the `MarketDataProvider` seam, pinned UA,
+   200ms spacing, L1–L4 applied), indicators, screening engine, daily CLI
+   shortlist. Universe is now two lanes: S&P 500 + Nasdaq 100 + major US ETFs;
+   HSI + HS Tech constituents + liquid HK ETFs (incl. HK-domiciled US trackers).
+
+---
+
 ## 2026-09-01 (testing) — Test infrastructure: vitest everywhere + dummy market-data seam + Playwright e2e
 
 - **Pattern:** mirrors ~/projects/ib-learning-site — every external dependency
