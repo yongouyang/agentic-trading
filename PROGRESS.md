@@ -5,6 +5,78 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-01 (testing) — Test infrastructure: vitest everywhere + dummy market-data seam + Playwright e2e
+
+- **Pattern:** mirrors ~/projects/ib-learning-site — every external dependency
+  gets a controllable dummy (deterministic defaults + per-test injection),
+  env-selected, fail-closed in production.
+- **`apps/api` market-data seam** (`src/market-data/`): `MarketDataProvider`
+  interface returns the RAW response shape; `MarketDataService` applies
+  quant-core's `classifyResponse` (L3/L4 taxonomy) + loader rules (L1
+  HKEX-holiday phantom drop, L2 close-outside-[H,L] clamp) + the CA_DEGRADED
+  flag for USD-declared HK dividends (9988.HK). `DummyMarketDataProvider`:
+  deterministic synthetic bars (symbol-seeded PRNG, fixed calendar) + 8
+  injectable behaviors covering the verification-report failure taxonomy
+  (429, timeout, 200+empty-bars, zombie-meta, not-found,
+  fx-inconsistent-dividends, holiday-phantom, close-outside-hl). Injection:
+  constructor map / `setBehavior()` in tests, or the
+  `x-test-market-behavior` header — honored ONLY with
+  `MARKET_DATA_TEST_MODE=1` AND the dummy provider (deps.ts refuses dummy +
+  test mode under `NODE_ENV=production` unless `MARKET_DATA_ALLOW_DUMMY=1`).
+  Minimal endpoint `GET /instruments/:symbol/bars` exercises the seam. The
+  LLM-client seam is deferred to Phase 2 (no LLM code exists yet).
+- **vitest everywhere (no Jest):** api (node env, unplugin-swc for decorator
+  metadata + a `.js`→`.ts` resolver plugin for the NodeNext specifiers),
+  web (jsdom + RTL + jest-dom, `@` alias), quant-core unchanged.
+  Throwaway-SQLite helper applies the real migration SQL (dev.db is
+  gitignored — tests never touch it); `DATABASE_URL` env overrides the
+  PrismaService datasource (constructor-param injection broke Nest DI via
+  emitted design:paramtypes).
+- **Playwright e2e at root:** `scripts/find-port.cjs` resolves disjoint free
+  ports (api 3001/3100+, web 3000/3200+ — probe-then-bind race made disjoint
+  pools necessary); two webServers (built api with dummy env wiring, `next
+  start` web with `API_INTERNAL_URL`); Desktop Chrome only. Smoke spec:
+  placeholder renders + web reaches `/health` ("api: ok (instruments: N)").
+  Page needed `export const dynamic = "force-dynamic"` (static prerender
+  baked the no-env branch).
+- **Coverage:** v8, per-area thresholds set just below measured —
+  quant-core 96.8L/81.7B → 95/80; api 100L/93.8B → 90/80 (market-data 90/85);
+  web 100/100 → 95/95. Root scripts: `test` (54 tests: 16 quant-core + 33 api
+  + 5 web), `test:coverage`, `test:e2e` (builds first). All green incl.
+  `pnpm -r build`; `playwright install chromium` done.
+- **Next (Phase 1, unchanged):** real Yahoo loader behind the same seam
+  (`MARKET_DATA_PROVIDER=yahoo` currently throws a declared not-implemented).
+
+---
+
+## 2026-09-01 (scaffold) — Phase 0 monorepo scaffolded; build + tests green
+
+- pnpm workspace (`packageManager: pnpm@12.0.0` pinned; allowBuilds for
+  prisma/esbuild postinstalls), strict shared `tsconfig.base.json` (NodeNext).
+- `packages/quant-core`: `Bar` / `DataOutcome` (GENUINELY_ABSENT documented as
+  source-scoped) / dividend-only `CorporateAction` / dual `Signal` (5-tier +
+  conviction + abstain). Data-quality module ported from `spike/data-probe.ts`
+  (gaps, duplicates, zero-volume, stale last bar, OHLC sanity, >20% outliers)
+  plus loader rules L1–L4 encoded from the verification report: HKEX-holiday
+  phantom-bar filter, close-outside-[H,L] clamp, zombie-meta → FETCH_FAILED,
+  200+empty-bars → FETCH_FAILED. Adjustment module implements R1 exactly
+  (multiplicative, dividend events only, NO split factor, prev-session-close
+  base, anchored at latest bar). vitest: **16/16 green** incl. NVDA-style
+  no-split-factor and 2800.HK-style prev-close-base regressions.
+- `packages/agents`: skeleton — `Verdict` type + re-export of quant-core's
+  `Signal`; no LLM code (Phase 2).
+- `apps/api`: Nest 11 (ESM) health module + Prisma 6.19.3 / SQLite
+  (`Instrument`, `Bar`, `CorporateAction` — raw OHLCV + CA events per R1);
+  `migrate dev --name init` applied; boots and serves `/health`.
+- `apps/web`: Next 15.5 placeholder page; production build green.
+- Resolved: TS 5.9.3, vitest 3.2.7, Nest 11.2.3, Next 15.5.24 / React 19.2.8,
+  Prisma 6.19.3. Deviation: no root `lint` script (no ESLint configured —
+  not trivial; defer). No git mutations.
+- **Next (Phase 1):** Yahoo loader (pinned UA, 200ms spacing, L1–L4 rules) +
+  quant-core indicators + screening engine + daily CLI shortlist.
+
+---
+
 ## 2026-09-01 — HK corporate-action events: decided (defer with degraded flag)
 
 - User resolved the spike's decision point 1: **v1 ships with Yahoo CA events;

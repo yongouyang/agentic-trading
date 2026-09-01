@@ -1,0 +1,18 @@
+{
+  "name": "agentic-trading",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@12.0.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm build && playwright test",
+    "test:coverage": "pnpm -r test:coverage"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

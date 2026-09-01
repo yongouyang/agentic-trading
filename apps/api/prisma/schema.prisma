@@ -1,0 +1,53 @@
+// Prisma schema — SQLite (zero-ops, personal scale; architecture §3).
+// R1: store RAW OHLCV (split-adjusted as delivered — store-boundary
+// invariant) plus corporate-action events; adjusted series is derived
+// locally in quant-core, never persisted.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Instrument {
+  id        Int     @id @default(autoincrement())
+  symbol    String  @unique // provider-native, e.g. "0005.HK", "CSPX.L", "AAPL"
+  market    String // "US" | "HK" | "LSE"
+  currency  String
+  name      String?
+  // CA_DEGRADED: Yahoo event amounts unusable for USD-declaring HK names
+  // (architecture §4, decided 2026-09-01).
+  caDegraded Boolean @default(false)
+
+  bars             Bar[]
+  corporateActions CorporateAction[]
+}
+
+model Bar {
+  instrumentId Int
+  date         String // session date YYYY-MM-DD
+  open         Float?
+  high         Float?
+  low          Float?
+  close        Float?
+  volume       Float?
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@id([instrumentId, date])
+}
+
+model CorporateAction {
+  instrumentId Int
+  date         String // ex-date YYYY-MM-DD
+  type         String // v1: "DIVIDEND" only — no split factor is ever applied (R1)
+  amount       Float
+  currency     String // declared currency; beware Yahoo FX-converted HK amounts
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@id([instrumentId, date, type])
+}
