@@ -41,8 +41,13 @@ export default defineConfig({
       include: ["src/**"],
       exclude: ["src/main.ts"],
       thresholds: {
-        // Measured 2026-09-01: market-data 100% lines / 94.6% branches,
-        // src overall 100% lines / 93.8% branches.
+        // Measured 2026-09-02: all-files 95.1% lines / 91.1% branches;
+        // market-data 98.4% / 93.5%, sentinel 100% / 95.3%, cli 88.5% / 84%
+        // (the CLI wrappers' main() and the live-gated smoke path are the
+        // uncovered residue). Note: the branch thresholds were NOT met at commit
+        // ed3317b (workstream A landed at 77.3% / 78.5% — `test:coverage` was
+        // red there); the sentinel work added the provider-shape tests that
+        // brought both globs back above their thresholds.
         "src/market-data/**": { lines: 90, branches: 85 },
         "src/**": { lines: 90, branches: 80 },
       },

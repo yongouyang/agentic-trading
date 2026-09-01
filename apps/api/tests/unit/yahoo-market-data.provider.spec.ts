@@ -188,3 +188,69 @@ describe("YahooMarketDataProvider — response mapping (mocked chart/fetch, zero
     expect(classify(r)).toBe(DataOutcome.FETCH_FAILED);
   });
 });
+
+describe("YahooMarketDataProvider — sparse payloads and option defaults", () => {
+  it("explicit window is honoured; absent fields map to null, absent events to []", async () => {
+    const chart = vi.fn().mockResolvedValue({ quotes: [{ date: "2024-12-31T00:00:00Z" }] });
+    const p = providerWith({ chart });
+    const r = await p.fetchDailyBars("AAPL", { period1: "2024-01-01", period2: "2024-12-31" });
+    expect(r.bars).toEqual([{ date: "2024-12-31", open: null, high: null, low: null, close: null, volume: null }]);
+    expect(r.corporateActions).toEqual([]);
+    expect(r.splitCount).toBe(0);
+    const query = chart.mock.calls[0]![1] as any;
+    expect(query.period1.toISOString().slice(0, 10)).toBe("2024-01-01");
+    expect(query.period2.toISOString().slice(0, 10)).toBe("2024-12-31");
+  });
+
+  it("a bare chart result (no meta/quotes) still classifies as L4 FETCH_FAILED", async () => {
+    const p = providerWith({ chart: vi.fn().mockResolvedValue({}) });
+    const r = await p.fetchDailyBars("AAPL");
+    expect(r.bars).toEqual([]);
+    expect(r.failureReason).toBe("http-200-empty-bars");
+    expect(classify(r)).toBe(DataOutcome.FETCH_FAILED);
+  });
+
+  it("raw fallback on a sparse quote row: missing meta → USD, short arrays → null", async () => {
+    const chart = vi.fn().mockRejectedValue(new Error("Schema validation failed"));
+    const t = Math.floor(new Date("2024-12-31T00:00:00Z").getTime() / 1000);
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse(200, { chart: { result: [{ timestamp: [t, t + 86400], indicators: { quote: [{ open: [10] }] } }], error: null } }),
+    );
+    const r = await providerWith({ chart, fetchImpl }).fetchDailyBars("AAPL");
+    expect(r.corporateActions).toEqual([]);
+    expect(r.splitCount).toBe(0);
+    expect(r.bars[0]).toMatchObject({ open: 10, high: null, low: null, close: null, volume: null });
+    expect(r.bars[1]).toMatchObject({ date: "2025-01-01", open: null });
+    expect(classify(r)).toBe(DataOutcome.OK);
+  });
+
+  it("non-Error rejection: message-less failure is FETCH_FAILED and retryable", async () => {
+    const chart = vi.fn().mockRejectedValue({});
+    const r = await providerWith({ chart }).fetchDailyBars("AAPL");
+    expect(r.httpStatus).toBeNull();
+    expect(r.failureReason).toBe("[object Object]");
+    expect(chart).toHaveBeenCalledTimes(2); // unknown transport failure ⇒ one retry
+  });
+
+  it("5xx and timeout wording classify without an HTTP status match", async () => {
+    const r500 = await providerWith({ chart: vi.fn().mockRejectedValue(new Error("got HTTP 503 from upstream")) }).fetchDailyBars("AAPL");
+    expect(r500.failureReason).toBe("http-503");
+    const timedOut = await providerWith({ chart: vi.fn().mockRejectedValue(new Error("request timed out")) }).fetchDailyBars("AAPL");
+    expect(timedOut.httpStatus).toBeNull();
+    expect(timedOut.failureReason).toBe("timeout");
+  });
+
+  it("production defaults pace at jitter(200ms) between requests", async () => {
+    const sleeps: number[] = [];
+    const p = new YahooMarketDataProvider({
+      retryBackoffMs: 0,
+      sleep: async (ms) => void sleeps.push(ms),
+      chart: vi.fn().mockResolvedValue({ meta: { currency: "USD" }, quotes: [QUOTE] }),
+    });
+    await p.fetchDailyBars("AAPL");
+    await p.fetchDailyBars("MSFT");
+    expect(sleeps).toHaveLength(1);
+    expect(sleeps[0]!).toBeGreaterThanOrEqual(200);
+    expect(sleeps[0]!).toBeLessThanOrEqual(300);
+  });
+});

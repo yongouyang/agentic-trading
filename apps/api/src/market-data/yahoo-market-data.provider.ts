@@ -204,7 +204,7 @@ export class YahooMarketDataProvider implements MarketDataProvider {
           retryable: false,
         };
       }
-      const q = d.indicators.quote[0];
+      const q = d.indicators?.quote?.[0] ?? {};
       const date = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
       const currency: string = d.meta?.currency ?? "USD";
       return {
@@ -212,11 +212,14 @@ export class YahooMarketDataProvider implements MarketDataProvider {
         hasTimestamps: true,
         bars: ts.map((t, i) => ({
           date: date(t),
-          open: q.open[i] ?? null,
-          high: q.high[i] ?? null,
-          low: q.low[i] ?? null,
-          close: q.close[i] ?? null,
-          volume: q.volume[i] ?? null,
+          // Optional per-array: v8 omits an indicator array entirely on sparse
+          // payloads, and reading `undefined[i]` would misclassify a served
+          // response as a transport failure.
+          open: q.open?.[i] ?? null,
+          high: q.high?.[i] ?? null,
+          low: q.low?.[i] ?? null,
+          close: q.close?.[i] ?? null,
+          volume: q.volume?.[i] ?? null,
         })),
         corporateActions: Object.values(d.events?.dividends ?? {}).map((v: any) => ({
           date: date(v.date),

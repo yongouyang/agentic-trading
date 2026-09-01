@@ -203,6 +203,22 @@ sacrifices is detection of a provider *silently rewriting history* between
 runs; the sentinel is the cheap insurance for that **where a second source
 exists**, and is not optional.
 
+**Sentinel as built (2026-09-02):** `pnpm -C apps/api screen:sentinel`
+(`apps/api/src/cli/sentinel.ts`, read-only, manual cadence ≈ weekly) over a
+pinned 10-name HK sample — `0005 0700 0941 9988 0388 0001 0016 2318 2800 3195`
+(liquid payers incl. the two USD-declaring CA_DEGRADED names, an ETF, and the
+HK-domiciled US tracker). Four checks per name: **yahoo-rewrite** (fresh full
+window vs store — same-provider revision, ALARM on any difference),
+**tencent-dates** (independent session calendar; closes are never even fetched,
+R4), **ca-revision** (dividend event date/amount delta, WARN), and
+**eastmoney-raw** (cross-source raw closes) — built, but **opt-in via
+`--eastmoney`** while that host's IP ban is unresolved, so a routine run never
+probes it (≈12 requests/week normally, 22 with the leg on). Exit code 1 on any
+ALARM (cron-ready); artifacts in `apps/api/reports/sentinel-<date>.json` are
+the diff baseline. Scope stays HK-only: the second sources have no US coverage,
+so the US lane keeps G2d's same-provider check (the yahoo-rewrite leg is
+same-provider for both lanes when it runs on US names).
+
 ## 5. Daily pipeline
 
 ```

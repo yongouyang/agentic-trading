@@ -5,6 +5,98 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-02 — Hardening workstream B: weekly sentinel CLI (live-validated)
+
+### What was done
+- **`TencentKlineProvider`** (`src/market-data/tencent.provider.ts`): the
+  sentinel's second-calendar leg. Returns **dates only** (`{dates, series} |
+  {failure}`, never throws) so "never compare tencent closes" (R4, no raw HK
+  series) is structural, not conventional. Spike URL verbatim
+  (`param=hk<5digit>,day,,,1200,qfq`), 500ms + 0–50% jitter, spacing/sleep/
+  fetch injectable. Live shapes confirmed: `qfqday` for stocks/2800.HK, `day`
+  only for 3195.HK (fallback needed); wrong code shape = 200 + empty (L4).
+- **Four pure diff checks** (`src/sentinel/sentinel-checks.ts`): `yahoo-rewrite`
+  (same-provider revision ⇒ any in-window date/close mismatch ALARM, 1e-9
+  relative), `eastmoney-raw` (ALARM max |dev| > 1% or date mismatch, WARN mean
+  > 0.27%), `tencent-dates` (ALARM on unexplained mismatch), `ca-revision`
+  (WARN-only). Shared window-edge rule: all comparisons run on the **overlap**
+  of the two date sets (store vs trailing-5y vs tencent's 1200-bar cap).
+- **`runSentinel` + CLI** (`src/cli/sentinel.ts`, `screen:sentinel`): pinned
+  10-name sample (`src/sentinel/sentinel-sample.ts`), legs Yahoo fresh (through
+  `MarketDataService`, so L1/L2 parity with the store) + tencent dates +
+  eastmoney raw **opt-in only** (`--eastmoney`, reuses
+  `EastmoneyRepairProvider`; the banned host must not be re-probed weekly).
+  Read-only; stdout table + `reports/sentinel-<date>.json`; `process.exitCode =
+  1` on any ALARM; `--symbol` override flagged as CUSTOM in header and JSON.
+- **`HKEX_ADHOC_CLOSURES` / `HKEX_KNOWN_NON_SESSIONS`** (quant-core calendars):
+  the three measured 2023 cyclone closures (Talim 07-17, Saola 09-01, black
+  rain 09-08) that tencent carries phantom bars for, unioned with the published
+  holidays. Documented as a *closure* set, not an L1 input (L1 semantics
+  unchanged). Evidence-driven growth rule: new closure ⇒ one ALARM ⇒ human
+  classifies ⇒ append with citation.
+- **Provider-provenance guard** (deviation, added after a live finding): the
+  daily header now carries `provider=yahoo` /
+  `⚠ PROVIDER=dummy — SYNTHETIC DATA, NOT REAL MARKET DATA` (+ two up-front log
+  lines), `LaneReport.provider` and the sentinel legs line carry it too, and
+  `main()` labels yahoo/dummy explicitly from `getMarketDataDeps().dummyMode`.
+- **Docs:** `architecture-v1.md` §4.3 (sentinel as built: CLI, pinned sample,
+  four checks, opt-in eastmoney leg, exit code, request volume),
+  `phase-1-hardening-plan.md` §B (implemented + every deviation and its
+  evidence), vitest coverage comment re-baselined.
+- **Tests:** 166 passed / 1 skipped in apps/api (was 70/1) — 37 check-function
+  unit, 20 tencent-provider unit, 20 sentinel integration (fake sources +
+  throwaway SQLite), 8 CLI/sample pinning, 3 new daily-screen provenance tests,
+  2 new quant-core calendar tests (41 there). `pnpm -w test` and
+  `pnpm -w test:coverage` green; build green.
+- **Coverage debt fixed on the way:** `pnpm -w test:coverage` was **already red
+  at HEAD** (market-data 77.3% branches vs the 85% gate, overall 78.5% vs 80% —
+  workstream A landed without running the coverage gate). Added the missing
+  provider-shape tests (Yahoo sparse-payload/option-default/error-taxonomy
+  paths, eastmoney pacing + numeric-field nulls, tencent shapes): now
+  market-data 93.5%, overall 91.1%. Uncovered residue is the CLI `main()`
+  wrappers and the live-gated smoke path.
+
+### Live validation (workstream B, the two unblocked legs)
+- HK store had to be repaired first: **all 122 HK instruments held the dummy
+  provider's 30 synthetic bars ending 2024-12-31** (run 6, 2026-09-01 — a dummy
+  run did a full-window rewrite and the header looked healthy; every name
+  `INSUFFICIENT_HISTORY`). This is the hazard the guard above now shouts about.
+- Real HK `screen:daily` restored the lane: 122/122 screened, 0 fetch-failed,
+  252 clamped bars, rescue pass correctly **idle** (zero eastmoney requests —
+  the ban was not probed), header format verified.
+- `screen:sentinel` baseline (10 names, ~25s): **yahoo-rewrite ok on all 10**
+  (1225/1225 days, 3195.HK 576/576), **tencent-dates 99.67% / 1196d** with
+  exactly the 4 classified phantoms — reproduces the Phase 0 §G2b numbers.
+  ALARM 0, exit 0. Artifact kept as the diff baseline.
+- ALARM path proven against live data: one corrupted stored close was caught
+  with its date + deviation and exit 1; value restored and re-verified.
+- **New finding (CA leg):** on the two CA_DEGRADED names Yahoo restates
+  dividend amounts **on every fetch** (0005.HK 2026-08-13: 0.78407 →
+  0.78404003 → 0.78402 across three runs); the eight HKD-native payers were
+  byte-identical. Confirms the CA_DEGRADED policy empirically; amounts on those
+  two names are now recorded-but-ignored (date sets still compared) so the
+  weekly run stays clean at 10/10 ok.
+
+### Deviations & open items
+- Sentinel §B: window-edge/overlap rule, known-closure attribution (note vs
+  WARN vs ALARM by direction), loader parity, and the extra verdicts
+  (not-in-store ⇒ WARN, store=eastmoney ⇒ skip check 1, fetch-failed ⇒ WARN +
+  stored reference, absent ⇒ ALARM, thin overlap ⇒ WARN) — all listed with
+  evidence in the plan §B.
+- eastmoney leg (§B check 2) is **built and tested but never run live** — same
+  blocker as §A. Re-check the ban ~2026-09-04 with one throttled request, then
+  validate §A's rescue path and this leg together.
+- Design note for §A's re-open: bans outlasting a day argue for the sentinel
+  being runnable without the banned leg, which is now the default.
+
+### What's next
+- Workstream C: HSCEI universe expansion (verify-then-add against Yahoo v8).
+- ~2026-09-04: single throttled eastmoney probe ⇒ then §A live rescue
+  validation + first `screen:sentinel -- --eastmoney` run (≈2 min).
+- Phase 2 design (deep tier): agent pipeline + Piotroski/earnings inputs.
+
+---
+
 ## 2026-09-02 — Hardening workstream A: HK rescue loaders
 
 ### What was done

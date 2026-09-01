@@ -15,6 +15,12 @@
  *
  * Degraded rule: FETCH_FAILED count > 2% of the lane's universe size.
  *
+ * Provenance rule (added 2026-09-02): the integrity header always names the
+ * provider that produced the lane (`provider=yahoo`, or a shouted SYNTHETIC
+ * warning for the controllable dummy) — a full-window rewrite through the dummy
+ * had silently replaced the HK lane's real 5y series with 30 fake bars while
+ * the header still looked healthy.
+ *
  * HK rescue pass (phase-1-hardening-plan §A): HK tickers whose Yahoo outcome
  * ≠ OK (FETCH_FAILED and GENUINELY_ABSENT) are collected during the main loop
  * and repaired after the main pass via the RepairProvider (eastmoney — the
@@ -73,6 +79,18 @@ export interface DailyScreenDeps {
    *  real EastmoneyRepairProvider, or disabled (null) under
    *  MARKET_DATA_TEST_MODE=1. Explicit null disables; inject a fake in tests. */
   repairProvider?: RepairProvider | null;
+  /** Which provider produced the data, echoed in the integrity header — the
+   *  dummy is deterministic and its window ends 2024-12-31, so a store written
+   *  through it LOOKS like shallow real data unless the header says otherwise
+   *  (found 2026-09-02: the HK lane's 5y Yahoo series was overwritten by 30
+   *  synthetic bars per name and the header still read "122/122 screened").
+   *  Undefined ⇒ derived from the injected provider's class name. */
+  providerLabel?: string;
+}
+
+/** True for the controllable dummy (by class name, or an explicit label). */
+export function isDummyProviderLabel(label: string): boolean {
+  return /dummy/i.test(label);
 }
 
 export interface DailyScreenOpts {
@@ -87,6 +105,8 @@ export interface FetchFailure {
 export interface LaneReport {
   market: Market;
   date: string;
+  /** Provider that produced this lane's data ("yahoo" | "dummy"). */
+  provider: string;
   universeSize: number;
   ok: number;
   genuinelyAbsent: number;
@@ -120,8 +140,12 @@ function renderText(r: LaneReport): string {
   const rescuedSegment = r.rescued.length
     ? ` · ${r.rescued.length} rescued via eastmoney (${r.rescued.map((x) => x.symbol).join(", ")})`
     : "";
+  // Synthetic data is the one thing an integrity header must never hide.
+  const providerSegment = isDummyProviderLabel(r.provider)
+    ? ` · ⚠ PROVIDER=${r.provider} — SYNTHETIC DATA, NOT REAL MARKET DATA`
+    : ` · provider=${r.provider}`;
   const lines = [
-    `== DATA INTEGRITY ==  ${r.market} ${r.date}: ${r.ok}/${r.universeSize} screened · ` +
+    `== DATA INTEGRITY ==  ${r.market} ${r.date}${providerSegment}: ${r.ok}/${r.universeSize} screened · ` +
       `${r.fetchFailed.length} fetch-failed (${failedList}) · ${r.genuinelyAbsent} genuinely absent · ` +
       `${r.clampedBars} clamped bars${rescuedSegment} · DEGRADED: ${r.degraded ? "yes" : "no"}`,
     "== SHORTLIST ==",
@@ -141,6 +165,7 @@ async function runLane(
   service: MarketDataService,
   today: string,
   repairProvider: RepairProvider | null,
+  provider: string,
 ): Promise<LaneReport> {
   const market = lane.toUpperCase() as Market;
   const { prisma } = deps;
@@ -358,6 +383,7 @@ async function runLane(
   const report: LaneReport = {
     market,
     date: today,
+    provider,
     universeSize: entries.length,
     ok,
     genuinelyAbsent,
@@ -390,9 +416,16 @@ export async function runDailyScreen(deps: DailyScreenDeps, opts: DailyScreenOpt
         : new EastmoneyRepairProvider();
   const lanes: Lane[] = opts.market === "all" ? ["us", "hk"] : [opts.market];
 
+  const provider = deps.providerLabel ?? deps.provider.constructor.name;
+  if (isDummyProviderLabel(provider)) {
+    log(
+      `⚠ market-data provider is "${provider}" — bars are synthetic and deterministic.`,
+    );
+    log(`⚠ Store impact: each lane's stored series is rewritten from this provider — point DATABASE_URL at a throwaway db for dummy runs.`);
+  }
   const reports: LaneReport[] = [];
   for (const lane of lanes) {
-    const report = await runLane(lane, deps, service, today, repairProvider);
+    const report = await runLane(lane, deps, service, today, repairProvider, provider);
     log(report.text);
     if (deps.reportsDir !== null) {
       const dir = deps.reportsDir ?? path.join(PKG_ROOT, "reports");
@@ -423,8 +456,8 @@ async function main(): Promise<void> {
   const prisma = new PrismaService();
   await prisma.$connect();
   try {
-    const { provider } = getMarketDataDeps(process.env);
-    await runDailyScreen({ prisma, provider }, { market });
+    const { provider, dummyMode } = getMarketDataDeps(process.env);
+    await runDailyScreen({ prisma, provider, providerLabel: dummyMode ? "dummy" : "yahoo" }, { market });
   } finally {
     await prisma.$disconnect();
   }

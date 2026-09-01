@@ -82,4 +82,33 @@ describe("EastmoneyRepairProvider — response parsing (mocked fetch, zero spaci
     const p = providerWith({ fetchImpl: vi.fn() });
     await expect(p.fetchRawBars("AAPL")).rejects.toThrow(/not a Yahoo HK symbol/);
   });
+
+  it("empty / non-numeric numeric fields → null (never NaN in the store)", async () => {
+    const body = { data: { klines: ["2024-12-30,10.00,10.50,11.00,9.50,", "2024-12-31,-,11.00,11.20,10.40,234567"] } };
+    const p = providerWith({ fetchImpl: vi.fn().mockResolvedValue(jsonResponse(200, body)) });
+    const r = await p.fetchRawBars("0005.HK");
+    expect("bars" in r && r.bars).toEqual([
+      { date: "2024-12-30", open: 10, close: 10.5, high: 11, low: 9.5, volume: null },
+      { date: "2024-12-31", open: null, close: 11, high: 11.2, low: 10.4, volume: 234567 },
+    ]);
+  });
+
+  it("error without a cause → transport:<message>", async () => {
+    const p = providerWith({ fetchImpl: vi.fn().mockRejectedValue(new Error("socket hang up")) });
+    expect(await p.fetchRawBars("0700.HK")).toEqual({ failure: "transport:socket hang up" });
+  });
+
+  it("ban protection: production defaults pace at ≥2s, jitter(2000) ∈ [2000, 3000]", async () => {
+    const sleeps: number[] = [];
+    const body = { data: { klines: ["2024-12-30,10.00,10.50,11.00,9.50,123456"] } };
+    const p = new EastmoneyRepairProvider({
+      fetchImpl: vi.fn().mockResolvedValue(jsonResponse(200, body)),
+      sleep: async (ms) => void sleeps.push(ms),
+    });
+    await p.fetchRawBars("0005.HK"); // no spacingMs given ⇒ default 2000
+    await p.fetchRawBars("0700.HK");
+    expect(sleeps).toHaveLength(1);
+    expect(sleeps[0]!).toBeGreaterThanOrEqual(2000);
+    expect(sleeps[0]!).toBeLessThanOrEqual(3000);
+  });
 });

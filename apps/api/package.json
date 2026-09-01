@@ -11,7 +11,8 @@
     "test:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "screen:daily": "tsx src/cli/daily-screen.ts"
+    "screen:daily": "tsx src/cli/daily-screen.ts",
+    "screen:sentinel": "tsx src/cli/sentinel.ts"
   },
   "dependencies": {
     "@agentic-trading/quant-core": "workspace:*",

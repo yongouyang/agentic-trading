@@ -3,9 +3,12 @@
  * SQLite db (phase-1-spec §6). No child processes, no network — the live
  * Yahoo smoke test is gated in yahoo-live.spec.ts.
  */
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import type { Bar } from "@agentic-trading/quant-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runDailyScreen, type UniverseEntry } from "../../src/cli/daily-screen.js";
+import { isDummyProviderLabel, runDailyScreen, type UniverseEntry } from "../../src/cli/daily-screen.js";
 import { DummyMarketDataProvider } from "../../src/market-data/dummy-market-data.provider.js";
 import { PHANTOM_BAR_DATE } from "../../src/market-data/dummy-market-data.provider.js";
 import type { DummyBehavior, MarketDataProvider, RawMarketDataResponse } from "../../src/market-data/market-data.types.js";
@@ -33,6 +36,53 @@ afterAll(async () => {
 const entry = (symbol: string): UniverseEntry => ({ symbol, name: symbol, currency: symbol.endsWith(".HK") ? "HKD" : "USD", kind: "stock" });
 
 const silent = () => {};
+
+describe("runDailyScreen — provider provenance in the integrity header", () => {
+  it("labels the real provider and the report JSON records it", async () => {
+    const lines: string[] = [];
+    const dir = mkdtempSync(path.join(tmpdir(), "daily-reports-"));
+    try {
+      const reports = await runDailyScreen(
+        {
+          prisma,
+          provider: new DummyMarketDataProvider(),
+          providerLabel: "yahoo",
+          universes: { us: [entry("AAPL")] },
+          reportsDir: dir,
+          today: "2025-01-02",
+          log: (l) => lines.push(l),
+        },
+        { market: "us" },
+      );
+      expect(reports[0]!.provider).toBe("yahoo");
+      expect(lines.join("\n")).toContain("US 2025-01-02 · provider=yahoo:");
+      const json = JSON.parse(readFileSync(path.join(dir, "2025-01-02-US.json"), "utf8"));
+      expect(json.provider).toBe("yahoo");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("the dummy provider is shouted in the header and up front (synthetic data must never pass as real)", async () => {
+    const lines: string[] = [];
+    const reports = await runDailyScreen(
+      { prisma, provider: new DummyMarketDataProvider(), universes: { us: [entry("AAPL")] }, reportsDir: null, today: "2025-01-02", log: (l) => lines.push(l) },
+      { market: "us" },
+    );
+    expect(reports[0]!.provider).toBe("DummyMarketDataProvider"); // derived from the injected class
+    const out = lines.join("\n");
+    expect(out).toContain('⚠ market-data provider is "DummyMarketDataProvider"');
+    expect(out).toContain("SYNTHETIC DATA, NOT REAL MARKET DATA");
+    expect(out).toContain("point DATABASE_URL at a throwaway db");
+  });
+
+  it("isDummyProviderLabel matches the dummy, not a real loader", () => {
+    expect(isDummyProviderLabel("DummyMarketDataProvider")).toBe(true);
+    expect(isDummyProviderLabel("dummy")).toBe(true);
+    expect(isDummyProviderLabel("yahoo")).toBe(false);
+    expect(isDummyProviderLabel("YahooMarketDataProvider")).toBe(false);
+  });
+});
 
 describe("runDailyScreen — dummy provider, throwaway SQLite", () => {
   it("all 8 dummy behaviors flow through with correct outcome tallies; >2% fetch-failed ⇒ degraded", async () => {

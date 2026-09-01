@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HKEX_HOLIDAYS, NYSE_HOLIDAYS } from "../src/calendars.js";
+import { HKEX_ADHOC_CLOSURES, HKEX_HOLIDAYS, HKEX_KNOWN_NON_SESSIONS, NYSE_HOLIDAYS } from "../src/calendars.js";
 
 const weekday = (d: string) => new Date(d + "T00:00:00Z").getUTCDay();
 const byYear = (set: ReadonlySet<string>, year: number) =>
@@ -14,6 +14,23 @@ describe("exchange holiday calendars (static, refresh annually)", () => {
     // 2022-12-26: Christmas observed in BOTH markets (Dec 25 fell Sunday).
     expect(HKEX_HOLIDAYS.has("2022-12-26")).toBe(true);
     expect(NYSE_HOLIDAYS.has("2022-12-26")).toBe(true);
+  });
+
+  it("ad-hoc closures: the measured tencent phantoms, disjoint from the published calendar", () => {
+    // docs/phase-0-verification-report.md §G2b: HKEX was shut all day on each
+    // of these, tencent serves bars, Yahoo does not.
+    for (const d of ["2023-07-17", "2023-09-01", "2023-09-08"]) expect(HKEX_ADHOC_CLOSURES.has(d), d).toBe(true);
+    for (const d of HKEX_ADHOC_CLOSURES) {
+      expect(HKEX_HOLIDAYS.has(d), d).toBe(false); // ad-hoc, never published
+      expect(weekday(d), d).toBeGreaterThanOrEqual(1);
+      expect(weekday(d), d).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it("KNOWN_NON_SESSIONS is the union (the sentinel's attribution set)", () => {
+    expect(HKEX_KNOWN_NON_SESSIONS.size).toBe(HKEX_HOLIDAYS.size + HKEX_ADHOC_CLOSURES.size);
+    expect(HKEX_KNOWN_NON_SESSIONS.has("2022-01-31")).toBe(true); // published holiday
+    expect(HKEX_KNOWN_NON_SESSIONS.has("2023-09-01")).toBe(true); // cyclone closure
   });
 
   it("every listed date is a weekday", () => {

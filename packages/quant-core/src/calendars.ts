@@ -11,6 +11,11 @@
  * zero-volume phantom bars on HKEX holidays (measured 2022-01-31 Lunar New
  * Year eve, every HK ticker). US half-days (e.g. Black Friday) are full
  * sessions at daily granularity and are NOT listed.
+ *
+ * `HKEX_ADHOC_CLOSURES` / `HKEX_KNOWN_NON_SESSIONS` (below) extend the holiday
+ * lists with cyclone/rainstorm closures, for the weekly sentinel's calendar
+ * attribution — they are closure sets, not an additional L1 phantom-drop input
+ * (L1 keeps its own, narrower holiday semantics).
  */
 
 /** HKEX full-day holidays 2021–2027. Includes: New Year's Day, Lunar New
@@ -129,6 +134,31 @@ export const HKEX_HOLIDAYS: ReadonlySet<string> = new Set([
   "2027-10-08", // Chung Yeung
   "2027-12-27", // Christmas (Dec 25 Saturday, Dec 26 Sunday → observed)
 ]);
+
+/** HKEX **ad-hoc** full-day closures — not in the published holiday schedule,
+ *  declared hours before the session (tropical cyclone / black rain). These
+ *  matter because a published calendar cannot explain a provider that carries
+ *  a bar on such a date: the weekly sentinel would otherwise ALARM forever on
+ *  a fully classified third-party bug.
+ *
+ *  Measured 2026-08-31 (docs/phase-0-verification-report.md §G2b): tencent
+ *  serves bars on all three of these sessions, Yahoo correctly does not —
+ *  "HKEX closed, tencent carries phantom bars → tencent calendar bug".
+ *
+ *  Evidence-driven on purpose: a NEW cyclone closure surfaces as one sentinel
+ *  ALARM, a human classifies it (tencent phantom vs a real session missing
+ *  from our store), and only then is it appended here with its citation. Do
+ *  not pre-fill this list from memory. */
+export const HKEX_ADHOC_CLOSURES: ReadonlySet<string> = new Set([
+  "2023-07-17", // Typhoon Talim — T10 in force, HKEX closed all day
+  "2023-09-01", // Typhoon Saola — T10 in force, HKEX closed all day
+  "2023-09-08", // Black rainstorm + T8 resumed — HKEX closed all day
+]);
+
+/** Every date HKEX was shut all day, scheduled or ad-hoc — the set the sentinel
+ *  uses to attribute a phantom session to the provider that carried it instead
+ *  of alarming. */
+export const HKEX_KNOWN_NON_SESSIONS: ReadonlySet<string> = new Set([...HKEX_HOLIDAYS, ...HKEX_ADHOC_CLOSURES]);
 
 /** NYSE full-day holidays 2021–2027: New Year's Day, MLK Day, Washington's
  *  Birthday, Good Friday, Memorial Day, Juneteenth, Independence Day,
