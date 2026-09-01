@@ -5,6 +5,59 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-01 (research) — openalgo reference analysis
+
+### What was done
+- Source-level analysis of `~/projects/openalgo` (Flask + React 19, 36 broker
+  plugins, 500 endpoints, 6 data stores) as a design reference →
+  `docs/research-openalgo-reference.md`. Scope decided with the user up
+  front: v1–v3-applicable first; deep-dives on data stores/Historify,
+  sandbox/paper trading, MCP surface, frontend.
+- **Top borrows:** `data_catalog` coverage ledger for incremental ingestion
+  (Phase 1 hardening); service-layer `paper|live` fork + daily equity
+  snapshot table + next-bar-open fills + per-market cost model (Phase 4 paper
+  trading — openalgo lacks the last two); MCP-layer LLM tool-design
+  discipline (structured errors, truncation metadata, server-side compute +
+  legend) for Phase 3 chat tools; jsdom test setup + CSS-token chart theming
+  + feature-folder layout for Phase 3 web.
+- **Skipped as not-our-constraints:** DuckDB (1M rows don't need it), 5-way
+  DB split, eventlet/NullPool machinery, OAuth-for-hosted-MCP-clients, the
+  charting terminal, Socket.IO (SSE replaces), all broker normalization.
+- **Confirmed we're ahead on:** corporate actions (they have none) and
+  transaction costs in paper fills (they have none).
+
+### What's next
+- Unchanged: Phase 2 design (deep tier) — agent pipeline + Piotroski/earnings
+  deterministic inputs; Phase 1 follow-ups (rescue loaders, weekly sentinel,
+  coverage-ledger ingestion).
+
+---
+
+## 2026-09-01 (skills) — trading_skills audit; skill dirs shared across harnesses
+
+### What was done
+- Reviewed [staskh/trading_skills](https://github.com/staskh/trading_skills)
+  (350★, options-seller/IBKR toolkit, 24 skills over a Python package);
+  cloned to `~/vendor/trading_skills` and wrote the audit →
+  `docs/research-trading-skills-audit.md`.
+- **Borrow (knowledge, not code):** scanner-bullish rubric → Phase 4
+  hypothesis H2; Piotroski F-score + earnings calendar → Phase 2 analyst
+  inputs; beta/VaR → risk module gap; report template + md→pdf → Phase 3.
+- **Not borrowed:** Python runtime (pure-TS fork), unschematized yfinance
+  data path (no L1–L4/R1–R4 discipline), 13 IBKR/options skills (out of
+  scope; IBKR data is paid), whale-hunting (paid API). HK news-depth gap
+  confirmed unchanged (insider data is SEC Form 4, US-only).
+- **Harness config:** registered all three vendored skill libraries
+  (Vibe-Trading, ccxt, trading_skills) in kimi-code `extra_skill_dirs`
+  (doctor-validated, backed up) and pi `settings.json` — both harnesses now
+  share the same skill index.
+
+### What's next
+- Phase 2 design (deep tier): lean agent pipeline; fold in the Piotroski /
+  earnings-calendar deterministic inputs.
+
+---
+
 ## 2026-09-01 — Phase 1 apps/api implemented (loader + daily CLI)
 
 ### What was done
