@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factor Combination &amp; Weights — Stable Regions over Peaks | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-val{--accent:#1d4ed8}.c-qual{--accent:#15803d}.c-mom{--accent:#c2410c}
+  .c-grid{--accent:#7e22ce}.c-oos{--accent:#0369a1}.c-warn{--accent:#b91c1c}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  .compare-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.compare,.compare-3{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel.purple{border-top:4px solid var(--purple)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}.panel.purple h4{color:var(--purple)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .alloc-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;border:1.5px solid var(--line);margin:14px 0;font-size:13px;font-weight:700;color:#fff}
+  .alloc-bar .seg{display:flex;align-items:center;justify-content:center}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Factor Combination</div>
+  <h1>Factor Combination &amp; Weights — Stable Regions, Not Historical Peaks</h1>
+  <p>Multiple factors all work, but they contribute differently to future returns — each must be given a reasonable "voice" (话语权) via weights to build a stronger, more stable strategy. The goal is not the weight with the highest historical return, but a weight region that stays effective across different times and environments.</p>
+  <div class="src">Source: knowledge-base/day_28 (IMG_6705–IMG_6712), "30天学习量化投资 · Day 28: 因子组合与权重" · Extracted 2026-09-02</div>
+</header>
+
+<!-- ============ 1. What Are Factor Weights ============ -->
+<section>
+  <h2><span class="num">1</span>What Are Factor Weights? — The Composite Score</h2>
+  <p class="subtitle">Multi-factor combination = each factor's score × weight → composite score (综合得分). The weight decides how much "voice" (话语权) each factor has in the portfolio.</p>
+
+  <h3>A simple multi-factor weight example</h3>
+  <p style="font-size:14.5px">Suppose we use 3 factors — Value (价值), Quality (质量), Momentum (动量) — and set weights that sum to 100%:</p>
+  <div class="alloc-bar">
+    <div class="seg" style="background:var(--blue); width:40%">Value: 40%</div>
+    <div class="seg" style="background:var(--green); width:40%">Quality: 40%</div>
+    <div class="seg" style="background:var(--orange); width:20%">Momentum: 20%</div>
+  </div>
+
+  <h3>How to compute the composite score (example)</h3>
+  <p style="font-size:14.5px">A stock's three factor scores (standardized to 0~100): <b>Composite = Σ (factor score × weight)</b></p>
+  <table>
+    <tr><th>Stock</th><th>Value score (价值)</th><th>Quality score (质量)</th><th>Momentum score (动量)</th><th>Calculation</th><th>Composite</th></tr>
+    <tr><td>Stock A</td><td class="num">80</td><td class="num">90</td><td class="num">60</td><td>80×40% + 90×40% + 60×20%</td><td class="num"><b>80.0</b></td></tr>
+  </table>
+
+  <div class="quote"><strong>Different weights → different composite scores → possibly different rankings → different final portfolio!</strong> (权重不同 → 综合得分不同 → 股票排名可能不同 → 最终投资组合也会不同！)</div>
+
+  <h3>Different weights change the ranking</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Scheme A: Value 40% / Quality 40% / Momentum 20%</h4>
+      <table>
+        <tr><th>Stock</th><th>V</th><th>Q</th><th>M</th><th>Score</th><th>Rank</th></tr>
+        <tr><td>A</td><td class="num">80</td><td class="num">90</td><td class="num">60</td><td class="num">80.0</td><td>👑 1</td></tr>
+        <tr><td>B</td><td class="num">70</td><td class="num">70</td><td class="num">90</td><td class="num">72.0</td><td>2</td></tr>
+        <tr><td>C</td><td class="num">90</td><td class="num">60</td><td class="num">40</td><td class="num">70.0</td><td>3</td></tr>
+      </table>
+    </div>
+    <div class="panel purple">
+      <h4>Scheme B: Value 60% / Quality 20% / Momentum 20%</h4>
+      <table>
+        <tr><th>Stock</th><th>V</th><th>Q</th><th>M</th><th>Score</th><th>Rank</th></tr>
+        <tr><td>A</td><td class="num">80</td><td class="num">90</td><td class="num">60</td><td class="num">76.0</td><td>2</td></tr>
+        <tr><td>B</td><td class="num">70</td><td class="num">70</td><td class="num">90</td><td class="num">70.0</td><td>3</td></tr>
+        <tr><td>C</td><td class="num">90</td><td class="num">60</td><td class="num">40</td><td class="num">78.0</td><td>👑 1</td></tr>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:13.5px;color:var(--muted)">🎯 Even a small change in weights can affect the final holdings! (权重的微小变化，都可能影响最终的持仓结果！)</p>
+
+  <h3>Weights reflect your investment logic and beliefs (投资逻辑和信念)</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Different weights = different views</h4>
+      <ul>
+        <li>Value matters more → give Value a higher weight</li>
+        <li>Quality is more stable → give Quality a higher weight</li>
+        <li>Momentum is stronger → give Momentum a higher weight</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>Weights are not decided on a whim — they're based on:</h4>
+      <ul>
+        <li>✅ Historical backtest results (历史回测效果)</li>
+        <li>✅ Factor stability (因子稳定性)</li>
+        <li>✅ Economic logic &amp; market environment (经济逻辑与市场环境)</li>
+        <li>✅ Risk-control considerations (风险控制考虑)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Factor weights determine each factor's influence (影响力) in the portfolio — they directly affect the composite score, ranking, and final return performance.</b> There is no absolute "correct answer" for weights — only a more suitable choice under specific assumptions and market environments. (权重没有绝对的"正确答案"，只有在特定假设和市场环境下更合适的选择！)</div>
+</section>
+
+<!-- ============ 2. How Weights Change Scores & Rankings ============ -->
+<section>
+  <h2><span class="num">2</span>How Weights Change Composite Scores &amp; Stock Ranking</h2>
+  <p class="subtitle">Same factor scores, different weights → different composite scores → possibly completely different rankings. Weights are the portfolio's "steering wheel" (方向盘).</p>
+
+  <h3>Factor raw scores (standardized to 0~100)</h3>
+  <table>
+    <tr><th>Stock</th><th>Value (V)</th><th>Quality (Q)</th><th>Momentum (M)</th></tr>
+    <tr><td>A</td><td class="num">80</td><td class="num">90</td><td class="num">60</td></tr>
+    <tr><td>B</td><td class="num">70</td><td class="num">70</td><td class="num">90</td></tr>
+    <tr><td>C</td><td class="num">60</td><td class="num">80</td><td class="num">40</td></tr>
+    <tr><td>D</td><td class="num">90</td><td class="num">60</td><td class="num">30</td></tr>
+    <tr><td>E</td><td class="num">50</td><td class="num">50</td><td class="num">80</td></tr>
+  </table>
+  <p style="font-size:13.5px;color:var(--muted)">Note: a higher factor score means that factor is more favorable for the stock; but each factor's importance differs, so "weights" decide their voice in the combination.</p>
+
+  <div class="compare">
+    <div class="spec c-val" style="margin:0">
+      <h3><span class="tag">scheme A</span>V 40% + Q 40% + M 20%</h3>
+      <p style="font-size:13.5px">Composite = V×40% + Q×40% + M×20%</p>
+      <table>
+        <tr><th>Stock</th><th>Calculation</th><th>Score</th><th>Rank</th></tr>
+        <tr><td>A</td><td>80×40%+90×40%+60×20%</td><td class="num">80.0</td><td>👑 1</td></tr>
+        <tr><td>B</td><td>70×40%+70×40%+90×20%</td><td class="num">74.0</td><td>2</td></tr>
+        <tr><td>C</td><td>60×40%+80×40%+40×20%</td><td class="num">64.0</td><td>3</td></tr>
+        <tr><td>D</td><td>90×40%+60×40%+30×20%</td><td class="num">60.0</td><td>4</td></tr>
+        <tr><td>E</td><td>50×40%+50×40%+80×20%</td><td class="num">54.0</td><td>5</td></tr>
+      </table>
+    </div>
+    <div class="spec c-mom" style="margin:0">
+      <h3><span class="tag">scheme B</span>V 20% + Q 20% + M 60%</h3>
+      <p style="font-size:13.5px">Composite = V×20% + Q×20% + M×60%</p>
+      <table>
+        <tr><th>Stock</th><th>Calculation</th><th>Score</th><th>Rank</th></tr>
+        <tr><td>A</td><td>80×20%+90×20%+60×60%</td><td class="num">66.0</td><td>3</td></tr>
+        <tr><td>B</td><td>70×20%+70×20%+90×60%</td><td class="num">82.0</td><td>👑 1</td></tr>
+        <tr><td>C</td><td>60×20%+80×20%+40×60%</td><td class="num">52.0</td><td>4</td></tr>
+        <tr><td>D</td><td>90×20%+60×20%+30×60%</td><td class="num">40.0</td><td>5</td></tr>
+        <tr><td>E</td><td>50×40%+50×20%+80×60%</td><td class="num">64.0</td><td>2</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>Ranking comparison of the two schemes</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Rank changes at a glance (排名变化一目了然)</h4>
+      <table>
+        <tr><th>Stock</th><th>Scheme A rank</th><th>Scheme B rank</th><th>Change</th></tr>
+        <tr><td>A</td><td class="num">1</td><td class="num">3</td><td style="color:var(--red)">↓2</td></tr>
+        <tr><td>B</td><td class="num">2</td><td class="num">1</td><td style="color:var(--red)">↑1</td></tr>
+        <tr><td>C</td><td class="num">3</td><td class="num">4</td><td style="color:var(--red)">↓1</td></tr>
+        <tr><td>D</td><td class="num">4</td><td class="num">5</td><td style="color:var(--red)">↓1</td></tr>
+        <tr><td>E</td><td class="num">5</td><td class="num">2</td><td style="color:var(--red)">↑3</td></tr>
+      </table>
+    </div>
+    <div class="panel good">
+      <h4>Conclusion: weights significantly change the final selection</h4>
+      <ul>
+        <li>✅ Emphasize Value &amp; Quality → stock A moves to the front</li>
+        <li>✅ Emphasize Momentum → stocks B, E move to the front</li>
+        <li>✅ The result is entirely decided by your "investment philosophy" (投资哲学)!</li>
+        <li>✅ There is no absolutely correct weight — only the weight that fits you</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="keypoint">🎯 <b>Core tip:</b> weights decide which traits you value more — and which stocks you ultimately buy! (权重决定了你更看重哪些特质，也决定了你最终会买入哪些股票！)</div>
+  <div class="takeaway"><span class="star">★</span><b>Weights are the core variable of factor combination — they directly affect the composite score, ranking, and final holdings!</b> Next: how to find suitable weights? We need scientific testing, not gut feeling. (下一步：如何找到合适的权重？我们需要科学测试，而不是凭感觉！)</div>
+</section>
+
+<!-- ============ 3. Weight Grid Search ============ -->
+<section>
+  <h2><span class="num">3</span>Weight Grid Search — Testing Combinations at Scale</h2>
+  <p class="subtitle">Don't test just a few combinations — test exhaustively and systematically (网格化、系统地全面测试). Through systematic enumeration, find the weight region that performs well.</p>
+
+  <div class="spec c-grid">
+    <h3><span class="tag">step 1</span>Three factors: how do weights permute?</h3>
+    <p style="font-size:14.5px">Using 3 factors — Value, Quality, Momentum. Weight requirement: non-negative, summing to 100%. Set a step (步长), e.g. increments of 10%, then generate all valid weight combinations. On the ternary grid (triangle diagram), every dot represents one weight combination.</p>
+
+    <h3>Example weight combinations (step = 10%)</h3>
+    <table>
+      <tr><th>Combo ID</th><th>Value V</th><th>Quality Q</th><th>Momentum M</th><th>Sum</th></tr>
+      <tr><td>C1</td><td class="num">100%</td><td class="num">0%</td><td class="num">0%</td><td class="num">100%</td></tr>
+      <tr><td>C2</td><td class="num">90%</td><td class="num">10%</td><td class="num">0%</td><td class="num">100%</td></tr>
+      <tr><td>C3</td><td class="num">90%</td><td class="num">0%</td><td class="num">10%</td><td class="num">100%</td></tr>
+      <tr><td>…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td><td class="num">…</td></tr>
+      <tr><td>C25</td><td class="num">50%</td><td class="num">30%</td><td class="num">20%</td><td class="num">100%</td></tr>
+      <tr><td>C50</td><td class="num">30%</td><td class="num">40%</td><td class="num">30%</td><td class="num">100%</td></tr>
+      <tr><td>C84</td><td class="num">0%</td><td class="num">10%</td><td class="num">90%</td><td class="num">100%</td></tr>
+      <tr><td>C91</td><td class="num">0%</td><td class="num">0%</td><td class="num">100%</td><td class="num">100%</td></tr>
+    </table>
+    <p style="font-size:13.5px">With a 10% step, <b>91 combinations</b> are generated. The smaller the step, the more combinations, the heavier the computation — and the finer the results! (步长越小，组合越多，计算量越大，结果越精细！)</p>
+
+    <h3>Backtest each weight combination, record key metrics</h3>
+    <div class="cols">
+      <div class="io-box">
+        <b>Backtest setup (example)</b>
+        ✓ Universe: full A-share market (全市场A股)<br>
+        ✓ Rebalance frequency: monthly (每月)<br>
+        ✓ Holding style: long top 20% (多头Top20%)<br>
+        ✓ Backtest window: 2018.01 – 2024.12<br>
+        ✓ Cost assumptions: commission 0.05% (手续费), slippage 0.05% (滑点)
+      </div>
+      <div class="io-box">
+        <b>Watch more than returns! (关注的不只是收益！)</b>
+        ✓ Annualized return (年化收益)<br>
+        ✓ Sharpe ratio (夏普比率)<br>
+        ✓ Max drawdown (最大回撤)<br>
+        ✓ Win rate (胜率)<br>
+        ✓ Stability (稳定性) — very important (非常重要)
+      </div>
+    </div>
+
+    <table>
+      <tr><th>Combo ID (V/Q/M)</th><th>Annualized</th><th>Sharpe</th><th>Max DD</th><th>Win rate</th><th>Stability score*</th></tr>
+      <tr><td>C1 (100/0/0)</td><td class="num">9.3%</td><td class="num">0.62</td><td class="num">-24.1%</td><td class="num">53%</td><td class="num">0.41</td></tr>
+      <tr><td>C10 (70/20/10)</td><td class="num">13.6%</td><td class="num">0.92</td><td class="num">-16.3%</td><td class="num">56%</td><td class="num">0.68</td></tr>
+      <tr style="background:var(--green-bg)"><td><b>C25 (50/30/20)</b></td><td class="num"><b>16.2%</b></td><td class="num"><b>1.18</b></td><td class="num"><b>-13.2%</b></td><td class="num"><b>57%</b></td><td class="num"><b>0.79</b></td></tr>
+      <tr style="background:var(--green-bg)"><td><b>C50 (30/40/30)</b></td><td class="num"><b>15.7%</b></td><td class="num"><b>1.10</b></td><td class="num"><b>-12.8%</b></td><td class="num"><b>58%</b></td><td class="num"><b>0.82</b></td></tr>
+      <tr><td>C70 (10/40/50)</td><td class="num">11.4%</td><td class="num">0.76</td><td class="num">-18.7%</td><td class="num">54%</td><td class="num">0.52</td></tr>
+      <tr><td>C91 (0/0/100)</td><td class="num">8.7%</td><td class="num">0.55</td><td class="num">-26.5%</td><td class="num">52%</td><td class="num">0.36</td></tr>
+    </table>
+    <p style="font-size:12.5px;color:var(--muted)">* Stability score (稳定性得分) combines per-year consistency (分年度表现一致性), effectiveness across markets/industries (分市场/行业有效性), IC stability (IC稳定性), etc.</p>
+
+    <div class="quote"><strong>Core idea (核心思想):</strong> if high returns aren't stable, they may fail next time! (高收益如果不稳定，下一次可能就失效！)</div>
+
+    <h3>Visualize results — find well-performing regions</h3>
+    <p style="font-size:14.5px">Plot four ternary heatmaps (热力图) over the weight space — annualized return, Sharpe ratio, max drawdown, stability score — each with Value, Quality, Momentum on the three axes. What we usually want: a <b>region with high return + high Sharpe + low drawdown + high stability</b> — not an isolated "spike point" (尖峰点). (通常我们希望：高收益 + 高夏普 + 低回撤 + 高稳定性 的区域，而不是某个孤立的"尖峰点")</p>
+
+    <h3>Grid search caveats (注意事项)</h3>
+    <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <div class="mod c-grid"><h4>Reasonable step size</h4><p>Too large → coarse, may miss good regions; too small → huge compute, limited gain. Common: 5% or 10%. (步长选择要合理)</p></div>
+      <div class="mod c-qual"><h4>Avoid unreasonable combos</h4><p>Cap single-factor weights (e.g. ≤ 70%) or set a minimum threshold (e.g. ≥ 10%) to keep combos stable. (避免不合理组合，让组合更稳定)</p></div>
+      <div class="mod c-oos"><h4>Rolling backtest validation</h4><p>Full-window results can mislead; use rolling windows to check performance across periods. Look at the long run, not one stretch. (使用滚动回测验证)</p></div>
+      <div class="mod c-mom"><h4>Filter with economic logic</h4><p>Backtest is a tool, not the whole story. Final choices must fit assumptions, logic, and practical executability. Logic + data = good strategy. (结合经济逻辑筛选)</p></div>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Grid search is not for finding the historically "best" weight — it's for discovering weight regions with stable performance and strong robustness (鲁棒性强)!</b> Next: after finding a good region, how to further verify stability? (找到好的区域后，如何进一步验证稳定性？)</div>
+</section>
+
+<!-- ============ 4. The Historical-Optimum Trap ============ -->
+<section>
+  <h2><span class="num">4</span>The Historical-Optimum Trap — The Peak May Be Overfitting</h2>
+  <p class="subtitle">The point with the highest backtest return is often luck (运气), not skill (能力). The "optimal weight" found in historical data may not keep working in the future! (历史最优权重陷阱：最高点可能只是过拟合)</p>
+
+  <h3>Weight grid search results (example)</h3>
+  <table>
+    <tr><th>Value V</th><th>Quality Q</th><th>Momentum M</th><th>Annualized</th><th>Max DD</th><th>Sharpe</th></tr>
+    <tr><td class="num">30%</td><td class="num">40%</td><td class="num">30%</td><td class="num">16.3%</td><td class="num">-14.2%</td><td class="num">1.32</td></tr>
+    <tr><td class="num">35%</td><td class="num">45%</td><td class="num">20%</td><td class="num">17.8%</td><td class="num">-12.1%</td><td class="num">1.48</td></tr>
+    <tr style="background:var(--orange-bg)"><td class="num"><b>👑 37%</b></td><td class="num"><b>48%</b></td><td class="num"><b>15%</b></td><td class="num" style="color:var(--red)"><b>18.7%</b></td><td class="num"><b>-11.0%</b></td><td class="num" style="color:var(--red)"><b>1.62</b> ← historical best</td></tr>
+    <tr><td class="num">40%</td><td class="num">45%</td><td class="num">15%</td><td class="num">17.5%</td><td class="num">-12.3%</td><td class="num">1.41</td></tr>
+    <tr><td class="num">40%</td><td class="num">40%</td><td class="num">20%</td><td class="num">17.2%</td><td class="num">-11.8%</td><td class="num">1.36</td></tr>
+    <tr><td class="num">35%</td><td class="num">40%</td><td class="num">25%</td><td class="num">16.8%</td><td class="num">-12.0%</td><td class="num">1.34</td></tr>
+  </table>
+  <p style="font-size:13.5px;color:var(--red)">⚠ On the surface 37%/48%/15% looks best — but it's just an isolated "spike point" (孤立的尖峰点)!</p>
+
+  <h3>Small perturbations near the optimum → large swings</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Tiny-change test around the optimum</h4>
+      <p style="font-size:14px">Annualized returns of 10 combinations ordered by distance from the optimum: a jagged line peaking at <b>18.7%</b> (combo #5) and falling to ~16% just one or two steps away.</p>
+    </div>
+    <div class="panel bad">
+      <h4>Meaning (含义)</h4>
+      <ul>
+        <li>Near the optimum, returns drop very fast</li>
+        <li>The model is extremely sensitive to weights</li>
+        <li>It may be fitting historical noise (拟合历史噪声), not a real pattern</li>
+        <li>A small future change can cause large failure</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>In-sample vs out-of-sample (检验过拟合)</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>In-sample 样本内 (2018.01 – 2024.12)</h4>
+      <table>
+        <tr><th></th><th>Best 37/48/15</th><th>2nd 35/45/20</th><th>3rd 40/45/15</th></tr>
+        <tr><td>Annualized</td><td class="num" style="color:var(--red)"><b>18.7%</b></td><td class="num">17.8%</td><td class="num">17.5%</td></tr>
+        <tr><td>Sharpe</td><td class="num" style="color:var(--red)"><b>1.62</b></td><td class="num">1.48</td><td class="num">1.41</td></tr>
+      </table>
+    </div>
+    <div class="panel bad">
+      <h4>Out-of-sample 样本外 (2025.01 – 2025.12)</h4>
+      <table>
+        <tr><th></th><th>Best 37/48/15</th><th>2nd 35/45/20</th><th>3rd 40/45/15</th></tr>
+        <tr><td>Annualized</td><td class="num" style="color:var(--red)"><b>5.2%</b></td><td class="num">11.6%</td><td class="num">10.1%</td></tr>
+        <tr><td>Sharpe</td><td class="num" style="color:var(--red)"><b>0.32</b></td><td class="num">0.71</td><td class="num">0.58</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="quote"><strong>Conclusion:</strong> the historically best combination performed the worst out-of-sample — this is the "overfitting trap" (过拟合陷阱)!</div>
+
+  <h3>Why does overfitting happen? (为什么会过拟合？)</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="mod c-warn"><h4>Search space too large</h4><p>Hundreds or thousands of weight combos tested — some point will "look" best by chance. (搜索空间过大)</p></div>
+    <div class="mod c-warn"><h4>Historical data contains noise</h4><p>Noise in the backtest may be amplified by a particular weight combo, producing a false edge (虚假优势). (历史数据包含噪声)</p></div>
+    <div class="mod c-warn"><h4>Market changes not considered</h4><p>Future environments, factor effectiveness, correlations all change; historical optimality can't guarantee the future. (未考虑市场变化)</p></div>
+    <div class="mod c-warn"><h4>Lacking constraints &amp; logic</h4><p>Weights without economic logic are a "numbers game" (数字游戏), with no stable theoretical support. (缺乏约束和逻辑)</p></div>
+  </div>
+
+  <div class="keypoint">📌 <b>Remember:</b> overfitting isn't because the model is bad — it's because we used the wrong method to find the "best answer". What we really want is not a point, but a stable region! (过拟合不是模型太差，而是我们用错了方法去寻找"最佳答案"。真正要找的不是点，而是稳定区域！)</div>
+  <div class="takeaway"><span class="star">★</span><b>The historically optimal weight may just be luck; a stable, effective region is closer to skill!</b> (历史最优的权重，可能只是运气；稳定有效的区域，才更接近能力！)</div>
+</section>
+
+<!-- ============ 5. Stable Regions ============ -->
+<section>
+  <h2><span class="num">5</span>Stable Regions — Look for a Plateau, Not a Spike</h2>
+  <p class="subtitle">What we want is not the point with the highest historical return, but a region where everything nearby also performs well. (稳定区域：寻找平台，而不是尖峰)</p>
+
+  <h3>Spike vs plateau: two different outcomes</h3>
+  <div class="compare">
+    <div class="panel bad">
+      <h4>Case A: historical optimum (尖峰 spike)</h4>
+      <p>✗ Only one point is especially high; the moment you move slightly around it, returns fall sharply. (只有一个点特别高，周围稍微变动收益就大幅下降。)</p>
+    </div>
+    <div class="panel good">
+      <h4>Case B: stable plateau (稳定平台)</h4>
+      <p>✓ A whole area performs well; insensitive to small weight changes — more stable! (一大片区域表现都不错，对权重的微小变化不敏感，更稳定！)</p>
+    </div>
+  </div>
+
+  <h3>Example: performance comparison of nearby weight combinations</h3>
+  <table>
+    <tr><th>Value V</th><th>Quality Q</th><th>Momentum M</th><th>Annualized</th><th>Max DD</th></tr>
+    <tr><td class="num">30%</td><td class="num">40%</td><td class="num">30%</td><td class="num">16.2%</td><td class="num">-13.8%</td></tr>
+    <tr><td class="num">33%</td><td class="num">44%</td><td class="num">23%</td><td class="num">16.9%</td><td class="num">-12.8%</td></tr>
+    <tr><td class="num">35%</td><td class="num">45%</td><td class="num">20%</td><td class="num">17.4%</td><td class="num">-12.1%</td></tr>
+    <tr style="background:var(--green-bg)"><td class="num"><b>👑 37%</b></td><td class="num"><b>48%</b></td><td class="num"><b>15%</b></td><td class="num"><b>18.7%</b></td><td class="num"><b>-11.0%</b></td></tr>
+    <tr><td class="num">38%</td><td class="num">47%</td><td class="num">15%</td><td class="num">18.4%</td><td class="num">-11.3%</td></tr>
+    <tr><td class="num">40%</td><td class="num">45%</td><td class="num">15%</td><td class="num">17.5%</td><td class="num">-12.3%</td></tr>
+    <tr><td class="num">42%</td><td class="num">43%</td><td class="num">15%</td><td class="num">16.8%</td><td class="num">-12.7%</td></tr>
+    <tr><td class="num">45%</td><td class="num">40%</td><td class="num">15%</td><td class="num">15.2%</td><td class="num">-13.6%</td></tr>
+  </table>
+  <ul class="duty">
+    <li>✅ 37%/48%/15% has the highest return, but many nearby combos perform nearly as well — together they form a stable plateau (稳定平台)!</li>
+    <li>⚠ If only this one row were high while all other combos were poor, it might be an overfit "lucky point" (幸运点).</li>
+  </ul>
+
+  <h3>Benefits of a stable region (稳定区域的好处)</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    <div class="mod c-qual"><h4>More robust (更稳健)</h4><p>Small changes don't cause big return swings; the future is more reliable (未来更可靠).</p></div>
+    <div class="mod c-val"><h4>More overfit-resistant (更抗过拟合)</h4><p>Doesn't depend on one specific number; reduces the influence of historical noise (降低历史噪声的影响).</p></div>
+    <div class="mod c-oos"><h4>Easier to execute (更易执行)</h4><p>No need for precision to several decimal places; lower maintenance cost (降低维护成本).</p></div>
+    <div class="mod c-mom"><h4>More extensible (更有延展性)</h4><p>When adding new factors later, easier to find suitable combos within the region.</p></div>
+  </div>
+
+  <h3>How to define a "stable region"?</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Reference multiple metrics at once</h4>
+      <ul>
+        <li>☑ Annualized return (年化收益) ↑</li>
+        <li>☑ Max drawdown (最大回撤) — the smaller the better ↓</li>
+        <li>☑ Sharpe — the bigger the better ↑</li>
+        <li>☑ IC mean (IC 均值) — the bigger the better ↑</li>
+        <li>☑ Win rate / profit-loss ratio (胜率 / 盈亏比)</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>Definition rules (example)</h4>
+      <ul>
+        <li>☑ Annualized ≥ 80% of the best value</li>
+        <li>☑ Sharpe ≥ 80% of the best value</li>
+        <li>☑ Max drawdown ≤ 120% of the best value</li>
+        <li>☑ IC mean positive and stable (IC 均值为正且稳定)</li>
+      </ul>
+    </div>
+  </div>
+  <p style="font-size:14px">Combinations meeting the conditions = the stable region (满足条件的组合 = 稳定区域). On the ternary diagram: green dots = meet conditions (stable region), blue dots = fail conditions — they form a contiguous "plateau", not a single spike.</p>
+
+  <div class="takeaway"><span class="star">★</span><b>When choosing weight combinations, don't fixate on the highest-return point — look for a plateau region with stable performance and forgiving boundaries (边界宽容)!</b> Next: how to finalize the weight? A scientific and practical decision process. (如何确定最终权重？一个科学又实用的决策流程！)</div>
+</section>
+
+<!-- ============ 6. Out-of-Sample Validation ============ -->
+<section>
+  <h2><span class="num">6</span>Out-of-Sample Validation — Do Weights Still Work in the Future?</h2>
+  <p class="subtitle">The point of backtesting is not to prove "the past was great", but to verify "it may work in the future" (验证"未来可能有效"). If a weight combo only works historically, it's luck, not real skill.</p>
+
+  <h3>What is in-sample vs out-of-sample? (样本内 vs 样本外)</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>In-sample / training period 样本内 (2018.01 – 2024.12)</h4>
+      <p>During this time: we search for the optimal weight combination (e.g. 37%/48%/15%).</p>
+    </div>
+    <div class="panel good">
+      <h4>Out-of-sample / test period 样本外 (2024.12 – 2025.12)</h4>
+      <p>During this time: we no longer adjust weights — we only observe real performance.</p>
+    </div>
+  </div>
+  <div class="quote"><strong>Core idea:</strong> if a weight combo is excellent in-sample but degrades badly out-of-sample, it very likely overfit history. Only combos that stay stable out-of-sample deserve trust! (如果一个权重组合在样本内非常优秀，但在样本外大幅变差，说明它很可能过拟合了历史。只有样本外依然表现稳定，才值得信任！)</div>
+
+  <h3>Example: the best combo, in-sample vs out-of-sample</h3>
+  <table>
+    <tr><th rowspan="2">Weight combo (V/Q/M)</th><th colspan="4">In-sample (2018.01–2024.12)</th><th colspan="4">Out-of-sample (2025.01–2025.12)</th><th rowspan="2">Pass OOS?</th></tr>
+    <tr><th>Annualized</th><th>Max DD</th><th>Sharpe</th><th>Win rate</th><th>Annualized</th><th>Max DD</th><th>Sharpe</th><th>Win rate</th></tr>
+    <tr><td><b>⭐ 37% / 48% / 15%</b></td><td class="num" style="color:var(--red)"><b>18.7%</b></td><td class="num">-11.0%</td><td class="num">1.62</td><td class="num">57%</td><td class="num">11.6%</td><td class="num">-7.3%</td><td class="num">0.71</td><td class="num">52%</td><td style="color:var(--green)">✅ Pass 通过</td></tr>
+    <tr><td>35% / 45% / 20%</td><td class="num">17.8%</td><td class="num">-12.1%</td><td class="num">1.48</td><td class="num">56%</td><td class="num">10.2%</td><td class="num">-9.5%</td><td class="num">0.58</td><td class="num">50%</td><td style="color:var(--green)">✅ Pass 通过</td></tr>
+    <tr><td>40% / 45% / 15%</td><td class="num">17.5%</td><td class="num">-12.3%</td><td class="num">1.41</td><td class="num">55%</td><td class="num">4.1%</td><td class="num">-13.2%</td><td class="num">0.18</td><td class="num">46%</td><td style="color:var(--red)">✗ Fail 未通过</td></tr>
+    <tr><td>25% / 55% / 20%</td><td class="num">15.2%</td><td class="num">-9.8%</td><td class="num">1.22</td><td class="num">54%</td><td class="num">11.8%</td><td class="num">-6.9%</td><td class="num">0.75</td><td class="num">53%</td><td style="color:var(--green)">✅ Pass 通过</td></tr>
+    <tr><td>20% / 20% / 60%</td><td class="num">13.6%</td><td class="num">-15.6%</td><td class="num">0.92</td><td class="num">52%</td><td class="num">-1.3%</td><td class="num">-18.7%</td><td class="num">-0.12</td><td class="num">41%</td><td style="color:var(--red)">✗ Fail 未通过</td></tr>
+  </table>
+  <div class="keypoint">💡 The combo with the highest in-sample return isn't necessarily the best out-of-sample! The key is whether it stays robust in the future (关键看未来是否依然稳健！)</div>
+
+  <h3>How to do out-of-sample validation?</h3>
+  <div class="flow">
+    <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">📅</div><div class="name">① Split time 划分时间</div><div class="cn">train &amp; test don't overlap (common: 70–80% train)</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--green-bg)"><div class="icon">🔒</div><div class="name">② Fix weights 固定权重</div><div class="cn">best weights from training, unchanged in test</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--orange-bg)"><div class="icon">📊</div><div class="name">③ True backtest 真实回测</div><div class="cn">run full strategy on future data, no adjustments</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--purple-bg)"><div class="icon">🧮</div><div class="name">④ Compare 对比评估</div><div class="cn">in vs out: return, drawdown, Sharpe, win rate</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">🎯</div><div class="name">⑤ Conclusion 结论判断</div><div class="cn">only stable OOS combos are worth adopting</div></div>
+  </div>
+
+  <h3>Common pitfalls of OOS validation (常见陷阱)</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="mod c-warn"><h4>Test period too short</h4><p>Short windows can be skewed by chance events; recommend at least 1 year+. (测试期太短)</p></div>
+    <div class="mod c-warn"><h4>Market environment changed</h4><p>If market style shifts dramatically, old factors may temporarily fail. (市场环境变化)</p></div>
+    <div class="mod c-warn"><h4>Frequent weight adjustments</h4><p>Tweaking weights on every return dip makes future validation impossible. (频繁调整权重)</p></div>
+    <div class="mod c-warn"><h4>Returns only, no risk</h4><p>Even OOS, still watch whether drawdown, volatility and other risk metrics are controlled. (只看收益不看风险)</p></div>
+  </div>
+
+  <h3>The golden rules of OOS validation (黄金法则)</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="mod c-qual"><h4>Rule 1: Independent data 独立数据</h4><p>Test data must be fully independent from training data — no information leakage (不能有任何信息泄漏).</p></div>
+    <div class="mod c-mom"><h4>Rule 2: Stability first 稳定优先</h4><p>OOS return doesn't need to be the highest; stable, sustainable, risk-controlled combos are good combos.</p></div>
+    <div class="mod c-val"><h4>Rule 3: Multi-dimensional 多维评价</h4><p>Judge with return, drawdown, Sharpe, win rate, IC stability and more together.</p></div>
+    <div class="mod c-oos"><h4>Rule 4: Long-term tracking 长期跟踪</h4><p>One successful test isn't the end — keep tracking real performance and review periodically (定期复盘).</p></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Only weight combinations that pass out-of-sample validation (样本外验证) are qualified to go live (进入实盘)!</b></div>
+</section>
+
+<!-- ============ 7. Summary ============ -->
+<section>
+  <h2><span class="num">★</span>Day 28 Summary — Simple, Stable, Explainable Beats Historical-Optimal</h2>
+  <p class="subtitle">Weight optimization of a multi-factor combination is not about finding the number that made the most money historically — it's about finding a weight region with economic logic (经济逻辑), stable nearby performance, and continued out-of-sample effectiveness. 最优可能是运气，稳定才更接近能力！</p>
+
+  <h3>Core knowledge learned today</h3>
+  <ol class="duty">
+    <li><b>Factor combinations need weights</b> — multiple factors weighted into a composite score (按权重加权，形成综合得分).</li>
+    <li><b>Don't blindly chase the historical optimum</b> — overfitting historical noise may fail in the future (不要盲目追求历史最优).</li>
+    <li><b>Look for stable effective regions</b> — choose weights inside an area that all performs well (寻找稳定有效区域).</li>
+    <li><b>Combine with economic logic</b> — roughly reasonable, explainable weights are more trustworthy (权重大致合理，可解释，才更可信).</li>
+    <li><b>Out-of-sample validation is key</b> — only what still works OOS deserves trust (样本外验证是关键).</li>
+  </ol>
+
+  <h3>Three typical outcomes of weight selection</h3>
+  <div class="compare-3">
+    <div class="panel bad">
+      <h4>Historical optimum (尖峰)</h4>
+      <ul>
+        <li>Highest historical return, highest Sharpe</li>
+        <li>But small nearby moves → returns drop sharply</li>
+        <li>Very likely fails in the future</li>
+      </ul>
+      <p style="color:var(--red);font-size:13px;margin-top:8px">✗ Risk: overfitting (过拟合)</p>
+    </div>
+    <div class="panel good">
+      <h4>Stable plateau (推荐 recommended)</h4>
+      <ul>
+        <li>A whole region performs well</li>
+        <li>Nearby changes have small impact</li>
+        <li>Still effective out-of-sample — more stable, more reliable</li>
+      </ul>
+      <p style="color:var(--green);font-size:13px;margin-top:8px">✅ Preferred choice (优先选择)</p>
+    </div>
+    <div class="panel neutral">
+      <h4>Low-return region (低洼)</h4>
+      <ul>
+        <li>Overall low returns</li>
+        <li>No amount of tweaking lifts it</li>
+        <li>More time invested, limited improvement</li>
+      </ul>
+      <p style="color:var(--red);font-size:13px;margin-top:8px">✗ Not prioritized (不优先考虑)</p>
+    </div>
+  </div>
+
+  <h3>A complete weight-selection process (review)</h3>
+  <div class="flow">
+    <div class="step" style="--stepbg:var(--orange-bg)"><div class="icon">💡</div><div class="name">① Hypothesis 投资假设</div><div class="cn">set factors &amp; rough weight direction</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--blue-bg)"><div class="icon">🔲</div><div class="name">② Grid test 网格测试</div><div class="cn">batch-backtest weight combos</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--purple-bg)"><div class="icon">⛰️</div><div class="name">③ Find plateau 寻找稳定区</div><div class="cn">find the stable region (platform)</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--green-bg)"><div class="icon">🛡️</div><div class="name">④ OOS check 样本外验证</div><div class="cn">test on future data</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--orange-bg)"><div class="icon">🏆</div><div class="name">⑤ Finalize 最终确定</div><div class="cn">simple, stable, explainable weights</div></div>
+  </div>
+  <div class="keypoint">⭐ <b>Remember: process beats result; stability beats high return!</b> (过程比结果更重要，稳定比高收益更重要！)</div>
+
+  <h3>How to land the final weight? (最终权重如何落地？)</h3>
+  <ul class="duty">
+    <li>☑ Weights don't need to be complex: keep it simple (e.g. 3–5 factors)</li>
+    <li>☑ Weights don't need to be precise: e.g. 35% / 45% / 20% is fine</li>
+    <li>☑ Periodic review &amp; optimization: check every half-year or year (定期复盘优化)</li>
+    <li>☑ Control trading costs: frequent weight changes increase costs (控制交易成本)</li>
+    <li>☑ Combine with risk control: even great factors need drawdown control (与风险控制结合)</li>
+  </ul>
+  <div class="alloc-bar">
+    <div class="seg" style="background:var(--blue); width:40%">Value 40%</div>
+    <div class="seg" style="background:var(--green); width:40%">Quality 40%</div>
+    <div class="seg" style="background:var(--orange); width:20%">Momentum 20%</div>
+  </div>
+  <p style="font-size:13.5px;color:var(--muted)">Example final scheme: Value 40% / Quality 40% / Momentum 20%. On the return heatmap: high (&gt;18%), fairly high (15–18%), mid (12–15%), fairly low (8–12%), low (&lt;8%) — the dashed stable region is a "plateau", not a spike.</p>
+
+  <h3>Common misconceptions vs correct understanding (常见误区 vs 正确认知)</h3>
+  <div class="compare">
+    <div class="panel bad">
+      <h4>✗ Common misconceptions</h4>
+      <ul>
+        <li>Chasing the highest historical-return weight</li>
+        <li>Weights precise to two decimal places</li>
+        <li>Frequently adjusting weights, chasing rallies and dumping dips (追涨杀跌)</li>
+        <li>Ignoring economic logic and portfolio explanation</li>
+        <li>Skipping out-of-sample validation</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>✓ Correct understanding</h4>
+      <ul>
+        <li>Look for stable effective regions</li>
+        <li>Simple, rough weights are fine (权重简单、粗略即可)</li>
+        <li>Weights relatively stable, long-term effective</li>
+        <li>The combination needs economic-logic support</li>
+        <li>Out-of-sample validation is a must (必选项)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>What we seek is not the historically "most profitable" weight, but a weight combination more worthy of trust in the future — one that can accompany us for the long term!</b> (我们寻找的不是历史上"最赚钱"的权重，而是未来更值得信任、能够长期陪伴的权重组合！)<br><br>Next step (Day 29): how to actually land the weight combination into trading? We need position, rebalancing, risk-control and trading-cost management! (下一步：如何将权重组合真正落地到交易中？我们需要持仓、调仓、风险控制和交易成本的管理！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_28_factor-combination-weights.html · Distilled from knowledge-base/day_28 (30天学习量化投资 · Day 28) · 2026-09-02
+</footer>
+</div>
+</body>
+</html>

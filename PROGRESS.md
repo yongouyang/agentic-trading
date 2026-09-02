@@ -5,6 +5,38 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-02 (docs) — Day 25–28 knowledge-base extraction
+
+### What was done
+- Extracted the last four slide folders (`knowledge-base/day_25`–`day_28`,
+  8 JPGs each) into HTML docs, same pattern as Day 1–24 (delegated to four
+  k3-256k coder subagents, one per day, per the fast-tier policy):
+  - `docs/day_25_asset-allocation.html` — 多标的与资产配置: strategy
+    diversification ≠ asset diversification; weights; concentration risk;
+    industry exposure; simple-first allocation rules (≤20% stock, ≤40%
+    industry, ±5–10% rebalance band).
+  - `docs/day_26_multi-factor-model.html` — 多因子模型: factor families,
+    Factor Engine (raw→score), standardization (Z-Score/Min-Max), 40/40/20
+    composite model, score→Top-N ranking, Factor Model ≠ Portfolio.
+  - `docs/day_27_factor-backtest.html` — 因子回测: 5-step pipeline, group
+    returns & monotonicity, long-short spreads, IC/ICIR, stability over
+    single-period returns, 7 traits of a research-worthy factor.
+  - `docs/day_28_factor-combination-weights.html` — 因子组合与权重: weight
+    grid search (91-combo ternary grid), the historical-optimum trap,
+    plateau-not-spike stable regions, out-of-sample validation rules.
+- Verification: all four files pass a tag-balance parse; day_25 hero/sections
+  spot-checked against the slides. Subagents flagged (and preserved, with
+  footnotes) two slide typos: day_26 slide 8 duplicate rank "1", day_28
+  slide 3 Scheme B row E's inconsistent 40% weight; day_25 slide 6's
+  105万/105% table kept as printed (slide footnotes it as unrealized gains).
+
+### What's next
+- Commit these four docs (with the user's go-ahead).
+- Unchanged: ~2026-09-04 eastmoney ban re-check ⇒ §A + sentinel eastmoney
+  leg; user decision on chasing ~140 HK names; Phase 2 design (deep tier).
+
+---
+
 ## 2026-09-02 (review + follow-ups) — sanity check of workstream B, then items 1/3/4
 
 ### Review of the Qwen3.8-Flash session (workstream B, commit 3f0998c)

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Factor Model — Factor Engine, Factor Model &amp; Portfolio | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-value{--accent:#1d4ed8}.c-quality{--accent:#15803d}.c-mom{--accent:#ea580c}
+  .c-engine{--accent:#15803d}.c-model{--accent:#ea580c}.c-port{--accent:#7e22ce}.c-data{--accent:#1d4ed8}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  .compare-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.compare,.compare-3{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel.purple{border-top:4px solid var(--purple)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}.panel.purple h4{color:var(--purple)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  /* weight bar */
+  .alloc-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;border:1.5px solid var(--line);margin:14px 0;font-size:13px;font-weight:700;color:#fff}
+  .alloc-bar .seg{display:flex;align-items:center;justify-content:center}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Factor Investing</div>
+  <h1>Multi-Factor Model — Evaluate Stocks from Multiple Dimensions</h1>
+  <p>Facing thousands of stocks, we can't look at just one indicator — score from multiple angles, combine the scores, and find the batch most worth investing in. Different factors reflect company value from different angles; combining factors improves stock-selection stability. (用多个维度评估股票，选出更好的投资标的。)</p>
+  <div class="src">Source: knowledge-base/day_26 (IMG_6689–IMG_6696), "30天学习量化投资 · Day 26: 多因子模型" · Extracted 2026-09-02</div>
+</header>
+
+<!-- ============ 1. Overview ============ -->
+<section>
+  <h2><span class="num">1</span>Multi-Factor Model — Overview &amp; Basic Pipeline</h2>
+  <p class="subtitle">Core idea: Value (便宜吗?) + Quality (公司好吗?) + Momentum (趋势好吗?) = a more comprehensive evaluation (更全面的评估).</p>
+
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="icon">🗄️</div><div class="name">1. Market Data (市场数据)</div><div class="cn">financials, prices, fundamentals…</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-engine" style="--stepbg:var(--green-bg)"><div class="icon">⚙️</div><div class="name">2. Factor Engine (因子计算)</div><div class="cn">score each factor: value (PE, PB), quality (ROE, margins), momentum (returns)…</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="icon">🧩</div><div class="name">3. Factor Model (因子组合)</div><div class="cn">combine factors into a composite score: Value 40% + Quality 40% + Momentum 20% → score / ranking</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">4. Portfolio (资金分配)</div><div class="cn">from ranking &amp; risk, decide what to buy and how much: position building, risk control, sizing</div></div>
+  </div>
+
+  <h3>Remember the three roles (记住三个角色)</h3>
+  <div class="modules">
+    <div class="mod c-engine"><div class="tag">⚙️ compute</div><h4>Factor Engine</h4><p>Calculates factors (计算因子) — turns raw data into factor scores.</p></div>
+    <div class="mod c-model"><div class="tag">🧩 combine</div><h4>Factor Model</h4><p>Combines factors (组合因子) — weighted blend into one composite score.</p></div>
+    <div class="mod c-port"><div class="tag">🥧 allocate</div><h4>Portfolio</h4><p>Allocates capital (资金分配) — decides what to buy and how much.</p></div>
+  </div>
+
+  <h3>What you'll learn today (今天你将收获)</h3>
+  <ol class="duty">
+    <li>What is a multi-factor model?</li>
+    <li>Common value, quality, and momentum factors</li>
+    <li>Factor calculation: from raw data to factor scores</li>
+    <li>Factor combination: how to get a composite score</li>
+    <li>The relationship between factor models and portfolios</li>
+    <li>Pros, cons, and pitfalls of factor models</li>
+  </ol>
+
+  <div class="quote"><strong>"Investing is not gambling — it's using scientific methods to find certainty in an uncertain market!"</strong> (投资不是赌博，而是用科学的方法，在不确定的市场中寻找确定性！)</div>
+</section>
+
+<!-- ============ 2. What is a Factor ============ -->
+<section>
+  <h2><span class="num">2</span>What is a Factor? (什么是因子?)</h2>
+  <p class="subtitle">A factor = a characteristic that can explain differences in stock returns (因子 = 能够解释股票收益差异的特征). It's the indicator we use to measure how a stock performs on some dimension.</p>
+
+  <div class="quote">Different factors describe a company from different angles; combining multiple factors evaluates stocks more comprehensively and more stably. Value finds "cheap" companies, Quality finds "excellent" companies, Momentum finds "strong" companies.</div>
+
+  <h3>Three common factor families with examples (三类常用因子及示例)</h3>
+  <div class="compare-3">
+    <div class="spec c-value" style="margin:0">
+      <h3 style="font-size:16px">1. Value factors (价值因子)</h3>
+      <p style="font-size:13.5px;color:var(--muted)">Look for underpriced companies (寻找价格被低估的公司).</p>
+      <table>
+        <tr><th>Factor</th><th>Meaning</th></tr>
+        <tr><td>PE (市盈率)</td><td>Lower is better</td></tr>
+        <tr><td>PB (市净率)</td><td>Lower is better</td></tr>
+        <tr><td>Dividend yield (股息率)</td><td>Higher is better</td></tr>
+        <tr><td>FCF Yield (自由现金流收益率)</td><td>Higher is better</td></tr>
+      </table>
+      <p style="font-size:13.5px"><b>Questions it asks:</b> Is the company undervalued by the market? Is the current price cheap? (价格 vs 内在价值)</p>
+    </div>
+    <div class="spec c-quality" style="margin:0">
+      <h3 style="font-size:16px">2. Quality factors (质量因子)</h3>
+      <p style="font-size:13.5px;color:var(--muted)">Look for companies with excellent operating quality (寻找经营质量优秀的公司).</p>
+      <table>
+        <tr><th>Factor</th><th>Meaning</th></tr>
+        <tr><td>ROE (净资产收益率)</td><td>Higher is better</td></tr>
+        <tr><td>Gross margin (毛利率)</td><td>Higher is better</td></tr>
+        <tr><td>Debt-to-asset ratio (资产负债率)</td><td>Lower is better</td></tr>
+        <tr><td>Net-profit stability (净利润稳定性)</td><td>Higher is better</td></tr>
+        <tr><td>Operating cash flow (经营现金流)</td><td>Higher is better</td></tr>
+      </table>
+      <p style="font-size:13.5px"><b>Questions it asks:</b> Is the company good at making money? Are its finances healthy? Can it keep earning? (盈利能力 + 财务健康)</p>
+    </div>
+    <div class="spec c-mom" style="margin:0">
+      <h3 style="font-size:16px">3. Momentum factors (动量因子)</h3>
+      <p style="font-size:13.5px;color:var(--muted)">Look for companies in an uptrend (寻找趋势向上的公司).</p>
+      <table>
+        <tr><th>Factor</th><th>Meaning</th></tr>
+        <tr><td>Past 1-month return</td><td>Higher is better</td></tr>
+        <tr><td>Past 3-month return</td><td>Higher is better</td></tr>
+        <tr><td>Past 6-month return</td><td>Higher is better</td></tr>
+        <tr><td>Past 12-month return</td><td>Higher is better</td></tr>
+      </table>
+      <p style="font-size:13.5px"><b>Questions it asks:</b> Is the market buying it recently? Is the trend strengthening? (价格趋势 + 市场认可度)</p>
+    </div>
+  </div>
+
+  <h3>Why use multiple factors? (为什么要使用多个因子?)</h3>
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+    <div class="mod c-value"><h4>More complete (更全面)</h4><p>Cover different dimensions; information is more complete.</p></div>
+    <div class="mod c-quality"><h4>More robust (更稳健)</h4><p>A single factor may fail; a combination is steadier.</p></div>
+    <div class="mod c-mom"><h4>Diversifies risk (分散风险)</h4><p>Avoids the extreme risk of relying on one factor.</p></div>
+    <div class="mod c-port"><h4>Complementary (互补增强)</h4><p>Different factors can complement and strengthen each other.</p></div>
+  </div>
+  <p style="font-size:14px">Like a jigsaw puzzle — every piece matters, and only combined is the picture complete. (就像拼图，每一块都重要，组合起来才更完整！)</p>
+
+  <div class="spec c-model">
+    <h3><span class="tag">example</span>A simple example</h3>
+    <div class="flow" style="padding:14px 10px">
+      <div class="step" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red)">Only lowest-PE companies</div><div class="cn">⚠️ may be cheap but terrible companies</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red)">Only strongest momentum</div><div class="cn">⚠️ may be over-hyped companies</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="name">Value + Quality + Momentum</div><div class="cn">more likely to find cheap, excellent, uptrending companies</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-quality" style="--stepbg:var(--green-bg)"><div class="name">Higher composite score 🏆</div><div class="cn">more stable long-term performance</div></div>
+    </div>
+    <div class="keypoint">💡 <b>Factors are not a silver bullet, but a sensible combination of multiple factors can significantly improve the win rate and stability of stock selection.</b> (因子不是万能的，但多个合理的因子组合，可以显著提高选股的胜率和稳定性！)</div>
+  </div>
+</section>
+
+<!-- ============ 3. Factor Engine ============ -->
+<section>
+  <h2><span class="num">3</span>Factor Engine — Computing Factors (计算因子)</h2>
+  <p class="subtitle">The Factor Engine's job: turn raw data into factor scores that can be compared and graded. The complete process from raw data to factor score.</p>
+
+  <h3>Typical factor-calculation pipeline (因子计算的典型流程)</h3>
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="icon">🗄️</div><div class="name">1. Raw data</div><div class="cn">financials, quotes, fundamentals</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--sky-bg)"><div class="icon">⚙️</div><div class="name">2. Data processing</div><div class="cn">cleaning, dedup, missing-value &amp; outlier handling</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-engine" style="--stepbg:var(--green-bg)"><div class="icon">🧮</div><div class="name">3. Factor construction</div><div class="cn">compute metrics (PE, ROE, returns…)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="icon">📈</div><div class="name">4. Standardization</div><div class="cn">unify scale &amp; direction: Z-Score / percentile rank</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🏅</div><div class="name">5. Factor score</div><div class="cn">map to 0–100; higher = better on that factor</div></div>
+  </div>
+
+  <div class="spec c-engine">
+    <h3><span class="tag">example</span>Common factors: raw metric → factor score</h3>
+    <table>
+      <tr><th>Factor family</th><th>Raw metric (example)</th><th>Raw values</th><th>Direction</th><th>After processing (standardized)</th><th>Factor score (0–100)</th></tr>
+      <tr>
+        <td><b>Value</b><br>💎</td><td>PE (市盈率), lower is better</td><td>A: 8<br>B: 20<br>C: 35</td>
+        <td style="color:var(--red)"><b>Negative (负向)</b><br>lower is better</td>
+        <td>Percentile rank (low→high):<br>A: 95% (very cheap)<br>B: 50%<br>C: 5% (very expensive)</td>
+        <td class="num">A: <b>95</b><br>B: <b>50</b><br>C: <b>5</b></td>
+      </tr>
+      <tr>
+        <td><b>Quality</b><br>🛡️</td><td>ROE (净资产收益率), higher is better</td><td>A: 18%<br>B: 10%<br>C: 5%</td>
+        <td style="color:var(--green)"><b>Positive (正向)</b><br>higher is better</td>
+        <td>Z-Score standardization:<br>A: +1.2<br>B: 0.1<br>C: −1.5</td>
+        <td class="num">A: <b>89</b><br>B: <b>53</b><br>C: <b>12</b></td>
+      </tr>
+      <tr>
+        <td><b>Momentum</b><br>📈</td><td>Past 6-month return, higher is better</td><td>A: +30%<br>B: +10%<br>C: −5%</td>
+        <td style="color:var(--orange)"><b>Positive (正向)</b><br>higher is better</td>
+        <td>Percentile rank (high→low):<br>A: 90%<br>B: 60%<br>C: 10%</td>
+        <td class="num">A: <b>90</b><br>B: <b>60</b><br>C: <b>10</b></td>
+      </tr>
+    </table>
+    <div class="keypoint">💡 <b>Goal of processing:</b> make every factor a comparable score (usually 0–100) with a consistent direction — higher is always better. (让所有因子都变成可比较的分数，并且方向一致。)</div>
+  </div>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Why do we need a Factor Engine? (为什么需要 Factor Engine?)</h4>
+      <ul>
+        <li><b>Unified standard (统一标准):</b> factors have different units and ranges; adding them raw would be distorted.</li>
+        <li><b>Unified direction (统一方向):</b> some factors are better high, some better low — all must become "bigger is better".</li>
+        <li><b>Noise reduction (降低噪音):</b> handle outliers and missing values, improving factor stability.</li>
+        <li><b>Comparability (可比较性):</b> only stocks scored on the same ruler are meaningfully comparable.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>Practice tips (实践小贴士)</h4>
+      <ul>
+        <li>Factor calculation frequency: usually monthly / quarterly.</li>
+        <li>Update frequency should match trading frequency.</li>
+        <li>Handle abnormal factor values promptly (e.g. clip extreme values).</li>
+        <li>Factors need regular backtesting to verify they still work.</li>
+        <li>Record factor history — avoid look-ahead (未来函数) problems!</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="spec c-value">
+    <h3><span class="tag">example</span>Simple example — the PE factor</h3>
+    <table>
+      <tr><th></th><th></th><th></th><th></th><th></th><th>(outlier 异常)</th></tr>
+      <tr><td>Raw PE</td><td class="num">5</td><td class="num">10</td><td class="num">20</td><td class="num">40</td><td class="num">100</td></tr>
+      <tr><td>Clipped to 5–50 (去极值)</td><td class="num">5</td><td class="num">10</td><td class="num">20</td><td class="num">40</td><td class="num">50</td></tr>
+      <tr><td>Percentile (low→high)</td><td class="num">100%</td><td class="num">75%</td><td class="num">50%</td><td class="num">25%</td><td class="num">5%</td></tr>
+      <tr><td>Factor score (0–100)</td><td class="num"><b>100</b></td><td class="num"><b>75</b></td><td class="num"><b>50</b></td><td class="num"><b>25</b></td><td class="num"><b>5</b></td></tr>
+    </table>
+  </div>
+
+  <div class="quote"><strong>Factor Engine = factor factory (因子工厂).</strong> It processes all kinds of raw data into high-quality factor scores, laying a solid foundation for factor combination and stock selection. (把各种原始数据加工成高质量的因子得分，为后续的因子组合和选股打下坚实的基础！)</div>
+</section>
+
+<!-- ============ 4. Why factors can't be added directly ============ -->
+<section>
+  <h2><span class="num">4</span>Why Can't Factors Be Added Directly? (为什么因子不能直接相加?)</h2>
+  <p class="subtitle">Different units, different directions, different ranges — standardization is required first. (量纲不同、方向不同、范围不同，需要标准化处理。)</p>
+
+  <div class="spec c-mom">
+    <h3><span class="tag">example</span>One stock, three raw factor values</h3>
+    <table>
+      <tr><th></th><th>💎 PE (lower better)</th><th>🛡️ ROE (higher better)</th><th>📈 Past-6M return (higher better)</th></tr>
+      <tr><td>Raw value</td><td class="num">12</td><td class="num">18%</td><td class="num">+32%</td></tr>
+      <tr><td>Range / unit</td><td>usually 5 ~ 100+, no unit</td><td>usually −20% ~ 30%+, percentage</td><td>usually −50% ~ +100%+, percentage</td></tr>
+      <tr><td>Direction</td><td style="color:var(--red)"><b>Negative (越低越好)</b></td><td style="color:var(--green)"><b>Positive (越高越好)</b></td><td style="color:var(--green)"><b>Positive (越高越好)</b></td></tr>
+      <tr><td>Can we add them directly?</td><td colspan="3" style="text-align:center;color:var(--red);font-weight:700">✗ No! (不能!)</td></tr>
+    </table>
+    <div class="keypoint">💡 <b>Conclusion: direction inconsistent, units inconsistent, ranges inconsistent — you MUST standardize first!</b> (方向不一致、量纲不一致、范围不一致，必须先标准化！)</div>
+  </div>
+
+  <h3>Typical standardization pipeline (标准化处理的典型流程)</h3>
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="name">1. Outlier handling (异常值处理)</div><div class="cn">remove extremes, reduce interference from anomalous data</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-quality" style="--stepbg:var(--green-bg)"><div class="name">2. Unify direction (方向统一)</div><div class="cn">positive factors unchanged; negative factors inverted, e.g. PE → −PE</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-mom" style="--stepbg:var(--orange-bg)"><div class="name">3. Standardize / normalize (标准化/归一化)</div><div class="cn">Z-Score: Z = (x−μ)/σ, or Min-Max: X′ = (x−min)/(max−min)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name">4. Rank / percentile (排名/分位数)</div><div class="cn">convert to percentile rank — more robust (更稳健)</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--sky-bg)"><div class="name">5. Factor score (因子得分)</div><div class="cn">map to 0–100, bigger is better</div></div>
+  </div>
+  <p style="font-size:14px">💡 Only the resulting factor scores are comparable (可比性) and can be combined!</p>
+
+  <div class="compare">
+    <div class="spec c-value" style="margin:0">
+      <h3 style="font-size:16px"><span class="tag">example</span>Standardized factor scores</h3>
+      <table>
+        <tr><th>Stock</th><th>PE (std.)</th><th>ROE (std.)</th><th>Momentum (std.)</th></tr>
+        <tr><td>Company A</td><td class="num">82</td><td class="num">76</td><td class="num">91</td></tr>
+        <tr><td>Company B</td><td class="num">55</td><td class="num">63</td><td class="num">58</td></tr>
+        <tr><td>Company C</td><td class="num">20</td><td class="num">35</td><td class="num">18</td></tr>
+        <tr><td>Company D</td><td class="num">90</td><td class="num">88</td><td class="num">74</td></tr>
+        <tr><td>Company E</td><td class="num">45</td><td class="num">52</td><td class="num">67</td></tr>
+        <tr><td><b>Score range</b></td><td class="num">0 ~ 100</td><td class="num">0 ~ 100</td><td class="num">0 ~ 100</td></tr>
+      </table>
+      <p style="font-size:13.5px">💡 Now all factors sit on the same 0–100 scale — comparable and combinable!</p>
+    </div>
+    <div class="spec c-model" style="margin:0">
+      <h3 style="font-size:16px"><span class="tag">compare</span>Common standardization methods</h3>
+      <table>
+        <tr><th>Method</th><th>Pros</th><th>Cons</th><th>Best for</th></tr>
+        <tr><td><b>Z-Score</b> 标准化</td><td>Uses mean &amp; std-dev; handles different distributions</td><td>Strongly affected by extreme values</td><td>Factor distribution close to normal</td></tr>
+        <tr><td><b>Min-Max</b> 归一化</td><td>Simple &amp; intuitive; result in 0~1 (or 0~100)</td><td>Strongly affected by extreme values</td><td>Metrics with clear upper/lower bounds</td></tr>
+        <tr><td><b>Percentile rank</b> 分位数排名</td><td>Very robust; unaffected by extreme values</td><td>Loses some numeric information</td><td>Most quant factor scenarios (推荐)</td></tr>
+      </table>
+      <p style="font-size:13.5px">💡 Common practice: percentile-rank first, then map to 0–100. (先分位数排名，再映射到 0 ~ 100 分！)</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>Standardization key points (标准要点总结)</h4>
+      <ul>
+        <li>Factors come from different dimensions; raw values cannot be added directly.</li>
+        <li>Pipeline: outlier handling → direction unification → standardization → rank mapping.</li>
+        <li>Only the final 0–100 factor scores are comparable.</li>
+        <li>Standardization is the most critical — and most easily overlooked — step in a factor model!</li>
+      </ul>
+      <div class="keypoint">📌 <b>One line to remember:</b> unprocessed factors ≠ usable factors; standardized factors = comparable factors. (不处理的因子 ≠ 因子；标准化的因子 = 可比较的因子。)</div>
+    </div>
+    <div class="panel neutral">
+      <h4>One more intuitive example (再看一个直观例子)</h4>
+      <div class="flow" style="padding:12px 8px">
+        <div class="step" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red)">Raw values ✗</div><div class="cn">PE = 12, ROE = 18%, momentum = +32% — adding them is meaningless!</div></div>
+        <div class="arrow">→</div>
+        <div class="step" style="--stepbg:var(--green-bg)"><div class="name" style="color:var(--green)">Standardized ✓</div><div class="cn">PE score 82, ROE score 76, momentum score 91</div></div>
+        <div class="arrow">→</div>
+        <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="name">Weighted blend</div><div class="cn">Value 40% + Quality 40% + Momentum 20% → 82×40% + 76×40% + 91×20% = 82.4</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote"><strong>Remember:</strong> the more scientific the factor processing, the more stable the factor model, and the more reliable the stock selection. (因子处理得越科学，因子模型越稳定，选股效果越可靠！)</div>
+</section>
+
+<!-- ============ 5. Factor Model ============ -->
+<section>
+  <h2><span class="num">5</span>Factor Model — Combining Factors (组合因子)</h2>
+  <p class="subtitle">The Factor Model's job: combine multiple factor scores with sensible weights into a composite score (综合得分) for every stock.</p>
+
+  <div class="spec c-model">
+    <h3><span class="tag">example</span>A common three-factor model</h3>
+    <div class="alloc-bar">
+      <div class="seg" style="background:var(--blue); width:40%">Value 价值 40%</div>
+      <div class="seg" style="background:var(--green); width:40%">Quality 质量 40%</div>
+      <div class="seg" style="background:var(--orange); width:20%">Momentum 动量 20%</div>
+    </div>
+    <p style="font-size:14px">Value factor + Quality factor + Momentum factor = Composite score (0–100). Weights sum to 100% and can be tuned and optimized per strategy goals. (权重之和 = 100%，可根据策略目标进行调整和优化。)</p>
+
+    <h3>How is the composite score computed? (综合得分如何计算?)</h3>
+    <table>
+      <tr><th>Stock</th><th>Value score</th><th>Quality score</th><th>Momentum score</th><th>Computation (value×40% + quality×40% + momentum×20%)</th><th>Composite (0–100)</th></tr>
+      <tr><td>Company A</td><td class="num">82</td><td class="num">76</td><td class="num">91</td><td>82×40% + 76×40% + 91×20% = 32.8 + 30.4 + 18.2</td><td class="num"><b>81.4</b></td></tr>
+      <tr><td>Company B</td><td class="num">55</td><td class="num">63</td><td class="num">58</td><td>55×40% + 63×40% + 58×20% = 22.0 + 25.2 + 11.6</td><td class="num"><b>58.8</b></td></tr>
+      <tr><td>Company C</td><td class="num">20</td><td class="num">35</td><td class="num">18</td><td>20×40% + 35×40% + 18×20% = 8.0 + 14.0 + 3.6</td><td class="num"><b>25.6</b></td></tr>
+      <tr><td>Company D</td><td class="num">90</td><td class="num">88</td><td class="num">74</td><td>90×40% + 88×40% + 74×20% = 36.0 + 35.2 + 14.8</td><td class="num" style="color:var(--red)"><b>86.0</b></td></tr>
+      <tr><td>Company E</td><td class="num">45</td><td class="num">52</td><td class="num">67</td><td>45×40% + 52×40% + 67×20% = 18.0 + 20.8 + 13.4</td><td class="num"><b>52.2</b></td></tr>
+    </table>
+    <p style="font-size:14px">💡 The higher the composite score, the better the combined performance across the <b style="color:var(--blue)">value</b>, <b style="color:var(--green)">quality</b>, and <b style="color:var(--orange)">momentum</b> dimensions.</p>
+
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Composite score ranking (综合得分排名)</h4>
+        <table>
+          <tr><th>Rank</th><th>Stock</th><th>Score</th></tr>
+          <tr><td>🥇</td><td>Company D</td><td class="num">86.0</td></tr>
+          <tr><td>🥈</td><td>Company A</td><td class="num">81.4</td></tr>
+          <tr><td>🥉</td><td>Company B</td><td class="num">58.8</td></tr>
+          <tr><td>4</td><td>Company E</td><td class="num">52.2</td></tr>
+          <tr><td>5</td><td>Company C</td><td class="num">25.6</td></tr>
+        </table>
+        <p style="font-size:13.5px">In the end we can sort all stocks by composite score and pick the top batch (排序，选出得分靠前的一批!).</p>
+      </div>
+      <div class="panel purple">
+        <h4>Weights shape the composite score (权重影响综合得分)</h4>
+        <ul>
+          <li><b>Raise the value weight</b> (e.g. 50% / 30% / 20%): high-value stocks rise more in the ranking; style tilts toward "low valuation" (低估值).</li>
+          <li><b>Raise the momentum weight</b> (e.g. 30% / 40% / 30%): strong-momentum stocks more easily reach the front; style tilts toward "trend following" (趋势跟随).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="compare-3">
+      <div class="panel good">
+        <h4>Key points (关键要点)</h4>
+        <ul>
+          <li>Core of a Factor Model: sensible weighting + scientific combination (合理赋权 + 科学组合).</li>
+          <li>Weight settings significantly affect selection results and strategy style.</li>
+          <li>Weights are not fixed — they need periodic testing and optimization.</li>
+          <li>The composite score is only step one of selection; it doesn't directly determine position size.</li>
+          <li>Multi-factor combination reduces single-factor failure risk.</li>
+        </ul>
+      </div>
+      <div class="panel neutral">
+        <h4>How are weights determined? (权重如何确定?)</h4>
+        <ul>
+          <li>🎯 <b>Rule of thumb (经验法则):</b> set initial weights from your investment philosophy.</li>
+          <li>📊 <b>Historical backtest (历史回测):</b> search for weight combinations with better historical performance.</li>
+          <li>🤖 <b>Machine learning (机器学习):</b> let algorithms learn optimal weights automatically.</li>
+          <li>🔄 <b>Dynamic adjustment (动态调整):</b> adapt weights to the market environment.</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>Tip (小贴士)</h4>
+        <p style="font-size:14px">There is no absolutely correct answer for weights — fitting your own strategy goals and risk preference matters most. (权重没有绝对正确答案，适合自己的策略目标和风险偏好才是最重要的！)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote"><strong>Factor Model = factor combiner (因子组合器):</strong> it merges the signals of many factors into a more stable, more comprehensive basis for stock selection. Next: how high-scoring stocks are handed to the Portfolio for capital allocation. (把多个因子的信号整合起来，形成更稳定、更全面的选股依据！)</div>
+</section>
+
+<!-- ============ 6. Composite Score & Ranking ============ -->
+<section>
+  <h2><span class="num">6</span>Composite Score &amp; Stock Ranking (综合评分与股票 Ranking)</h2>
+  <p class="subtitle">Turn scores into an ordering and find the stocks most worth watching — with a composite score we can rank all stocks; the higher the score, the more worthy of attention (越值得关注).</p>
+
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="name">1. Compute composite score</div><div class="cn">0–100 for every stock</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-engine" style="--stepbg:var(--green-bg)"><div class="name">2. Score table of all stocks</div><div class="cn">one row per stock</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="name">3. Sort high → low</div><div class="cn">Ranking</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name">4. Pick Top N</div><div class="cn">as candidate pool (备选池)</div></div>
+  </div>
+
+  <div class="spec c-model">
+    <h3><span class="tag">example</span>Stock composite-score leaderboard</h3>
+    <table>
+      <tr><th>Rank</th><th>Stock</th><th>Value (40%)</th><th>Quality (40%)</th><th>Momentum (20%)</th><th>Composite</th><th>Watch level</th><th>Note</th></tr>
+      <tr><td>🥇</td><td>Company D</td><td class="num">90</td><td class="num">88</td><td class="num">74</td><td class="num"><b>86.0</b></td><td>★★★★★</td><td>Highest score — priority attention</td></tr>
+      <tr><td>🥈</td><td>Company A</td><td class="num">82</td><td class="num">76</td><td class="num">91</td><td class="num"><b>81.4</b></td><td>★★★★☆</td><td>Balanced across factors</td></tr>
+      <tr><td>🥉</td><td>Company B</td><td class="num">55</td><td class="num">63</td><td class="num">58</td><td class="num"><b>58.8</b></td><td>★★★☆☆</td><td>Mid-level — observe</td></tr>
+      <tr><td>4</td><td>Company E</td><td class="num">45</td><td class="num">52</td><td class="num">67</td><td class="num"><b>52.2</b></td><td>★★★☆☆</td><td>Good momentum — keep tracking</td></tr>
+      <tr><td>5</td><td>Company C</td><td class="num">20</td><td class="num">35</td><td class="num">18</td><td class="num"><b>25.6</b></td><td>★☆☆☆☆</td><td>Weak overall — skip for now</td></tr>
+    </table>
+    <div class="keypoint">💡 <b>Tips (小贴士):</b> Ranking is only step one — not the final buy decision! Combine with risk, valuation, and industry exposure for the final call. Refresh the ranking regularly and track dynamically. (排名只是第一步，不是最终买入决定！)</div>
+  </div>
+
+  <div class="compare">
+    <div class="spec c-port" style="margin:0">
+      <h3 style="font-size:16px"><span class="tag">example</span>Top-N candidate pool (Top 3)</h3>
+      <p style="font-size:13.5px;color:var(--muted)">Only the top-N highest-scoring stocks go to deep research and capital allocation.</p>
+      <table>
+        <tr><th></th><th>Company D 🥇</th><th>Company A 🥈</th><th>Company B 🥉</th></tr>
+        <tr><td>Composite</td><td class="num">86.0</td><td class="num">81.4</td><td class="num">58.8</td></tr>
+        <tr><td>Profile</td><td colspan="3">Radar view across value / quality / momentum / risk / valuation for each candidate</td></tr>
+      </table>
+      <p style="font-size:13.5px">How large Top N is depends on strategy style and capital size; common range: 10 ~ 50 stocks. (Top N 的数量取决于策略风格和资金规模。)</p>
+    </div>
+    <div class="spec c-value" style="margin:0">
+      <h3 style="font-size:16px"><span class="tag">compare</span>Selection by strategy style</h3>
+      <table>
+        <tr><th>Style</th><th>Top N size</th><th>Ranking emphasis</th><th>Trait</th></tr>
+        <tr><td><b>Value strategy</b></td><td class="num">20 ~ 30</td><td>Higher value-factor weight</td><td>Find undervalued stocks</td></tr>
+        <tr><td><b>Quality strategy</b></td><td class="num">20 ~ 30</td><td>Higher quality-factor weight</td><td>Find quality companies</td></tr>
+        <tr><td><b>Momentum strategy</b></td><td class="num">30 ~ 50</td><td>Higher momentum-factor weight</td><td>Catch strong trends</td></tr>
+        <tr><td><b>Balanced strategy</b></td><td class="num">20 ~ 40</td><td>Three factors balanced</td><td>More robust overall</td></tr>
+      </table>
+      <p style="font-size:13.5px">💡 There's no "best" Top N — only the Top N that best fits the strategy. (没有最好的 Top N，只有最适合策略的 Top N！)</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>What the composite score means (综合评分的意义)</h4>
+      <ul>
+        <li>🎯 <b>Quantifies multi-dimensional information</b> — avoids single-indicator bias.</li>
+        <li>🛡️ <b>Improves selection stability</b> — factors complement each other.</li>
+        <li>📈 <b>Raises strategy win rate</b> and long-term return potential.</li>
+        <li>🥧 <b>Provides a solid basis</b> for portfolio construction.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>Practical advice (实践建议)</h4>
+      <ul>
+        <li>Recompute factor scores regularly (e.g. monthly / quarterly).</li>
+        <li>Watch factor-distribution changes to avoid factor failure.</li>
+        <li>Record historical rankings to observe factor effectiveness.</li>
+        <li>Make final decisions together with fundamentals, valuation, and risk.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote"><strong>Summary:</strong> the higher the composite score, the more worthy of attention. But remember — ranking is only the starting point; deep research and risk control are the key. (综合得分越高，越值得关注！但记住：排名只是起点，深入研究和风险控制才是关键！)</div>
+</section>
+
+<!-- ============ 7. Factor Model ≠ Portfolio ============ -->
+<section>
+  <h2><span class="num">7</span>Factor Model ≠ Portfolio (因子模型 ≠ Portfolio)</h2>
+  <p class="subtitle">A high score does not mean a big position — different jobs, each doing its own duty. The factor model only "selects stocks more worth watching"; the real "how much to buy, how to allocate capital" is the Portfolio's work. (评分高不代表仓位高，职责不同，各司其职。)</p>
+
+  <div class="flow">
+    <div class="step c-engine" style="--stepbg:var(--green-bg)"><div class="icon">⚙️</div><div class="name">Factor Engine</div><div class="cn">computes factors — provides raw material; derives each factor's score from data</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="icon">🧩</div><div class="name">Factor Model</div><div class="cn">combines factors — outputs scores/rankings; weights factors and grades stocks</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="icon">🥧</div><div class="name">Portfolio</div><div class="cn">allocates capital — decides what &amp; how much to buy, given risk, constraints, goals</div></div>
+  </div>
+
+  <div class="spec c-port">
+    <h3><span class="tag">question</span>Why doesn't a high score mean a big buy? (为什么评分高，不一定买很多?)</h3>
+    <div class="cols">
+      <div>
+        <table>
+          <tr><th>Stock</th><th>Score</th><th>Rank</th><th>Buy?</th><th>Position</th><th>Reason</th></tr>
+          <tr><td>Company A</td><td class="num">92</td><td>1</td><td>✅</td><td class="num">4%</td><td>Valuation high — cap the position</td></tr>
+          <tr><td>Company B</td><td class="num">85</td><td>2</td><td>✅</td><td class="num">6%</td><td>Excellent overall — core holding</td></tr>
+          <tr><td>Company C</td><td class="num">78</td><td>3</td><td>✅</td><td class="num">3%</td><td>Industry weight already high — limit exposure</td></tr>
+          <tr><td>Company D</td><td class="num">71</td><td>4</td><td>❌</td><td class="num">0%</td><td>Poor liquidity — skip for now</td></tr>
+          <tr><td>Company E</td><td class="num">68</td><td>5</td><td>✅</td><td class="num">2%</td><td>Held for diversification</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="io-box" style="--accent:var(--orange)">
+          <b style="color:var(--orange)">What Portfolio must also consider (Portfolio 还需要考虑的因素)</b>
+          🛡️ <b>Risk control (风险控制):</b> cap single-stock / industry / portfolio risk exposure.<br>
+          🥧 <b>Industry constraints (行业约束):</b> avoid over-concentration in one industry.<br>
+          💰 <b>Money management (资金管理):</b> cash ratio, max-drawdown control.<br>
+          📊 <b>Trading constraints (交易约束):</b> liquidity, turnover, transaction costs.<br>
+          🎯 <b>Investment goals (投资目标):</b> return target, risk appetite, holding period.
+        </div>
+      </div>
+    </div>
+    <div class="keypoint">💡 <b>Core idea: the factor model tells us "who is better"; the Portfolio decides "how to buy and how much".</b> (因子模型告诉我们"谁更好"，Portfolio 决定"怎么买、买多少"！)</div>
+  </div>
+
+  <div class="compare">
+    <div class="spec c-value" style="margin:0">
+      <h3 style="font-size:16px"><span class="tag">case</span>Same scores, different positions</h3>
+      <table>
+        <tr><th>Stock</th><th>Score</th><th>Value</th><th>Quality</th><th>Mom.</th><th>Portfolio A (balanced)</th><th>Portfolio B (aggressive)</th><th>Portfolio C (defensive)</th></tr>
+        <tr><td>Company A</td><td class="num">90</td><td class="num">85</td><td class="num">88</td><td class="num">95</td><td class="num">5%</td><td class="num">10%</td><td class="num">3%</td></tr>
+        <tr><td>Company B</td><td class="num">85</td><td class="num">80</td><td class="num">80</td><td class="num">90</td><td class="num">6%</td><td class="num">9%</td><td class="num">4%</td></tr>
+        <tr><td>Company C</td><td class="num">78</td><td class="num">75</td><td class="num">82</td><td class="num">65</td><td class="num">4%</td><td class="num">6%</td><td class="num">2%</td></tr>
+        <tr><td>Company D</td><td class="num">72</td><td class="num">70</td><td class="num">70</td><td class="num">75</td><td class="num">3%</td><td class="num">4%</td><td class="num">1%</td></tr>
+        <tr><td>Company E</td><td class="num">68</td><td class="num">65</td><td class="num">60</td><td class="num">70</td><td class="num">2%</td><td class="num">3%</td><td class="num">1%</td></tr>
+        <tr><td>Cash</td><td>–</td><td>–</td><td>–</td><td>–</td><td class="num">80%</td><td class="num">68%</td><td class="num">89%</td></tr>
+        <tr><td><b>Total</b></td><td>–</td><td>–</td><td>–</td><td>–</td><td class="num"><b>100%</b></td><td class="num"><b>100%</b></td><td class="num"><b>100%</b></td></tr>
+      </table>
+      <p style="font-size:13.5px">💡 Same scores, but different risk appetites and strategies can lead to completely different allocations! (同样的评分，不同的风险偏好和策略，仓位分配可以完全不同！)</p>
+    </div>
+    <div class="panel bad" style="align-self:start">
+      <h4>Common mistakes (常见误区)</h4>
+      <ul>
+        <li><b>Mistake 1: higher score → heavier position.</b><br>Correct: weigh risk, valuation, industry, and money management together. (要综合考虑风险、估值、行业和资金管理等多方面因素。)</li>
+        <li><b>Mistake 2: only look at factors, not the portfolio.</b><br>Correct: portfolio-level risk exposure and correlation matter just as much. (组合层面的风险暴露和相关性同样重要。)</li>
+        <li><b>Mistake 3: never rebalance.</b><br>Correct: as markets and holdings change, rebalance regularly to keep the portfolio healthy. (随着市场变化和持仓收益，定期再平衡保持组合健康。)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>The complete pipeline: from data to holdings (完整的流程：从数据到持仓)</h3>
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="name">1. Market Data</div><div class="cn">price, financials, trading, industry raw data</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-engine" style="--stepbg:var(--green-bg)"><div class="name">2. Factor Engine</div><div class="cn">compute all factor scores (0–100)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="name">3. Factor Model</div><div class="cn">weighted combination → composite score &amp; ranking</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name">4. Portfolio</div><div class="cn">with risk &amp; constraints, decide what &amp; how much</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--sky-bg)"><div class="name">5. Execution &amp; monitoring</div><div class="cn">trade execution, portfolio monitoring, periodic rebalancing</div></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>The factor model is the "brain" (大脑) — it helps us pick stocks more intelligently; the Portfolio is the "hands and feet" (手脚) — it helps us deploy capital more sensibly.</b> Remember: scores are only the starting point; scientific capital allocation is the key to long-term stable profits. (评分只是起点，科学的资金分配才是长期稳定盈利的关键！)</div>
+</section>
+
+<!-- ============ 8. Summary ============ -->
+<section>
+  <h2><span class="num">★</span>Day 26 Summary — How the Three Modules Work Together (三大模块如何协同工作)</h2>
+  <p class="subtitle">Data → Factors → Scores → Holdings → Risk control → Rebalancing. From raw data to final positions, the three modules divide the work and interlock to build a scientific, stable, sustainable quant portfolio.</p>
+
+  <div class="flow">
+    <div class="step c-data" style="--stepbg:var(--blue-bg)"><div class="name">Market Data</div><div class="cn">price, financials, trading, industry raw data</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-engine" style="--stepbg:var(--green-bg)"><div class="name">Factor Engine</div><div class="cn">compute factor scores (0–100)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-model" style="--stepbg:var(--orange-bg)"><div class="name">Factor Model</div><div class="cn">weighted combination → composite score &amp; rank</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-port" style="--stepbg:var(--purple-bg)"><div class="name">Portfolio</div><div class="cn">decide what, how much, how to allocate</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--red-bg)"><div class="name" style="color:var(--red)">Risk control</div><div class="cn">monitor exposure; keep portfolio within tolerance</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--stepbg:var(--sky-bg)"><div class="name">Rebalancing</div><div class="cn">adjust regularly; keep strategy effective &amp; risk stable</div></div>
+  </div>
+
+  <h3>Each module's duty (三大模块各司其职)</h3>
+  <div class="compare-3">
+    <div class="spec c-engine" style="margin:0">
+      <h3 style="font-size:16px">1. Factor Engine (计算因子)</h3>
+      <ul class="duty">
+        <li><b>Duty:</b> compute all factor scores from data</li>
+        <li><b>Input:</b> raw data (price, financials, industry…)</li>
+        <li><b>Output:</b> factor scores (0–100)</li>
+      </ul>
+      <div class="io-box">
+        <b>Common factor examples</b>
+        💎 <b>Value:</b> PE, PB, dividend yield, FCF Yield…<br>
+        🛡️ <b>Quality:</b> ROE, net margin, debt ratio, cash flow…<br>
+        📈 <b>Momentum:</b> 3M/6M/12M returns, trend strength…
+      </div>
+    </div>
+    <div class="spec c-model" style="margin:0">
+      <h3 style="font-size:16px">2. Factor Model (组合因子)</h3>
+      <ul class="duty">
+        <li><b>Duty:</b> combine factors by weight; output composite score &amp; ranking</li>
+        <li><b>Input:</b> factor scores (0–100)</li>
+        <li><b>Output:</b> stock composite score &amp; ranking</li>
+      </ul>
+      <table>
+        <tr><th>Factor</th><th>Weight</th></tr>
+        <tr><td>Value (价值因子)</td><td class="num">40%</td></tr>
+        <tr><td>Quality (质量因子)</td><td class="num">40%</td></tr>
+        <tr><td>Momentum (动量因子)</td><td class="num">20%</td></tr>
+      </table>
+      <p style="font-size:13px">Composite = 40%×value + 40%×quality + 20%×momentum (result 0–100, higher is better)</p>
+    </div>
+    <div class="spec c-port" style="margin:0">
+      <h3 style="font-size:16px">3. Portfolio (资金分配)</h3>
+      <ul class="duty">
+        <li><b>Duty:</b> decide which stocks, how much, how to allocate capital</li>
+        <li><b>Input:</b> composite scores/ranking, risk constraints, capital situation</li>
+        <li><b>Output:</b> final holdings &amp; positions</li>
+      </ul>
+      <div class="io-box">
+        <b>Core considerations</b>
+        💎 Single-stock max position limit<br>
+        🛡️ Industry / sector max exposure limit<br>
+        ⚠️ Overall portfolio risk (volatility, drawdown…)<br>
+        💱 Liquidity, transaction costs<br>
+        🎯 Investment goals &amp; horizon
+      </div>
+    </div>
+  </div>
+
+  <div class="spec c-value">
+    <h3><span class="tag">example</span>One complete end-to-end example</h3>
+    <div class="cols">
+      <div>
+        <table>
+          <tr><th>Stock</th><th>Value (40%)</th><th>Quality (40%)</th><th>Mom. (20%)</th><th>Score</th><th>Rank</th><th>Suggested position</th></tr>
+          <tr><td>Company A</td><td class="num">82</td><td class="num">76</td><td class="num">91</td><td class="num"><b>81.4</b></td><td>1*</td><td class="num">15%</td></tr>
+          <tr><td>Company B</td><td class="num">55</td><td class="num">63</td><td class="num">58</td><td class="num"><b>58.8</b></td><td>2</td><td class="num">12%</td></tr>
+          <tr><td>Company C</td><td class="num">20</td><td class="num">35</td><td class="num">18</td><td class="num"><b>25.6</b></td><td>5</td><td class="num">0%</td></tr>
+          <tr><td>Company D</td><td class="num">90</td><td class="num">88</td><td class="num">74</td><td class="num"><b>86.0</b></td><td>1</td><td class="num">15%</td></tr>
+          <tr><td>Company E</td><td class="num">45</td><td class="num">52</td><td class="num">67</td><td class="num"><b>52.2</b></td><td>3</td><td class="num">10%</td></tr>
+        </table>
+        <p style="font-size:12px;color:var(--muted)">*Rank column as printed on the slide (companies A and D both marked 1 — likely a slide typo; by score D is #1, A is #2).</p>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>Explanation (解释)</b>
+          • Company D has the highest composite score, but is still subject to risk and position limits — so not all capital goes into it.<br>
+          • Company A also scores high — allocate appropriately.<br>
+          • Company C scores low — no buy for now.<br>
+          • The final Portfolio allocates capital by rules and controls risk.
+        </div>
+        <div class="keypoint">💡 <b>Scores decide "who is more worth buying" (谁更值得买); positions decide "how much to buy and how" (买多少、如何买)!</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>Practice tips (实践小贴士)</h4>
+      <ul>
+        <li>More factors is not better — effectiveness and stability are what count.</li>
+        <li>Validate factors regularly; promptly remove failed ones.</li>
+        <li>Watch correlations between factors — avoid double-counting.</li>
+        <li>Backtesting is only the start; live trading needs risk control and discipline.</li>
+        <li>Stay simple, interpretable, executable — that's how you win long-term.</li>
+      </ul>
+    </div>
+    <div class="panel neutral">
+      <h4>Next steps (下一步学习方向, Day 27+)</h4>
+      <ul>
+        <li><b>Day 27:</b> Risk models &amp; risk control (风险模型与风险控制)</li>
+        <li><b>Day 28:</b> Portfolio optimization (组合优化 — mean-variance / risk parity)</li>
+        <li><b>Day 29:</b> Backtest framework &amp; performance evaluation (回测框架与绩效评估)</li>
+        <li><b>Day 30:</b> Capstone project &amp; review (综合项目实战与复盘总结)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Remember: a good factor model improves our stock-picking win rate; sound portfolio management keeps us alive longer. Long-term stable returns come from scientific methods + strict discipline + continuous iteration.</b> (好的因子模型帮我们提高选股胜率，合理的组合管理帮我们活得更久！长期稳定的收益，来自科学的方法 + 严格的纪律 + 持续的迭代！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_26_multi-factor-model.html · Distilled from knowledge-base/day_26 (30天学习量化投资 · Day 26) · 2026-09-02
+</footer>
+</div>
+</body>
+</html>

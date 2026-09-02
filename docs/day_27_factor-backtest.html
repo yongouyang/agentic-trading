@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factor Backtest — Is This Factor Really Effective? | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-pool{--accent:#1d4ed8}.c-calc{--accent:#15803d}.c-sort{--accent:#ea580c}
+  .c-group{--accent:#7e22ce}.c-ret{--accent:#dc2626}.c-ic{--accent:#0369a1}.c-stab{--accent:#b45309}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  .compare-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.compare,.compare-3{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel.purple{border-top:4px solid var(--purple)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}.panel.purple h4{color:var(--purple)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Factor Research</div>
+  <h1>Factor Backtest — Is This Factor Really Effective?</h1>
+  <p>A factor's quality can't be judged by intuition alone — you must use historical data to verify whether it truly delivers excess returns (超额收益). The essence of backtesting is using history to validate a factor: if it is effective over the long run, it should consistently beat the benchmark (基准). Backtesting is not about proving yourself right — it's about actively seeking evidence of a factor's stable discriminative power.</p>
+  <div class="src">Source: knowledge-base/day_27 (IMG_6697–IMG_6704), "30天学习量化投资 · Day 27: 因子回测" · Extracted 2026-09-02</div>
+</header>
+
+<!-- ============ 1. Why Backtest ============ -->
+<section>
+  <h2><span class="num">1</span>Why Must Factors Be Backtested? — Sound Logic ≠ Actually Works in the Market</h2>
+  <p class="subtitle">Many ideas "sound reasonable", but the market may not move the way we think. A backtest uses historical data to examine a factor's past performance and assess its likely future effectiveness.</p>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Ideas we often have (我们常有这样的想法)</h4>
+      <ul>
+        <li>"Companies with low PE are cheaper — they should rise in the future"</li>
+        <li>"High-ROE companies are higher quality — worth holding long-term"</li>
+        <li>"Stocks that recently rose well may continue their trend"</li>
+      </ul>
+      <p style="margin-top:8px">These logics all sound reasonable — <b>but the market may not follow our script!</b></p>
+    </div>
+    <div class="panel bad">
+      <h4>Why does sound logic ≠ an effective factor?</h4>
+      <ul>
+        <li>The market has <b>already priced in</b> the information (价格已经包含预期)</li>
+        <li>The factor worked in the past, but <b>may fail in the future</b> (market environments change)</li>
+        <li>Too many people know the factor → <b>crowding</b> dilutes its effectiveness (有效性被稀释)</li>
+        <li>Short-term <b>luck</b> plays a big role (偶然表现好不代表一直好)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote"><strong>Goal of backtesting (回测的目的):</strong> verify whether a factor has <b>stable discriminative power</b> and <b>persistent excess-return ability</b>. (验证因子是否具备稳定的区分能力和持续的超额收益能力)</div>
+
+  <div class="spec c-ret">
+    <h3><span class="tag">trap</span>Looking at a single period is misleading</h3>
+    <div class="cols">
+      <div>
+        <div class="io-box">
+          <b>Example: a factor's 1-year curve looks beautiful</b>
+          Factor strategy return steadily above benchmark over the year. But extend to 5 years:
+          <table>
+            <tr><th>Year</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>2024</th></tr>
+            <tr><td>Factor excess return</td><td class="num" style="color:var(--green)">+18%</td><td class="num" style="color:var(--green)">+15%</td><td class="num" style="color:var(--red)">−22%</td><td class="num" style="color:var(--red)">−17%</td><td class="num" style="color:var(--green)">+30%</td></tr>
+          </table>
+          ⚠️ Short-term high returns may be an <b>"illusion" (假象)</b> caused by market style, luck, or a special stretch of market conditions!
+        </div>
+      </div>
+      <div>
+        <div class="io-box">
+          <b>What we should focus on instead: multi-dimensional stability (多维度的稳定性)</b>
+          <ul class="duty" style="padding-left:18px">
+            <li><b>Across time</b> — effective in multiple years and different market environments?</li>
+            <li><b>Across markets</b> — works in A-shares / HK / US stocks?</li>
+            <li><b>Across parameters</b> — different group counts or rebalance frequencies, effect still exists?</li>
+            <li><b>Across stock pools</b> — large caps, small caps, within industries?</li>
+            <li><b>Statistical stability</b> — IC and long-short returns positive long-term with controlled volatility?</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="keypoint">💡 <b>Only multi-dimensional verification increases our confidence in a factor.</b> Backtesting is not about "proving yourself right" — it's about actively seeking evidence of stable, repeatable discriminative power. (只有通过多维度验证，才能增加我们对因子的信心！)</div>
+  </div>
+</section>
+
+<!-- ============ 2. Five-Step Process ============ -->
+<section>
+  <h2><span class="num">2</span>The Complete Factor Backtest Pipeline — 5 Steps</h2>
+  <p class="subtitle">From stock pool to return calculation, verifying a factor step by step: Stock Pool → Compute Factor → Sort → Group → Compute Returns.</p>
+
+  <div class="flow">
+    <div class="step c-pool" style="--stepbg:var(--blue-bg)"><div class="icon">🧺</div><div class="name">① Stock Pool</div><div class="cn">股票池 — pick eligible stocks; e.g. all A-shares excluding ST &amp; suspended</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-calc" style="--stepbg:var(--green-bg)"><div class="icon">🖥️</div><div class="name">② Compute Factor</div><div class="cn">计算因子 — PE, ROE, dividend yield, momentum… raw values (continuous)</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-sort" style="--stepbg:var(--orange-bg)"><div class="icon">📶</div><div class="name">③ Sort by Factor</div><div class="cn">按因子排序 — high to low; higher factor value ranks earlier</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-group" style="--stepbg:var(--purple-bg)"><div class="name">④ Group</div><div class="cn">分组 — split into N groups (e.g. 5); Q1 = highest, Q5 = lowest</div></div>
+    <div class="arrow">→</div>
+    <div class="step c-ret" style="--stepbg:var(--red-bg)"><div class="icon">📈</div><div class="name">⑤ Compute Returns</div><div class="cn">计算收益 — hold each group (e.g. 1 month), observe group returns vs factor</div></div>
+  </div>
+
+  <div class="spec c-group">
+    <h3><span class="tag">example</span>Example: a "value factor" (价值因子), predicting next-month returns</h3>
+    <table>
+      <tr><th>Stock pool (1,000 stocks)</th><th>Factor value</th><th>Sort (high → low)</th><th>Group (5 groups)</th><th>Next-month avg return</th></tr>
+      <tr><td rowspan="5">A, B, C, …, N<br><span style="color:var(--muted)">e.g. A: 2.35, B: −1.12, C: 0.85, N: −0.72</span></td><td rowspan="5">Continuous raw factor values per stock</td><td>A: 2.35</td><td><b>Q1 (Top 20%)</b></td><td class="num" style="color:var(--green)"><b>+3.2%</b></td></tr>
+      <tr><td>C: 0.85</td><td>Q2 (20%–40%)</td><td class="num" style="color:var(--green)">+2.1%</td></tr>
+      <tr><td>…</td><td>Q3 (40%–60%)</td><td class="num" style="color:var(--green)">+1.3%</td></tr>
+      <tr><td>N: −0.72</td><td>Q4 (60%–80%)</td><td class="num" style="color:var(--green)">+0.5%</td></tr>
+      <tr><td>B: −1.12</td><td><b>Q5 (Bottom 20%)</b></td><td class="num" style="color:var(--red)"><b>−0.4%</b></td></tr>
+    </table>
+
+    <div class="cols">
+      <div class="io-box">
+        <b>Key reasoning (关键思路)</b>
+        <ul class="duty" style="padding-left:18px">
+          <li>If the factor works: <b>higher factor group → higher future return</b></li>
+          <li>If it doesn't: group returns are similar or completely irregular</li>
+          <li>If it works <b>in reverse</b>: higher factor group → lower future return</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <b>Tips (小贴士)</b>
+        <ul class="duty" style="padding-left:18px">
+          <li>Common group counts: 5 or 10 groups</li>
+          <li>Common holding periods: 1 week, 1 month, 3 months</li>
+          <li>Rebalance frequency: e.g. monthly at month-end</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="panel neutral">
+        <h4>Factor backtest (因子回测) — today</h4>
+        <p>Studies the factor's predictive power — only whether the factor itself works. Focus: group returns, long-short returns, IC, stability.</p>
+      </div>
+      <div class="panel good">
+        <h4>Strategy backtest (策略回测) — later</h4>
+        <p>Uses the factor to build a strategy — considering buys/sells, position sizing, risk control. Focus: strategy return, drawdown, Sharpe ratio, etc.</p>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 <b>Factor backtest ≠ strategy backtest.</b> Factor backtesting is step one — only when a factor proves effective is it worth building a strategy on. We judge discriminative power by observing group returns, long-short returns, and IC. (因子回测是第一步，只有因子有效，才值得继续做策略！)</div>
+  </div>
+</section>
+
+<!-- ============ 3. Group Returns & Monotonicity ============ -->
+<section>
+  <h2><span class="num">3</span>Group Returns (分组收益) — Checking Factor Monotonicity</h2>
+  <p class="subtitle">Sort stocks by factor value into groups and observe each group's average future return. Ideally returns decrease monotonically — higher factor value, higher future return.</p>
+
+  <div class="spec c-sort">
+    <h3><span class="tag">ideal</span>Ideal case: returns monotonically decrease from Q1 to Q5</h3>
+    <p style="font-size:14px">Assume a value factor predicting next-month returns: Q1 (Top 20%) <b style="color:var(--green)">+3.2%</b> &gt; Q2 <b style="color:var(--green)">+2.1%</b> &gt; Q3 <b style="color:var(--green)">+1.3%</b> &gt; Q4 <b style="color:var(--green)">+0.5%</b> &gt; Q5 (Bottom 20%) <b style="color:var(--red)">−0.4%</b>. Higher factor value → higher future return, with good monotonicity (单调性).</p>
+
+    <div class="compare">
+      <div class="panel bad">
+        <h4>Undesirable: poor monotonicity or reversal</h4>
+        <ul>
+          <li><b>Case A — poor monotonicity:</b> +1.2%, +0.3%, +1.6%, −0.2%, −0.5% — Q3 higher than Q1/Q2, no clear pattern</li>
+          <li><b>Case B — reverse relationship:</b> −0.6%, −0.2%, +0.3%, +1.1%, +2.3% — returns rise as factor value falls</li>
+        </ul>
+        <p style="margin-top:8px">⚠️ Poor monotonicity or reversal suggests the factor may be ineffective — or its direction is simply wrong!</p>
+      </div>
+      <div class="panel purple">
+        <h4>What group returns tell us</h4>
+        <ul>
+          <li><b>Discriminative power (区分能力)</b> — the larger the spread between groups, the stronger the factor's discrimination</li>
+          <li><b>Robustness (稳健程度)</b> — the more stable the monotonicity, the more reliable the factor</li>
+          <li><b>Direction (方向判断)</b> — is higher better, or lower better?</li>
+          <li><b>Strategy foundation (策略基础)</b> — an important prerequisite for later portfolio construction</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Comparison across factors (假设未来 1 个月收益)</h3>
+    <table>
+      <tr><th>Factor</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Q5</th><th>Monotonicity</th><th>Long-short (Q1−Q5)</th><th>Verdict</th></tr>
+      <tr><td><b>Value (越高越好)</b></td><td class="num">3.2%</td><td class="num">2.1%</td><td class="num">1.3%</td><td class="num">0.5%</td><td class="num" style="color:var(--red)">−0.4%</td><td>很好</td><td class="num">3.6%</td><td style="color:var(--green)">因子有效</td></tr>
+      <tr><td><b>Quality (越高越好)</b></td><td class="num">2.6%</td><td class="num">1.4%</td><td class="num">0.9%</td><td class="num">0.2%</td><td class="num" style="color:var(--red)">−0.1%</td><td>较好</td><td class="num">2.7%</td><td style="color:var(--green)">较有效</td></tr>
+      <tr><td><b>Momentum (越高越好)</b></td><td class="num">4.5%</td><td class="num">2.8%</td><td class="num">1.0%</td><td class="num" style="color:var(--red)">−0.2%</td><td class="num" style="color:var(--red)">−1.6%</td><td>很好</td><td class="num">6.1%</td><td style="color:var(--green)">非常有效</td></tr>
+      <tr><td><b>Random (无意义)</b></td><td class="num">0.3%</td><td class="num" style="color:var(--red)">−0.2%</td><td class="num" style="color:var(--red)">−0.2%</td><td class="num">0.1%</td><td class="num">0.0%</td><td style="color:var(--red)">很差</td><td class="num">0.3%</td><td style="color:var(--red)">无效</td></tr>
+    </table>
+
+    <div class="keypoint">💡 <b>Group returns are one of the most intuitive outputs of factor backtesting.</b> The ideal factor: high factor value → ranked ahead → high future return, i.e. returns with good monotonicity. Group count: 5 or 10 (5 is more common); rebalance monthly/quarterly/semi-annually; holding period 1 week/1 month/3 months. Monotonicity is not an absolute requirement, but the clearer the trend the better. Group returns are only step one — you must also check stability (next section). A single result may contain luck; only sustained observation over many periods reveals whether a factor is truly effective.</div>
+  </div>
+</section>
+
+<!-- ============ 4. Long-Short Returns ============ -->
+<section>
+  <h2><span class="num">4</span>Long-Short Returns (多空收益) — Widening the Gap Between Best and Worst</h2>
+  <p class="subtitle">Long the highest-factor group (Q1), short the lowest (Q5) — the resulting excess return is another key measure of a factor's discriminative power. The higher the long-short return, the stronger the factor.</p>
+
+  <div class="spec c-ret">
+    <h3><span class="tag">definition</span>What is long-short return?</h3>
+    <div class="quote"><strong>Long-short return = Q1 return − Q5 return</strong> (做多 Top 组 − 做空 Bottom 组). For the value-factor example: 3.2% − (−0.4%) = <b>+3.6%</b>. Note: the "short" here is mainly for observation and measurement — it does not necessarily mean actually shorting in practice. (注意：这里的"空"更多是为了观察和度量，不一定代表真实去做空。)</div>
+
+    <div class="compare-3">
+      <div class="panel neutral">
+        <h4>Discriminative power (区分能力)</h4>
+        <p>Measures whether the factor can separate future winners from losers — the larger the Q1–Q5 gap, the stronger the discrimination.</p>
+      </div>
+      <div class="panel good">
+        <h4>Strategy potential (策略潜力)</h4>
+        <p>The higher the long-short return, the greater the theoretical potential of a factor portfolio. The long-short equity curve should trend upward overall.</p>
+      </div>
+      <div class="panel purple">
+        <h4>Stability observation (稳定性观察)</h4>
+        <p>We hope the long-short return stays positive and relatively stable across many periods — long-term stability beats short-term spikes.</p>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="panel bad">
+        <h4>Case A: one abnormally high year</h4>
+        <p>2020: 2.1% · 2021: 2.4% · 2022: −1.8% · 2023: −2.3% · 2024: 5.0% · 2025: −1.2%</p>
+        <p>✗ Cumulative return may look fine, but that doesn't mean the factor works consistently.</p>
+      </div>
+      <div class="panel good">
+        <h4>Case B: stably positive over time</h4>
+        <p>2020: 2.0% · 2021: 1.8% · 2022: 1.3% · 2023: 1.6% · 2024: 2.2% · 2025: 1.7%</p>
+        <p>✓ Long-term stable long-short returns are more trustworthy!</p>
+      </div>
+    </div>
+
+    <h3>Long-short returns compared across factors (假设未来 1 个月)</h3>
+    <table>
+      <tr><th>Factor</th><th>Long-short return</th><th>Assessment</th></tr>
+      <tr><td>Value factor (价值因子)</td><td class="num" style="color:var(--green)">+3.6%</td><td>优秀 (excellent)</td></tr>
+      <tr><td>Quality factor (质量因子)</td><td class="num" style="color:var(--green)">+2.7%</td><td>较好 (good)</td></tr>
+      <tr><td>Momentum factor (动量因子)</td><td class="num" style="color:var(--green)">+6.1%</td><td>非常好 (very good)</td></tr>
+      <tr><td>Random factor (随机因子)</td><td class="num">+0.3%</td><td>很差 — near 0</td></tr>
+      <tr><td>Reverse factor (反向因子)</td><td class="num" style="color:var(--red)">−1.5%</td><td>无效 — negative</td></tr>
+    </table>
+
+    <div class="io-box">
+      <b>Ideal long-term long-short curve (示例:价值因子, rolling 1-month, 2020–2025)</b>
+      <ul class="duty" style="padding-left:18px">
+        <li>Above the zero axis most of the time</li>
+        <li>Controlled volatility, few drawdowns</li>
+        <li>No sustained negative stretches</li>
+        <li>Relatively consistent performance across years</li>
+      </ul>
+    </div>
+
+    <div class="keypoint">💡 <b>Long-short return focuses on the gap between best and worst — only a factor that stays positive long-term has true discriminative power.</b> But higher is not always better: judge it together with group monotonicity, IC, and stability. Observation window: at least 3–5 years for safety; typical rebalance is monthly; common groupings are 5 or 10. History being good ≠ future being good — but if history is bad, be very wary! (历史好 ≠ 未来好，但历史差一定要警惕！)</div>
+  </div>
+</section>
+
+<!-- ============ 5. IC ============ -->
+<section>
+  <h2><span class="num">5</span>IC (Information Coefficient) — Measuring a Factor's Predictive Power</h2>
+  <p class="subtitle">IC checks whether factor rankings match future return rankings — it cares about "is the ordering consistent", not "how much money was made".</p>
+
+  <div class="spec c-ic">
+    <h3><span class="tag">definition</span>What is IC?</h3>
+    <p style="font-size:14.5px">IC (信息系数, Information Coefficient) measures the correlation between factor ranking at a point in time and future return ranking (usually the Pearson correlation coefficient):</p>
+    <div class="quote"><strong>IC = Corr(factor ranking, future return ranking)</strong>
+      <ul class="duty" style="padding-left:18px; margin-top:6px">
+        <li>😊 <b>IC &gt; 0</b> — positive correlation: higher factor → higher future return</li>
+        <li>😐 <b>IC ≈ 0</b> — no relation between factor and future returns</li>
+        <li>😠 <b>IC &lt; 0</b> — negative correlation: higher factor → lower future return</li>
+      </ul>
+    </div>
+
+    <h3>Example: one day's factor vs future return ranking</h3>
+    <table>
+      <tr><th>Stock</th><th>Factor value (bigger = better)</th><th>Factor rank</th><th>Future return (next month)</th><th>Return rank</th></tr>
+      <tr><td>A</td><td class="num">2.35</td><td>1</td><td class="num" style="color:var(--green)">+8.0%</td><td>1</td></tr>
+      <tr><td>B</td><td class="num">1.62</td><td>2</td><td class="num" style="color:var(--green)">+4.1%</td><td>2</td></tr>
+      <tr><td>C</td><td class="num">0.85</td><td>3</td><td class="num" style="color:var(--green)">+1.0%</td><td>3</td></tr>
+      <tr><td>D</td><td class="num">−0.20</td><td>4</td><td class="num" style="color:var(--red)">−0.3%</td><td>4</td></tr>
+      <tr><td>E</td><td class="num">−1.10</td><td>5</td><td class="num" style="color:var(--red)">−4.2%</td><td>5</td></tr>
+    </table>
+    <p style="font-size:14px">Factor ranking and future return ranking agree perfectly → <b style="color:var(--green)">IC close to +1 (very strong)</b>.</p>
+
+    <div class="flow">
+      <div class="step c-sort" style="--stepbg:var(--orange-bg)"><div class="name">① Factor sort</div><div class="cn">rank all stocks by factor value, high → low</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-ret" style="--stepbg:var(--red-bg)"><div class="name">② Future-return sort</div><div class="cn">rank all stocks by future return, high → low</div></div>
+      <div class="arrow">→</div>
+      <div class="step c-ic" style="--stepbg:var(--sky-bg)"><div class="name">③ Compute correlation (IC)</div><div class="cn">check whether the two rank sequences agree</div></div>
+    </div>
+
+    <div class="cols">
+      <div class="io-box">
+        <b>What IC values mean</b>
+        <ul class="duty" style="padding-left:18px">
+          <li><b>IC closer to +1</b> — factor ranking matches future return ranking</li>
+          <li><b>IC closer to 0</b> — factor has basically no predictive power</li>
+          <li><b>IC closer to −1</b> — factor ranking is exactly opposite to future return ranking</li>
+        </ul>
+      </div>
+      <div>
+        <table>
+          <tr><th>IC range</th><th>Reading</th></tr>
+          <tr><td><b>IC &gt; 0.1</b></td><td>较强 — strong predictive power</td></tr>
+          <tr><td><b>0.05 &lt; IC ≤ 0.1</b></td><td>中等 — some predictive power</td></tr>
+          <tr><td><b>−0.05 ≤ IC ≤ 0.05</b></td><td>很弱 — basically no predictive power</td></tr>
+          <tr><td><b>−0.1 ≤ IC &lt; −0.05</b></td><td>较弱 — weak predictive power (reverse)</td></tr>
+          <tr><td><b>IC &lt; −0.1</b></td><td>较强负相关 — factor runs opposite to future returns</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>IC time series: stability matters more than any single reading</h3>
+    <p style="font-size:14px">Example: a factor's weekly IC over the past 3 years (2022–2025, roughly −0.2 to +0.2):</p>
+    <ul class="duty">
+      <li>Long-term IC &gt; 0 → the factor is effective overall</li>
+      <li>IC fluctuating within a reasonable range → good stability</li>
+      <li>Occasional negative values are normal — the key is long-term behavior</li>
+    </ul>
+
+    <div class="compare">
+      <div class="panel bad">
+        <h4>⚠️ Mean IC is not the only criterion</h4>
+        <ul>
+          <li>✗ High average IC but extreme volatility → possibly unstable</li>
+          <li>✗ IC effective in one period, failing in another → environment-sensitive</li>
+          <li>✗ Look at IC's mean, volatility, stability AND persistence!</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h4>💡 Tips (小贴士)</h4>
+        <ul>
+          <li>Common frequency: weekly IC / monthly IC</li>
+          <li>Common metrics: mean IC, ICIR (IC mean / IC standard deviation)</li>
+          <li>Rule of thumb: <b>ICIR &gt; 0.5–1 is considered quite good</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 <b>IC measures a factor's "ranking ability"</b> — whether it can predict the ordering of future returns. A factor with a long-term robust positive IC is worth deep research. Backtesting is not about finding the "most profitable factor" but the one that is <b>truly predictive and stable</b>. (长期稳健的正 IC，才是一个值得深入研究的因子！)</div>
+  </div>
+</section>
+
+<!-- ============ 6. Stability ============ -->
+<section>
+  <h2><span class="num">6</span>Stability Matters More Than a Single High Return</h2>
+  <p class="subtitle">Whether a factor is truly effective must withstand the test of time and environment. Earning a lot in one backtest doesn't make a good factor — long-term stability is what's reliable. (一次回测赚很多，不一定是好因子；长期稳定才可靠！)</p>
+
+  <div class="spec c-stab">
+    <h3><span class="tag">trap</span>Common trap: judging by one backtest's high return</h3>
+    <div class="cols">
+      <div>
+        <table>
+          <tr><th>Year</th><th>Factor long-short return</th></tr>
+          <tr><td>2020</td><td class="num" style="color:var(--green)">+12.5%</td></tr>
+          <tr><td>2021</td><td class="num" style="color:var(--green)">+10.3%</td></tr>
+          <tr><td>2022</td><td class="num" style="color:var(--red)">−8.6%</td></tr>
+          <tr><td>2023</td><td class="num" style="color:var(--red)">−6.2%</td></tr>
+          <tr><td>2024</td><td class="num" style="color:var(--green)">+15.7%</td></tr>
+          <tr><td>2025</td><td class="num" style="color:var(--red)">−7.1%</td></tr>
+          <tr style="background:var(--blue-bg)"><td><b>Cumulative</b></td><td class="num"><b>+16.6%</b></td></tr>
+        </table>
+        <p style="font-size:13.5px">Cumulative return looks fine, but with big mid-course drawdowns — a few years may just have been lifted by market style. What we need is a <b>long-term, stable, repeatable</b> factor!</p>
+      </div>
+      <div class="compare" style="margin:0">
+        <div class="panel good">
+          <h4>Stable factor (ideal)</h4>
+          <p>Rolling 1-year long-short return, 2020–2025: long-term positive, controlled volatility, small drawdowns.</p>
+        </div>
+        <div class="panel bad">
+          <h4>Factor effective only in some years</h4>
+          <p>Same window: big swings up and down, large drawdowns, uncontrollable.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>How to test factor stability — five dimensions</h3>
+    <table>
+      <tr><th>#</th><th>Dimension</th><th>Questions to ask</th></tr>
+      <tr><td>1</td><td><b>Cross-year (跨年份稳定性)</b></td><td>Effective in different years? Consistent across bull / bear / sideways markets? Long-term long-short return persistently positive?</td></tr>
+      <tr><td>2</td><td><b>Cross-market (跨市场稳定性)</b></td><td>Works in different markets — A-shares / HK / US, emerging / developed? Or only effective in a single market?</td></tr>
+      <tr><td>3</td><td><b>Parameter (参数稳定性)</b></td><td>Changing group count, rebalance frequency, factor computation window — does the effect survive small parameter changes?</td></tr>
+      <tr><td>4</td><td><b>Stock pool (股票池稳定性)</b></td><td>Different pools (whole market / within industries), different sample sizes (500/1000/2000) — consistent results, or dependent on a specific sample?</td></tr>
+      <tr><td>5</td><td><b>Portfolio construction (组合构建稳定性)</b></td><td>Different construction methods (equal weight / cap weight / industry neutral) — still robust after switching methods?</td></tr>
+    </table>
+
+    <h3>Test example (某价值因子)</h3>
+    <table>
+      <tr><th>Dimension</th><th>Good (stable)</th><th>Neutral</th><th>Bad (unstable)</th></tr>
+      <tr><td>Cross-year</td><td>✅ Positive in most years</td><td>🔘 Positive in some years</td><td>❌ Negative in most years</td></tr>
+      <tr><td>Cross-market</td><td>✅ Effective in multiple markets</td><td>🔘 Effective only in some markets</td><td>❌ Effective in only one market</td></tr>
+      <tr><td>Parameter</td><td>✅ Effect stable under parameter changes</td><td>🔘 Effect fluctuates a lot</td><td>❌ Fails the moment a parameter changes</td></tr>
+      <tr><td>Stock pool</td><td>✅ Effective across samples</td><td>🔘 Large variation across samples</td><td>❌ Depends on specific stocks</td></tr>
+      <tr><td>Construction</td><td>✅ Robust under multiple constructions</td><td>🔘 Effective only in some methods</td><td>❌ Fails when method changes</td></tr>
+    </table>
+    <p style="font-size:14px">⭐ Only when a factor is stable across <b>most dimensions</b> is it worth further research!</p>
+
+    <div class="compare">
+      <div class="panel purple">
+        <h4>Reality check: styles rotate — factors need long-term validation</h4>
+        <p>A-share style example: 2020 成长占优 (growth led), 2021 质量占优, 2022 价值占优, 2023 低估值占优, 2024 价值/质量, 2025 风格轮动 (rotation). If a factor only works when "growth leads", a style switch kills it — a truly good factor should traverse cycles. The same factor's rolling 1-year long-short return differs visibly across style environments.</p>
+      </div>
+      <div class="panel good">
+        <h4>Practical advice (实操建议)</h4>
+        <ul>
+          <li>Backtest at least 5 years, covering bull, bear, and sideways markets</li>
+          <li>Test multiple markets — avoid over-relying on one market's style</li>
+          <li>Vary parameters and construction methods to ensure robustness</li>
+          <li>Watch drawdowns and volatility, not just returns</li>
+          <li>Keep tracking the factor's performance on the latest data</li>
+        </ul>
+        <p style="margin-top:8px">🎯 Our goal: find a factor that can <b>stably beat the benchmark over the long term</b>!</p>
+      </div>
+    </div>
+
+    <div class="keypoint">💡 The more stable a factor, the more it deserves a place in the portfolio; an unstable factor can fail at any moment even with high historical returns; if multiple factors in a portfolio are simultaneously stable, the portfolio is more reliable; continuous tracking and regular review are keys to quant investing success. Backtesting is not about finding "the most money made" — it's about finding the <b>most trustworthy patterns</b> (最值得信任的规律).</div>
+  </div>
+</section>
+
+<!-- ============ 7. Summary: Traits of a Good Factor ============ -->
+<section>
+  <h2><span class="num">★</span>Summary — What Should a Factor Worthy of Further Research Look Like?</h2>
+  <p class="subtitle">Factor backtesting is not the finish line — it's the start of screening. Only a factor meeting these traits deserves to move to the next step. (因子回测不是终点，而是筛选的开始)</p>
+
+  <div class="modules" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+    <div class="mod c-sort">
+      <div class="tag">1. MONOTONICITY</div>
+      <h4>Group returns are monotonic</h4>
+      <p>Ideal: higher factor → higher future return (e.g. Q1 +3.2% &gt; Q2 +2.1% &gt; Q3 +1.3% &gt; Q4 +0.5% &gt; Q5 −0.4%). Monotonically decreasing returns prove discriminative power. Bad signs: unordered returns; only extreme groups high with middle groups chaotic; alternating signs with no pattern.</p>
+    </div>
+    <div class="mod c-ret">
+      <div class="tag">2. LONG-SHORT RETURN</div>
+      <h4>Long-term positive with sufficient magnitude</h4>
+      <p>Long-short = Q1 − Q5. Ideal traits: long-term positive (most periods &gt; 0); controlled drawdowns, no frequent large negative swings; magnitude large enough to be economically meaningful. Long-short return embodies the factor's practical value at the portfolio level.</p>
+    </div>
+    <div class="mod c-ic">
+      <div class="tag">3. IC</div>
+      <h4>Long-term positive and stable</h4>
+      <p>IC = correlation between factor ranking and future return ranking. Ideal: IC &gt; 0 long-term; mean significantly positive (e.g. &gt; 0.02); moderate volatility, no frequent failures. IC is the factor's "gold-content metric" (含金量指标).</p>
+    </div>
+    <div class="mod c-stab">
+      <div class="tag">4. STABILITY</div>
+      <h4>Stable across time and environments</h4>
+      <p>Example long-short returns 2020–2025: +6.1%, +4.3%, −1.2%, +3.8%, +5.6%, +2.0%. Performs in bull, bear, and sideways markets; doesn't depend on one year or one market wave; controlled drawdowns — can "survive" every phase. Stability beats short-term high returns!</p>
+    </div>
+    <div class="mod c-calc">
+      <div class="tag">5. ROBUSTNESS</div>
+      <h4>Not over-sensitive to risks and noise</h4>
+      <p>① Parameter-insensitive (e.g. 5 groups → 10 groups still works) · ② Rebalance-frequency-insensitive (monthly / quarterly / bi-weekly all similar) · ③ Pool-insensitive (whole market vs CSI 300 vs mid-caps) · ④ Not reliant on a few extreme stocks (remove top 5% extreme names, effect roughly unchanged) · ⑤ Not overfit — effective out of sample, not just "making money in history" (e.g. stays effective under time-split backtests). Overfitting signals: great history but terrible out-of-sample; fails the moment parameters change; fails in a different time window; only extreme groups profit while middle groups are chaotic.</p>
+    </div>
+    <div class="mod c-group">
+      <div class="tag">6. LOGIC</div>
+      <h4>Sound economic logic or industry explanation</h4>
+      <p>A factor is not a "mysterious formula" — it's a distillation of market patterns. Ask yourself: why might this factor work? What economic behavior or market feature does it reflect? Is there theoretical or empirical support? Is it sustainable in practice? Factors backed by logic survive longer!</p>
+    </div>
+  </div>
+
+  <div class="spec c-group">
+    <h3><span class="tag">7. scoring</span>Composite evaluation — selecting "good factors"</h3>
+    <p style="font-size:14px">Score each factor on five axes (radar): group-return monotonicity (分组收益单调性), long-short return magnitude (多空收益幅度), IC stability (IC 稳定性), cross-time stability (跨时间稳定性), parameter robustness (参数鲁棒性), plus economic-logic interpretability (经济逻辑可解释性).</p>
+    <table>
+      <tr><th>Score</th><th>Meaning</th></tr>
+      <tr><td>5</td><td>非常好 — excellent</td></tr>
+      <tr><td>4</td><td>较好 — usable</td></tr>
+      <tr><td>3</td><td>一般 — needs improvement</td></tr>
+      <tr><td>2</td><td>较差 — high risk</td></tr>
+      <tr><td>1</td><td>很差 — not recommended</td></tr>
+    </table>
+    <p style="font-size:14px"><b>Composite score ≥ 4 → may proceed to strategy portfolio testing.</b></p>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>Factor backtesting is not about "finding a money-making factor" — it's about finding a truly effective one.</b> Only factors with discriminative power, stability, and logical support deserve strategy construction and real capital. (只有具备区分能力、稳定性和逻辑支撑的因子，才值得你去构建策略、投入真金白银！)<br><br>Factor research is a marathon, not a 100-meter sprint. Slow is fast — stability is the key to victory. (因子研究是一场马拉松，不是一场百米冲刺。慢就是快，稳才是胜利的关键！)</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_27_factor-backtest.html · Distilled from knowledge-base/day_27 (30天学习量化投资 · Day 27) · 2026-09-02
+</footer>
+</div>
+</body>
+</html>
