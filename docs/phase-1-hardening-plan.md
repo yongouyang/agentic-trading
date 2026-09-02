@@ -1,8 +1,9 @@
 # Phase 1 Hardening Plan — Rescue Loaders, Weekly Sentinel, HSCEI Universe
 
-**Date:** 2026-09-01 · **Status:** A + B implemented 2026-09-02 — B live-validated
-on Yahoo + tencent (clean baseline in hand), A's eastmoney leg still
-ban-blocked; C pending
+**Date:** 2026-09-01 · **Status:** A + B + C implemented 2026-09-02 — B
+live-validated on Yahoo + tencent (clean 10-name baseline regenerated
+2026-09-02), C live-validated (131-name universe, acceptance run clean),
+A's eastmoney leg still ban-blocked
 **Parent docs:** `architecture-v1.md` §4.1/§4.3, `phase-1-spec.md`,
 `phase-0-verification-report.md`, `research-openalgo-reference.md` §3.
 Phase 1's gate has passed; this plan covers its deferred hardening items.
@@ -181,6 +182,12 @@ artifact and the exit code.
   can never masquerade as a baseline again. Restored with a real 122-name HK run
   (122/122 OK, 0 fetch-failed, 252 clamped bars, rescue pass correctly idle — no
   eastmoney request made).
+- **Fail-closed follow-up (added 2026-09-02, second review pass):** the header
+  only *labels* synthetic output; `main()` in `daily-screen.ts` now *prevents*
+  it — `assertRealProviderStore` refuses the dummy provider before any store
+  write unless `SCREEN_ALLOW_DUMMY_STORE=1` is set explicitly (verified live:
+  `MARKET_DATA_TEST_MODE=1 screen:daily` exits 1 with the refusal; unit-tested).
+  The sentinel is read-only, so it needs no such guard.
 - Spacing: tencent 500ms + jitter, eastmoney ≥2s + jitter, Yahoo 200ms + jitter
   — each provider paces itself. Measured live run: ~25s for 10 names on 20
   requests (~2 min with the eastmoney leg on, as planned).
@@ -194,22 +201,35 @@ artifact and the exit code.
   (live response shapes incl. the 200+empty RULE L4 shape, `qfqday`/`day`
   fallback, transport drop, pacing) + 20 integration through `runSentinel` with
   fake sources and a throwaway SQLite store + 8 CLI/sample pinning tests.
-- **Live baseline:** `apps/api/reports/sentinel-2026-09-01.json` — 10/10 ok,
+- **Live baseline:** `apps/api/reports/sentinel-2026-09-02.json` — 10/10 ok,
   ALARM 0, WARN 0 (tencent 99.67% / 1196d with 4 classified phantoms; eastmoney
-  leg disabled). Re-run weekly and diff the metrics against this file.
+  leg disabled). Regenerated 2026-09-02: the 09-01 file had been clobbered by
+  the corruption-verification `--symbol 0005.HK` run (1-row CUSTOM artifact),
+  and `apps/api/reports/` is gitignored, so the baseline is a local file —
+  re-run the sentinel if it is lost. Re-run weekly and diff the metrics against
+  this file.
 
-## C. HSCEI universe expansion
+## C. HSCEI universe expansion — IMPLEMENTED 2026-09-02
 
-- Add HSCEI constituents missing from `universe.hk.json` (HSI+HS Tech already
-  covered; HSCEI adds e.g. 1288.HK ABC, 2601.HK CPIC, 6030.HK CITIC Sec —
-  target ~140 total).
-- **Verify-then-add is mandatory** (the universe-build rule from Phase 1):
-  probe each candidate against Yahoo v8 before committing it; drop anything
-  that 404s. Reuse the probe pattern from the Phase 1 universe build.
-- `_meta.maintenance` entry records the addition and date.
-- Acceptance: a subsequent `screen:daily -- --market hk` shows the new
-  universe size with no FETCH_FAILED beyond noise and no unexplained
-  GENUINELY_ABSENT.
+- Added the HSCEI constituents missing from `universe.hk.json`: **9 net adds**
+  (1288 ABC, 1658 PSBC, 1801 Innovent, 2057 ZTO, 2328 PICC P&C, 2423 KE
+  Holdings, 6160 BeOne, 9926 Akeso, 9987 Yum China) ⇒ universe 122 → **131**.
+- **Deviation from this plan's expectation, with evidence:** the ~140 target
+  and the 2601.HK/6030.HK examples came from a stale constituent list. The
+  current HSCEI (hsi.com.hk official constituents feed, retrieved 2026-09-02,
+  50 names; cross-checked against Wikipedia's Aug-2022 list) overlaps
+  HSI+HS Tech by 41 of 50, so only 9 genuine names were missing. 2601.HK
+  (CPIC) and 6030.HK (CITIC Sec) probed OK against Yahoo but are **not current
+  HSCEI constituents** and were excluded to keep the file truthful to its
+  `source` claim. Reaching ~140 anyway would be a separate decision (add
+  liquid non-index H-shares; 2601/6030 are verified-live first candidates).
+- Verify-then-add was applied: every candidate probed against Yahoo v8
+  (`range=1mo&interval=1d`, ~450ms spacing, Mozilla UA — a UA-less batch drew
+  HTTP 429; cool-down + UA fixed it) before committing to the file.
+- `_meta.maintenance` records the addition, source feed and date ✔.
+- Acceptance ✔: live `screen:daily -- --market hk` 2026-09-02 —
+  `131/131 screened · 0 fetch-failed · 0 genuinely absent · DEGRADED: no`;
+  three new names made the shortlist (1801 #4, 6160 #5, 1288 #10).
 
 ## D. Coverage ledger — decision record (skipped)
 
@@ -228,7 +248,8 @@ MIN/MAX/COUNT per upsert — don't copy that part).
    tests 2026-09-02; live rescue validation still blocked on the §A ban
 2. Sentinel CLI (B) — ✔ 2026-09-02, live-validated on the two unblocked legs;
    its eastmoney leg is built, opt-in, and joins A's pending live validation
-3. HSCEI expansion (C — independent, can go first) — pending
+3. HSCEI expansion (C) — ✔ 2026-09-02, 9 verified adds (131 total), live
+   acceptance run clean
 
 **Acceptance:** all existing suites stay green ✔ (`pnpm -w test` and
 `pnpm -w test:coverage`; the coverage gate was found red at A's commit and is

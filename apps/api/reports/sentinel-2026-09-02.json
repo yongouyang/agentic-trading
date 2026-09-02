@@ -1,0 +1,652 @@
+{
+  "date": "2026-09-02",
+  "sample": [
+    "0005.HK",
+    "0700.HK",
+    "0941.HK",
+    "9988.HK",
+    "0388.HK",
+    "0001.HK",
+    "0016.HK",
+    "2318.HK",
+    "2800.HK",
+    "3195.HK"
+  ],
+  "customSample": false,
+  "legs": {
+    "yahoo": "fresh 5y (yahoo)",
+    "tencent": "enabled",
+    "eastmoney": "disabled (opt-in via --eastmoney)"
+  },
+  "rows": [
+    {
+      "symbol": "0005.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 17 events (+1 restated)",
+          "metrics": {
+            "storedEvents": 17,
+            "freshEvents": 17,
+            "windowEvents": 17,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 1,
+            "amountsIgnored": 1
+          },
+          "details": [
+            "1 dividend amount(s) restated by Yahoo and ignored (CA_DEGRADED: FX-converted amounts change every fetch)"
+          ]
+        }
+      ]
+    },
+    {
+      "symbol": "0700.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 5 events",
+          "metrics": {
+            "storedEvents": 5,
+            "freshEvents": 5,
+            "windowEvents": 5,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "0941.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 10 events",
+          "metrics": {
+            "storedEvents": 10,
+            "freshEvents": 10,
+            "windowEvents": 10,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "9988.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 4 events (+4 restated)",
+          "metrics": {
+            "storedEvents": 4,
+            "freshEvents": 4,
+            "windowEvents": 4,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 4,
+            "amountsIgnored": 1
+          },
+          "details": [
+            "4 dividend amount(s) restated by Yahoo and ignored (CA_DEGRADED: FX-converted amounts change every fetch)"
+          ]
+        }
+      ]
+    },
+    {
+      "symbol": "0388.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 10 events",
+          "metrics": {
+            "storedEvents": 10,
+            "freshEvents": 10,
+            "windowEvents": 10,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "0001.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 10 events",
+          "metrics": {
+            "storedEvents": 10,
+            "freshEvents": 10,
+            "windowEvents": 10,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "0016.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 10 events",
+          "metrics": {
+            "storedEvents": 10,
+            "freshEvents": 10,
+            "windowEvents": 10,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "2318.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 10 events",
+          "metrics": {
+            "storedEvents": 11,
+            "freshEvents": 11,
+            "windowEvents": 10,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 1
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "2800.HK",
+      "storedSource": "yahoo",
+      "storedBars": 1225,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 1225d identical",
+          "metrics": {
+            "windowDays": 1225,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "99.67% 1196d (+4 tencent phantoms)",
+          "metrics": {
+            "window": "2021-10-20…2026-09-02",
+            "overlapDays": 1196,
+            "overlapPct": 99.67,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 4,
+            "ourPhantomSessions": 0
+          },
+          "details": [
+            "tencent carries bars on the known HKEX closures (provider calendar bug, not a revision — recorded, not warned): 2022-01-31,2023-07-17,2023-09-01,2023-09-08"
+          ]
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 10 events",
+          "metrics": {
+            "storedEvents": 10,
+            "freshEvents": 10,
+            "windowEvents": 10,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    },
+    {
+      "symbol": "3195.HK",
+      "storedSource": "yahoo",
+      "storedBars": 576,
+      "verdict": "ok",
+      "checks": [
+        {
+          "check": "yahoo-rewrite",
+          "status": "ok",
+          "summary": "ok 576d identical",
+          "metrics": {
+            "windowDays": 576,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "closeMismatch": 0
+          },
+          "details": []
+        },
+        {
+          "check": "eastmoney-raw",
+          "status": "skip",
+          "summary": "skip disabled",
+          "metrics": {},
+          "details": [
+            "eastmoney leg not enabled — pass --eastmoney (host is IP-ban prone)"
+          ]
+        },
+        {
+          "check": "tencent-dates",
+          "status": "ok",
+          "summary": "100% 577d",
+          "metrics": {
+            "window": "2024-04-29…2026-09-02",
+            "overlapDays": 577,
+            "overlapPct": 100,
+            "onlyReference": 0,
+            "onlyTencent": 0,
+            "tencentPhantomClosures": 0,
+            "ourPhantomSessions": 0
+          },
+          "details": []
+        },
+        {
+          "check": "ca-revision",
+          "status": "ok",
+          "summary": "ok 0 events",
+          "metrics": {
+            "storedEvents": 0,
+            "freshEvents": 0,
+            "windowEvents": 0,
+            "onlyStored": 0,
+            "onlyFresh": 0,
+            "amountMismatch": 0,
+            "restatedAmounts": 0,
+            "amountsIgnored": 0
+          },
+          "details": []
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "ok": 10,
+    "warn": 0,
+    "alarm": 0,
+    "skip": 0
+  },
+  "alarm": false
+}

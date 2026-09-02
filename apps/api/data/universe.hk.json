@@ -1,9 +1,9 @@
 {
   "_meta": {
-    "source": "Hang Seng Index and Hang Seng Tech Index constituents (hand-compiled from Hang Seng Indexes public constituent lists, 2026-09-01) plus liquid HKEX-listed ETFs, including HK-domiciled US-index trackers.",
+    "source": "Hang Seng Index, Hang Seng China Enterprises Index (HSCEI) and Hang Seng Tech Index constituents (hand-compiled from Hang Seng Indexes public constituent lists, 2026-09-01; HSCEI from the hsi.com.hk constituents feed, 2026-09-02) plus liquid HKEX-listed ETFs, including HK-domiciled US-index trackers.",
     "compiled": "2026-09-01",
     "note": "Refresh manually; index membership drift accepted in v1 (see docs/phase-1-spec.md §1). Stale symbols surface as GENUINELY_ABSENT at runtime.",
-    "maintenance": "2026-09-01: added 2888.HK Standard Chartered (HSI constituent missed in initial curation)."
+    "maintenance": "2026-09-01: added 2888.HK Standard Chartered (HSI constituent missed in initial curation). 2026-09-02: added 9 HSCEI constituents not already covered via HSI/HS Tech (1288, 1658, 1801, 2057, 2328, 2423, 6160, 9926, 9987); source: hsi.com.hk HSCEI constituents feed retrieved 2026-09-02 (50 constituents, cross-checked against Wikipedia, Aug 2022 list); each probed against Yahoo v8 chart before adding."
   },
   "symbols": [
     {
@@ -361,6 +361,12 @@
       "kind": "stock"
     },
     {
+      "symbol": "1288.HK",
+      "name": "Agricultural Bank of China Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "1299.HK",
       "name": "AIA Group Ltd.",
       "currency": "HKD",
@@ -381,6 +387,18 @@
     {
       "symbol": "1398.HK",
       "name": "Industrial and Commercial Bank of China Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1658.HK",
+      "name": "Postal Savings Bank of China Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1801.HK",
+      "name": "Innovent Biologics, Inc.",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -439,6 +457,12 @@
       "kind": "stock"
     },
     {
+      "symbol": "2057.HK",
+      "name": "ZTO Express (Cayman) Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "2269.HK",
       "name": "WuXi Biologics (Cayman) Inc.",
       "currency": "HKD",
@@ -463,6 +487,12 @@
       "kind": "stock"
     },
     {
+      "symbol": "2328.HK",
+      "name": "PICC Property and Casualty Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "2331.HK",
       "name": "Li Ning Co. Ltd.",
       "currency": "HKD",
@@ -477,6 +507,12 @@
     {
       "symbol": "2388.HK",
       "name": "BOC Hong Kong (Holdings) Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2423.HK",
+      "name": "KE Holdings Inc.",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -643,6 +679,12 @@
       "kind": "stock"
     },
     {
+      "symbol": "6160.HK",
+      "name": "BeOne Medicines Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "6618.HK",
       "name": "JD Health International Inc.",
       "currency": "HKD",
@@ -715,8 +757,20 @@
       "kind": "stock"
     },
     {
+      "symbol": "9926.HK",
+      "name": "Akeso, Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "9961.HK",
       "name": "Trip.com Group Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9987.HK",
+      "name": "Yum China Holdings, Inc.",
       "currency": "HKD",
       "kind": "stock"
     },

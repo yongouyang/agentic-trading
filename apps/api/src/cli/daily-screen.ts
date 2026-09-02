@@ -21,6 +21,13 @@
  * had silently replaced the HK lane's real 5y series with 30 fake bars while
  * the header still looked healthy.
  *
+ * Fail-closed store guard (added 2026-09-02, after the same incident): the
+ * header only LABELS synthetic output; `assertRealProviderStore` in main()
+ * PREVENTS it — a dummy run rewrites every lane's stored series, so the CLI
+ * refuses the dummy provider outright unless SCREEN_ALLOW_DUMMY_STORE=1 is
+ * set explicitly (or NODE_ENV=production, where getMarketDataDeps already
+ * refuses the dummy before this is reached).
+ *
  * HK rescue pass (phase-1-hardening-plan §A): HK tickers whose Yahoo outcome
  * ≠ OK (FETCH_FAILED and GENUINELY_ABSENT) are collected during the main loop
  * and repaired after the main pass via the RepairProvider (eastmoney — the
@@ -91,6 +98,21 @@ export interface DailyScreenDeps {
 /** True for the controllable dummy (by class name, or an explicit label). */
 export function isDummyProviderLabel(label: string): boolean {
   return /dummy/i.test(label);
+}
+
+/** Fail-closed store guard for the CLI: the daily screen rewrites each lane's
+ *  stored series from whatever provider is wired in, so a dummy run against
+ *  the real store destroys real 5y data while producing a healthy-looking
+ *  report (the 2026-09-01 run-6 incident). main() calls this before touching
+ *  the store; tests drive runDailyScreen directly and are unaffected.
+ *  Throwing is intentional — a refused run is the correct outcome. */
+export function assertRealProviderStore(dummyMode: boolean, env: Record<string, string | undefined> = process.env): void {
+  if (!dummyMode) return;
+  if (env.SCREEN_ALLOW_DUMMY_STORE === "1") return;
+  throw new Error(
+    "refusing to run screen:daily with the dummy provider — every lane's stored series would be rewritten with synthetic bars. " +
+      "Point DATABASE_URL at a throwaway database and set SCREEN_ALLOW_DUMMY_STORE=1 explicitly if this is deliberate.",
+  );
 }
 
 export interface DailyScreenOpts {
@@ -453,10 +475,14 @@ function parseMarket(argv: string[]): Lane | "all" {
 
 async function main(): Promise<void> {
   const market = parseMarket(process.argv.slice(2));
+  const { provider, dummyMode } = getMarketDataDeps(process.env);
+  // Refuse the dummy BEFORE connecting/rewriting: labeling synthetic output in
+  // the header was not enough (the HK lane was destroyed by a dummy run that
+  // looked healthy). Deliberate dummy runs need SCREEN_ALLOW_DUMMY_STORE=1.
+  assertRealProviderStore(dummyMode, process.env);
   const prisma = new PrismaService();
   await prisma.$connect();
   try {
-    const { provider, dummyMode } = getMarketDataDeps(process.env);
     await runDailyScreen({ prisma, provider, providerLabel: dummyMode ? "dummy" : "yahoo" }, { market });
   } finally {
     await prisma.$disconnect();

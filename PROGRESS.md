@@ -5,6 +5,65 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-02 (review + follow-ups) — sanity check of workstream B, then items 1/3/4
+
+### Review of the Qwen3.8-Flash session (workstream B, commit 3f0998c)
+- All claims verified: 166/1 apps-api + 41 quant-core tests pass, coverage gate
+  green (apps/api 95.1% lines / 91.1% branches), build green; the code matches
+  its docs (tencent dates-only is structural, eastmoney leg fail-closed,
+  sentinel truly read-only — `MarketDataService` has no Prisma access).
+- **One finding:** the "clean 10-name baseline" artifact
+  `reports/sentinel-2026-09-01.json` was actually a 1-row CUSTOM leftover from
+  the corruption-injection verification (`customSample: true`), and
+  `apps/api/reports/` is gitignored — the diff baseline was both wrong and
+  fragile.
+
+### What was done
+- **Sentinel baseline regenerated** (live, ~25s): `reports/sentinel-2026-09-02.json`,
+  10/10 ok, ALARM 0, WARN 0, exit 0 — reproduces the claimed numbers exactly
+  (yahoo-rewrite 1225d identical ×9, 576d on 3195.HK; tencent 99.67%/1196d with
+  the 4 classified phantoms). Plan §B now points at this file and records that
+  reports/ is gitignored.
+- **Fail-closed dummy guard** (`assertRealProviderStore`, `cli/daily-screen.ts`):
+  the workstream-B provenance header only *labeled* synthetic output; the CLI
+  now *refuses* the dummy provider before any store write unless
+  `SCREEN_ALLOW_DUMMY_STORE=1` is set explicitly. Verified live
+  (`MARKET_DATA_TEST_MODE=1 screen:daily` → FATAL, exit 1) + 5 unit tests
+  (new `tests/unit/daily-screen.cli.spec.ts`). Sentinel needs no guard
+  (read-only).
+- **Workstream C — HSCEI universe expansion** (delegated to a k3-256k coder
+  subagent, per the fast-tier policy): **9 verified adds** ⇒ universe 122 →
+  **131**. Source: hsi.com.hk official HSCEI constituents feed retrieved
+  2026-09-02 (50 names), cross-checked against Wikipedia. Verify-then-add
+  against Yahoo v8 applied to all 11 candidates (one UA-less probe batch drew
+  HTTP 429; cool-down + UA fixed it). Acceptance run live:
+  `131/131 screened · 0 fetch-failed · 0 genuinely absent · DEGRADED: no`;
+  1801.HK/6160.HK/1288.HK made the shortlist.
+
+### Deviations & open items
+- **Plan §C's expectation was stale:** it predicted ~140 total and named
+  2601.HK/6030.HK as example adds — both probe OK but are **not current HSCEI
+  constituents** (removed from the index; Wikipedia's list is Aug-2022). Only
+  9 of 50 HSCEI names were genuinely missing. Reaching ~140 would need a
+  separate decision to add liquid non-index H-shares (2601/6030 are
+  verified-live first candidates) — **user decision pending**.
+- The sentinel baseline is a local, gitignored file; committing it (force-add)
+  would make the diff baseline durable — not done (git mutation needs the
+  user's go-ahead).
+- Unchanged: eastmoney ban re-check ~2026-09-04 (single throttled request),
+  then §A live rescue validation + first `screen:sentinel -- --eastmoney`.
+
+### What's next
+- ~2026-09-04: eastmoney ban re-check ⇒ §A + sentinel eastmoney leg validation.
+- User decision: chase ~140 with non-index H-shares, or accept 131.
+- Phase 2 design (deep tier): agent pipeline + Piotroski/earnings inputs.
+
+### Test/coverage state after this session
+- apps/api **171 passed / 1 skipped** (was 166/1), quant-core 41, agents 5;
+  `pnpm -w test`, `pnpm -w test:coverage`, `pnpm -w build` all green.
+
+---
+
 ## 2026-09-02 — Hardening workstream B: weekly sentinel CLI (live-validated)
 
 ### What was done
