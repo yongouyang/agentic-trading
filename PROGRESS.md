@@ -5,6 +5,151 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-03 — Provider research: AKShare + TickDB (verdict: add neither) + a live `3195.HK` store defect
+
+### What was done
+
+Answered "are AKShare / TickDB feasible providers for HK and US stocks + ETFs"
+**empirically** — live probes against both, plus a whole-HK-lane audit against
+the store, rather than reading their docs. New
+`docs/research-akshare-tickdb.md`; `docs/architecture-v1.md` §4.1 (two new
+source rows + a rejected row + corrected exclusion reasons), §4.2 (new **R3a**
+invariant, R4 qualification), §4.1 tail (adjusted-series nuance), §11 risks 5
+and 6 extended. Nothing in `src/` was changed — §4 below is a defect report
+needing your call.
+
+**Method.** Disposable venv (`/tmp/akenv`, akshare 1.18.94) for AKShare; direct
+HTTP for TickDB (its no-registration trial key from `GET /api/public/claw-keys`);
+Node `fetch` + Node `vm` to test portability of the underlying endpoints without
+Python. 131/131 HK instruments and 45 US names compared bar-for-bar against the
+store over the full 5-year window (154,895 + 55k comparisons). Artifacts and
+re-runnable probes listed at the head of the research doc.
+
+### Verdicts (all measured)
+
+- **TickDB — not feasible, close the line.** Coverage is real and *does* include
+  ETFs (catalogue HK 3,543 / US 14,169 with 5,479 ETF-named; **131/131 HK and
+  562/564 US** of our own instruments present), and quality is excellent
+  (median close deviation vs the store **0.0000 %**, volumes identical to the
+  unit) — which is the problem: it is the **same numbers as Yahoo**, so it buys
+  no independence. Decisive: **no dividend or split endpoint and no `adjust`
+  parameter anywhere in its OpenAPI** ⇒ §4.2 R1 (store raw **+ events**) is
+  unsatisfiable at any tier. Free tier measured: 72 whitelisted symbols, `3007`
+  `kline_history_years_limit: 1`, `limit=1000` rejected outright, 30 req/min on
+  a **single globally shared** trial key (≈10 calls saturated it; ~50 probes drew
+  `403`). 5-year history = Enterprise $899/mo (~$10.8k/yr) to duplicate Yahoo.
+  Two integration traps recorded: daily bars are stamped at **exchange-local
+  midnight in UTC ms** (naive UTC join shifts every HK bar one session — that is
+  what produced my first, wrong, "1.9 % deviation" result), and `kline` returns a
+  **still-forming bar** despite documenting "completed periods".
+- **AKShare — right coverage, wrong dependency.** The 2026-08-31 exclusion
+  reason ("A-share scope") was **factually wrong about coverage**: sina's HK/US
+  routes return **131/131 HK + 40/40 US** instruments with **0 failures** and the
+  *entire* listed history in one request (HSBC 6,965 bars since 1998, `AAPL`
+  10,023 since 1984, and **21/21 ETF probes** incl. `02800` since 1999 and
+  `SPY` since 2001) at ~1.5 s/name ⇒ a 695-instrument pass ≈18 min. Excluded
+  anyway: Python in a pure-TS stack (§3), and its eastmoney bar route is the
+  already-banned `push2his` (9/9 refusals). Portability is *not* the blocker —
+  7/7 endpoints answer Node `fetch` directly, and akshare's ~18 KB obfuscated
+  sina decoder runs under Node `vm` (decoded 6,965 bars in ~50 ms) — vendoring a
+  reverse-engineered decoder is simply not worth it for redundancy.
+- **Yahoo stays the sole primary.** §4.3's posture survived this inquiry
+  unaided — but see the defect below, which is *not* a provider-choice problem.
+
+### New architecture findings
+
+1. **R3a (added to §4.2): "raw" is not a shared quantity.** Yahoo back-adjusts
+   `close` for splits, bonus issues **and** distributions-in-specie; sina,
+   eastmoney `fqt=0`, tencent and TickDB are all **as-traded**. Exact factors:
+   `1211.HK` 0.3333 across BYD's 2025-06-10 bonus, `WMT` 0.3333, `SMCI` 0.1,
+   `UNG` 4.0, `NFLX` 10.0, and `0700.HK` 0.92186 → 0.94978 → 1.0 across the JD
+   and Meituan ex-dates — **with no split row in Yahoo's own event feed**. ⇒ the
+   §A.4 "agree to tick precision on surrounding closes" rescue guard is exactly
+   what keeps R3 safe (must not be relaxed), and any cross-source **level**
+   comparison fires on convention: 5/131 HK names (≈4 %) and 10/45 US (≈22 %)
+   carry a benign >1 % gap.
+2. **Workstream B's `eastmoney-raw` check needs a change before its first live
+   run.** Its rule (ALARM max |dev| > 1 %) compares *levels*, so it would alarm
+   on `0700.HK` (8 %) and `1211.HK` (67 %) for a benign reason; Phase 0's "0.27 %
+   agreement" was measured on `0005.HK`, which had no split in-window. Measured
+   fix: compare **day-over-day returns** (or CA-exclude ex-dates) — that drops
+   1,575 mismatching name-days to 259 (1.12 %).
+3. **Second noise class: HKEX half-day / year-end sessions are date-correlated.**
+   2025-12-31 → 11/15 sampled names deviate 0.15–0.45 %, 2024-12-31 → 8/15,
+   2026-02-16 → 8/15, 2025-01-28 → 7/15, 2024-12-24 → 7/15. A mean-based WARN
+   threshold must exclude these dates or it reports the calendar. (`2800.HK` clean
+   throughout: max 0.13 % — the G2d baseline and the pinned sample are unaffected.)
+4. **§4.1's HK dividend-event gap has a free answer.** eastmoney's **F10** host
+   (`datacenter.eastmoney.com`) is *not* the banned host: 12/12 calls at ~1 s,
+   ~0–100 ms, also 200 from Node. It publishes per-event **declaring-currency
+   amount + HKD equivalent + ex/book/pay dates** (94 rows back to 1999 for
+   `0005.HK`, incl. scrip flags; `01211.HK` shows RMB→HKD *and* the
+   每10股派8转12 bonus terms) — i.e. exactly what clears `CA_DEGRADED`, plus
+   HK/US three-statement history for Phase 2 (`00700` 1,124/585/966 rows). The
+   2026-09-01 "eastmoney for events" rejection was aimed at the wrong host.
+   No ETF records, no US dividend feed.
+5. **CN adjusted conventions vary *inside* one provider** → §4.1 tail rewritten.
+   sina HK `qfq` is multiplicative (TR 420.2 % vs our 428.6 %), sina US `qfq` is
+   additive cash, and sina has **no factor file for HK ETFs** (HTTP 404 ⇒ `qfq`
+   ≡ raw: ETF TR −2.8 % vs our +14.5 %). R3/R4 ("never consume a CN adjusted
+   series") stands; the reason is inconsistency, not additivity.
+
+### Defect found in our own store (needs your call; no code touched)
+
+**`3195.HK`'s oldest 72 stored bars are USD-counter prices in an HKD series.**
+Root cause confirmed four ways: (1) store rows `2024-04-29…2024-08-07` are flat
+(`O=H=L=C`) with `volume=0` at 1.03, then `2024-08-08` closes **8.13** — a
+phantom **+677 %** step in our data; (2) sina *and* tencent are continuous there
+(8.725 / 8.695 → 8.13) and both match Yahoo after 08-08; (3) over exactly those
+72 rows `sina/store` = **7.826 ± 0.058** — the HKD peg, not a consolidation
+factor; (4) the fund's USD counter `9195.HK` answers `currency=USD` close
+**1.552** against `3195.HK` `currency=HKD` **12.17** (12.17/7.85 = 1.55 ✓). So
+Yahoo spliced another counter's history into the series — the *price*-layer twin
+of the `adjclose` FX bug §4.1 already records, and it passes every shipped check
+(`yahoo-rewrite` same-provider, `tencent-dates` dates-only, `eastmoney-raw`
+opt-in/banned), which means **the sentinel's coverage has a hole no provider
+choice can fill**.
+
+Store-wide census (local, no network): 1,672 HK + 347 US flat rows, of which
+**7 rows across 5 names also break the local level by >10 %** — `3195.HK` (this
+defect), `2836.HK` (2 rows, ×2.1, same shape, needs adjudication), `2269.HK` (2),
+`0020.HK`, `0881.HK`, `2846.HK` (1 each, ~10–31 %). Flat alone is *not* the
+signal: `2819.HK` has 363 flat rows (62 % of its history) that match sina at
+ratio 1.000 — genuine thin sessions. Proposed control: an **intra-series** check
+`volume=0 AND open=high=low=close AND |close/prev − 1| > 10 %` → ALARM quoting
+the implied ratio (7.7–8.1 ⇒ counter stitching; otherwise halt/split). Zero
+network cost, so it can run on every screen rather than weekly.
+
+### Operational note (self-reporting)
+
+**The eastmoney block lifted before the planned 09-04 re-check — and I re-armed
+it.** One `curl` of *our own* provider URL returned HTTP 200 + 464,683 B (≈25 y
+of `116.00005` bars); akshare's `requests` call and Node's `fetch` to the same
+URL were refused within the same minutes, and after ~12 further probes every
+client including curl was refused again. So (a) the §A/§B blocker re-check must
+be **one request, issued by the Node loader we ship**, and (b) the refusal is
+burst- *and* fingerprint-sensitive, not a clean IP timeout — §11 risk 6 updated.
+No further eastmoney kline probing this week. ~250 sina requests: 0 failures, no
+throttling.
+
+### What's next
+
+- **Your decision (deep tier, per `AGENTS.md`):** (1) adopt the intra-series
+  integrity check and repair `3195.HK` (drop or convert 72 bars, re-derive —
+  its 12-1m/long-window features currently encode a 677 % gain that never
+  happened); (2) make `eastmoney-raw` return-based + half-day-excluded before
+  its first live run; (3) re-open eastmoney-F10 as the Phase-2 HK events /
+  statements source, which reverses a recorded rejection.
+- Then the pending §A/§B live validation: single Node request → `--eastmoney`
+  baseline. Worth pairing with the `3195.HK` repair so one run covers both.
+- Before HSCEI/ETF universe expansion: census multi-counter HK ETFs (`9xxx` USD
+  / `83xxx` RMB counters) for the same seam — it is a universe-quality issue now,
+  not only a repair issue.
+- TickDB: closed. Re-open only if a later phase needs real-time ticks/depth
+  (it still will not have corporate actions).
+
+---
+---
 ## 2026-09-02 (docs) — Day 25–28 knowledge-base extraction
 
 ### What was done

@@ -103,9 +103,15 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
   (short-window momentum is barely affected by a single event). A proper HK CA
   source is revisited in Phase 2; eastmoney-for-events was rejected as a
   blocking dependency after its per-IP ban proved to fire on the first request.
+  *(2026-09-02: that rejection was host-attributed wrongly — the ban lives on
+  `push2his`, while eastmoney's F10 host `datacenter.eastmoney.com` answers
+  normally and publishes per-event **declaring-currency amount + HKD equivalent +
+  ex/pay dates**, 94 rows back to 1999 for 0005.HK. The Phase-2 revisit now has a
+  concrete, measured candidate; the defer-with-flag decision is unchanged.
+  `docs/research-akshare-tickdb.md`.)*
   HK small-cap halts and HK-specific news depth remain unvalidated.
 
-### 4.1 Routing table (free, no-key) — revised 2026-08-31 after live probing
+### 4.1 Routing table (free, no-key) — revised 2026-08-31, extended 2026-09-02 after live probing
 
 | Role | Source | Markets | Auth | Probed status |
 |---|---|---|---|---|
@@ -113,18 +119,32 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
 | Repair / rescue (raw bars only) | eastmoney `push2his` kline | HK | none | ✅ good bars (`fqt=0` raw) · ⚠️ **hard-drops the TCP connection** (temp IP ban) after ~5 requests at 0.35s spacing → ≥2s + jitter |
 | Repair / rescue (raw bars only) | tencent `hkfqkline` | HK | none | ✅ works · ⚠️ code is **5-digit** (`hk00005`) where Yahoo is **4-digit** (`0005.HK`); ≤1200 bars per call; a wrong-but-plausible code shape returns **HTTP 200 + empty bar array** |
 | ~~US fallback~~ | ~~stooq~~ | — | — | ❌ **dropped**: the CSV endpoint serves a JavaScript proof-of-work challenge page (HTTP 200 + HTML, `__verify` SHA-256 leading-zero mine) instead of data — unusable headless |
+| Cross-source validation **lead — not adopted** | sina daily bars (`hkstock/<5digit>/klc2_kl.js`, `staticdata/us/<T>`) | HK + US, stocks **and ETFs** | none | Researched 2026-09-02 (`docs/research-akshare-tickdb.md`): ✅ 131/131 HK + 40/40 US store instruments, 0 failures, full history in one request (00005 → 6,965 bars since 1998; SPY since 2001), no ban in ~250 calls · ❌ payload is an obfuscated blob needing a vendored ~18 KB reverse-engineered decoder; **as-traded** prices, so not level-comparable to our store across splits (§4.2 R3); ETF universe absent from its list endpoint |
+| Phase 2 events/fundamentals **candidate — not adopted** | eastmoney **F10** `datacenter.eastmoney.com` (a *different* host from the banned `push2his`) | HK + US (ETFs: no) | none | ✅ reachable today: 12/12 calls at ~1 s, ~0–100 ms, 200 from Node too. Gives HK dividend events with **declaring-currency amount + HKD equivalent + ex/pay dates** (00005: 94 rows back to 1999 — the `CA_DEGRADED` case) and HK/US three-statement history (00700: 1,124/585/966 rows). ❌ no ETF records, no US dividend history |
 | Later (Phase 4 / broker era) | Futu OpenD, **IBKR** | HK / US (IBKR also LSE, if ever re-added) | local | Researched 2026-09-01 (`docs/research-broker-market-data.md`): **neither is free** — IBKR historical bars need paid per-exchange subscriptions; Futu is quota-capped (100–1000 tickers/7d by asset tier) so it's repair-tier at best, and has no LSE coverage. §4.2 storage rules make the migration a re-fetch, not a rewrite |
+| ~~Evaluated, rejected~~ | ~~**TickDB** (tickdb.ai)~~ | — | key | Researched 2026-09-02: coverage is real (HK 3,543 + US 14,169 catalogue products, ETFs included, 131/131 HK + 562/564 US store names present) and its closes match ours to 0.0000 % median — but **the API exposes no dividend or split endpoint and no `adjust` parameter**, so §4.2 R1 (store raw **+ events**) is unsatisfiable at any tier; free = 72 symbols / 1 calendar year / 30 req-min on a *globally shared* trial key; 5y history ⇒ $899/mo. Also: daily bars stamped at exchange-local midnight, and `kline` serves a still-forming bar despite its "completed periods" doc |
 
 Dropped as bulk fallbacks: **Alpha Vantage** (free tier ≈25 req/day — per-ticker
-rescue at best), **stooq** (PoW-gated, above), akshare/tushare (A-share scope
-excluded), and any paid source in v1.
+rescue at best), **stooq** (PoW-gated, above), **TickDB** (no CA events, paid),
+and any paid source in v1. **tushare** stays excluded (key + credit points). The
+earlier "akshare (A-share scope excluded)" line was *wrong about scope* —
+measured 2026-09-02, akshare covers HK and US stocks and ETFs with history far
+deeper than Yahoo's; it is excluded because it is a Python wrapper (stack
+constraint, §3) over the two hosts already listed above, not because it lacks
+coverage (`docs/research-akshare-tickdb.md`).
 
-**Yahoo is the only source whose *adjusted* prices we may use.** Every CN
-source's adjusted series uses the additive convention that mis-states returns
-(§4.2). Operational constraint: the request `User-Agent` must be pinned in the
-loader (a long Chrome UA drew an immediate 429; a short `Mozilla/5.0` returns
-200 in ~130ms), with ~200ms/request spacing — throttling is a design element,
-not a retry policy.
+**Yahoo is the only source whose *adjusted* prices we may use.** CN adjusted
+series are unusable — but *not* for one uniform reason (measured 2026-09-02,
+`docs/research-akshare-tickdb.md` §2.4): tencent/eastmoney `qfq` is additive
+(the §4.2 table); sina's **HK** `qfq` is *multiplicative* (5-y TR 420.2 % vs our
+428.6 % derivation — right convention, still not our numbers); sina's **US**
+`qfq` is additive cash; and sina publishes **no factor file at all for HK ETFs**
+(`02800`/`03032`/`03195` → HTTP 404, so `qfq` silently equals raw: ETF 5-y TR
+−2.8 % vs our +14.5 %). Conventions vary *inside* one provider — the rule is
+"derive locally, always", not "CN means additive". Operational constraint: the
+request `User-Agent` must be pinned in the loader (a long Chrome UA drew an
+immediate 429; a short `Mozilla/5.0` returns 200 in ~130ms), with ~200ms/request
+spacing — throttling is a design element, not a retry policy.
 
 ### 4.2 Price-adjustment convention — four invariants (agreed 2026-08-31)
 
@@ -175,8 +195,29 @@ HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
   injects a phantom ~12% jump that the momentum ranker reads as a breakout. A
   fallback may only supply **raw** bars, after which the whole series is
   re-derived locally.
+- **R3a — "raw" is not a shared quantity across providers (measured 2026-09-02,
+  `docs/research-akshare-tickdb.md`).** Yahoo v8 `close` is split- **and
+  distribution-in-specie-adjusted**; every alternative measured here (sina,
+  eastmoney `fqt=0`, tencent, TickDB) is **as-traded**. A 131-instrument × 5-year
+  HK audit: 130/131 names agree at median |deviation| **0.0000%**, 95 have at
+  least one bar off by >0.5 %, 13 have >3 bars off by >0.5 %, and **5 carry a
+  persistent >2 % block** — while a 45-name US sample flags 10 names (≈22%) the
+  same way. Exact measured factors: `1211.HK` 0.3333 across BYD's 2025-06-10
+  bonus (`WMT` 0.3333 for its 3:1, `SMCI` 0.1, `UNG` 4.0, `NFLX` 10.0),
+  `0700.HK` 0.92186 → 0.94978 → 1.0 across the JD and Meituan in-specie
+  ex-dates — **which appear in no event row Yahoo publishes**, so this class is
+  invisible to any event-based check. Two consequences: the rescue guard's
+  "agree to tick precision on the surrounding closes" test (§A.4) is what makes
+  R3 safe and must not be relaxed to an order-of-magnitude check; and any
+  cross-source **level** validation must be split-aware (compare day-over-day
+  returns, or exclude CA ex-dates) or it will fire on convention, not on
+  corruption.
 - **R4 — cross-source validation compares convention-free quantities only**
   (raw closes, session-date index, CA event sets). **Never** adjusted prices.
+  *(Qualification from R3a: raw closes are convention-free only within a
+  corporate-action-free window — outside one, they are not. Half-day and
+  year-end sessions are a second, date-correlated noise source: single days where
+  7–11 of 15 sampled HK names differ from Yahoo by 0.15–0.7%.)*
 
 Rejected alternative: "trust Yahoo's `adjclose` and defer local adjustment to
 Phase 4" — rejected because it leaves the signal layer dependent on a provider
@@ -320,8 +361,18 @@ the backtest module from Days 21–23 gets built there.
 5. **Silent provider revision** — Yahoo can rewrite history (dividends,
    adjustments) between runs, invisible from inside a single feed. Mitigated by
    R1 (history is derived, so re-derivation is free and inspectable) plus the
-   §4.3 weekly sentinel.
+   §4.3 weekly sentinel. *Limit found 2026-09-02: same-provider diffing also
+   cannot see a defect that is stable inside one fetch — `3195.HK`'s stored
+   series carries a +677 % seam (USD-counter prices written into the HKD
+   history) that passes `yahoo-rewrite` because nothing changed between runs.
+   That class needs an intra-series check (flat + zero-volume + local level
+   break), which no provider choice substitutes for.*
 6. **Free-source fragility** — the no-key sources we depend on throttle by IP,
    return 200-with-empty-body on bad request shapes, and change anti-bot rules
    (stooq is already PoW-gated). Mitigated by single-provider routing, loud
-   typed outcomes, and the §4.1 probed-status table kept current.
+   typed outcomes, and the §4.1 probed-status table kept current. *Measured
+   2026-09-02: the `push2his` refusal is burst- **and client-fingerprint** based
+   (one `curl` of our exact provider URL returned 200 + 464 KB while `requests`
+   and Node `fetch` were refused within the same minutes, and re-armed for all
+   clients after ~12 more probes) — so a re-check must be a single request from
+   the loader we actually ship, not a curl convenience.*
