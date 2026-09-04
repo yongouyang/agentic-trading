@@ -142,7 +142,8 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
   `VendorBar(vendor,symbol,date,…)` keeping native as-traded convention, adjusted series
   derived on read; or (b) split-normalize into the existing `Instrument/Bar` store per R1
   (requires accepting Yahoo ratios as normalization input for ~16.8k symbols incl. its
-  microcap gaps). Recommendation was (a)+registry now; revisit with registry stats in hand.
+  microcap gaps — measured 2026-09-04: FAR-tier Yahoo-missed rate ≈ 2% of answered
+  symbols, plus the 3,365 delisted blind spot; see §7.3). Recommendation was (a)+registry now; revisit with registry stats in hand.
 - Whether to also subscribe Databento **security master** (free) to settle the
   NASDAQ-listed vs ADF classification authoritatively. Measured 2026-09-04:
   `nasdaqtraded.txt` (current-only) classifies 11,875 of 16,781 plain symbols
@@ -152,16 +153,40 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
 
 ## 7. Next steps (ordered)
 
-1. Run the Yahoo sweep (§5 command). On completion: tally statuses; expect ~75% ok,
-   ~25% not-found among plain symbols.
-2. Validate + run detector v2 against anchors; produce candidate list.
-3. Cross-check registry vs candidates: Yahoo-missed-but-detected (TBLT-class) → append to
-   registry with `source=inband,confidence=estimated` (ratio from clean rational k);
-   detected-noise → drop. Report gap rate honestly.
+1. ✅ DONE 2026-09-04: sweep complete, zero failures — 13,416 ok / 3,365
+   not-found (20.0%); registry = **2,645 events across 1,731 symbols** (495
+   forward / 2,150 reverse; 1,511 reverses ≥1:10).
+2. ✅ DONE 2026-09-04: detector fixed to v3 (validated on anchors) and run over
+   the full archive: **3,589 candidates** (0.03% of sessions), 0 error files →
+   `detected-split-candidates-v3.csv`.
+3. ✅ DONE 2026-09-04: cross-check (`split-crosscheck.mjs`) →
+   `split-crosscheck-report.csv` + `split-registry-additions.csv`. Tally:
+   confirmed 1,283 · factor-mismatch 42 · **yahoo-missed 869** ·
+   **yahoo-blind-spot 503** · out-of-scope (non-plain) 892 · registry events
+   undetected 1,320 (of which expected-miss 167). Key measured nuances:
+   - **Detector recall is ~50%** (1,325/2,645). The 1,153 detector-misses
+     decompose: 649 real-signature-but-outside-tolerance (ex-date drift, e.g.
+     ABVC 1:10 with +22% ex-gap and volume that rose instead of falling); 305
+     ex-date absent from file (halt/renaming windows); 70 factor outside the
+     1:100 lattice (e.g. ACON 1:335); 59 no-prev-bar (new listings); 50 halted
+     on ex-date; 20 archive-edge (event in final days ⇒ no post window).
+   - **Proposed additions = 1,372 rows**, but split by confidence tier:
+     **FAR (≥4× repricing): 653** (268 yahoo-missed + 385 blind-spot) —
+     spot-checks show these are overwhelmingly real (NESR 3.9×, NINE 46×,
+     NIVF 21× all genuine repricings; occasional questionable like MUX 2.5×).
+     **NEAR: 719 — treat as needs-manual-verification, do NOT bulk-append.**
+   - **Test symbols leaked**: ZVZZT-class rows appear in both sweep journal and
+     candidates (isPlain doesn't exclude the 9 known test symbols) — exclude
+     them when finalizing the registry.
+   - Yahoo-missed-but-detected FAR rate ≈ 268/13,416 answered symbols ≈ 2% —
+     Yahoo's coverage gap is real but small for currently-listed names; the
+     detector's main value is the 3,365-symbol delisted blind spot.
 4. Decide storage fork (§6) → implement importer CLI
    `apps/api/src/cli/import-databento.ts` (better-sqlite3 bulk insert, manifest sha256
    verify, per-file idempotent journal, Day-17-style typed validation report, R4
    return-level cross-validation vs Yahoo store on shared symbols).
+   Registry finalization policy to decide with the fork: append FAR-tier
+   additions only (653) vs also vetting NEAR-tier (719).
 5. Docs touch-ups: architecture §4.1 routing-table row for Databento (paid archive,
    as-traded convention, ADF caveat); PROGRESS.md after each step.
 

@@ -5,6 +5,31 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-05 — Sweep + full detector run + cross-check COMPLETE: registry 2,645 events, 1,372 proposed additions (653 high-confidence)
+
+All three execution steps from the research plan are done (doc §7 updated with
+full results):
+
+- **Sweep**: 16,781/16,781, zero failures. 13,416 ok / 3,365 not-found (20.0%).
+  Registry = 2,645 events / 1,731 symbols (495 forward / 2,150 reverse).
+- **Detector v3 over full archive**: 3,589 candidates, 0 error files.
+- **Cross-check** (`split-crosscheck.mjs`): confirmed 1,283 · factor-mismatch 42
+  · yahoo-missed 869 · yahoo-blind-spot 503 · out-of-scope 892. Detector recall
+  ~50% vs registry — misses decompose as 649 real-signature-outside-tolerance
+  (e.g. ABVC +22% ex-gap), 305 ex-date absent from file, 70 beyond 1:100
+  lattice (ACON 1:335), 129 boundary classes. Fine for its advisory role.
+- **Proposed registry additions: 1,372**, tiered by confidence — FAR (≥4×
+  repricing) 653 spot-check real (NESR/NINE/NIVF verified); NEAR 719 NOT for
+  bulk append. Yahoo's gap on answered symbols ≈ 2% (FAR); its real weakness
+  is the delisted blind spot, where the detector adds 385 FAR events.
+- Test symbols (ZVZZT-class) leaked into sweep journal and candidates —
+  exclude at registry finalization.
+
+**Open for user (deep tier)**: storage fork (§6) + registry finalization
+policy (FAR-only vs also vetting NEAR). Then the importer CLI (step 4).
+
+---
+
 ## 2026-09-04 — Review of the 09-03 session; sweep hardened + RUNNING; detector fixed (v3); cross-check tooling ready
 
 Reviewed the prior (Qwen3.8-flash) session's analysis before executing its plan
