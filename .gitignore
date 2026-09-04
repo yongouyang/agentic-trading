@@ -26,3 +26,4 @@ coverage/
 
 # Phase 1 daily-screen report artifacts
 apps/api/reports/
+__pycache__/
