@@ -5,6 +5,84 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-04 — Review of the 09-03 session; sweep hardened + RUNNING; detector fixed (v3); cross-check tooling ready
+
+Reviewed the prior (Qwen3.8-flash) session's analysis before executing its plan
+(`docs/research-databento-import.md` updated with all corrections).
+
+**Verified accurate** (live re-probes): ITCH bars are as-traded/unadjusted (NVDA
+1208.00 → 120.87 on 2024-06-10, in-file); Yahoo v8 full-history depth + anchors;
+the TBLT 1:65 Yahoo gap is real; ~25% Yahoo 404 rate (mid-sweep: 21.6%).
+**One claim retracted**: TRAP-1 "windowed Yahoo requests drop in-window split
+events" does NOT reproduce — 2026-09-03 observation was a probe artifact; the
+`period1=0` mitigation stays (strictly conservative). Doc §4.2 corrected.
+
+**Done:**
+- `yahoo-splits-sweep.mjs` hardened: transient statuses (retries-exhausted /
+  exception / http-*) now re-fetched on resume (were permanently skipped);
+  completion check updated. Sweep **launched ~09:20 UTC, running in background**
+  (16,640 to fetch, est 2.9h; health check at 3,674: zero failures/429s).
+- `split_candidate_detector.py` → **v3, validated** (was shipped with 3 defects:
+  symbol never written to output; candidate lattice capped at 1:10 reversals —
+  whole microcap-reversal gap class unmatchable; v1-scale noise). v3: symmetric
+  lattice to 1:100, tiered gates (≥4× overnight gap ≈ unique to corporate
+  actions ⇒ loose FAR tier stays specific), plausibility floors. All 11 anchor
+  events detected, ex-dates exact, incl. TBLT 1:64 and KTTA 1:20; noise ~2 rows
+  / 23 files. Factors are bars-derived estimates (up to ~17% off on wide-gap
+  microcap ex-dates) — dates exact, which is what the cross-check needs.
+- Listing-exchange classification via `nasdaqtraded.txt` (free, current-only):
+  11,875/16,781 plain symbols classified → `symbol-listing-exchange.csv` in the
+  download dir. Only ~30% of matched are NASDAQ-listed common stock (ADF caveat
+  quantified); the 4,906 unmatched are delisted names (spot-verified), aligning
+  with the Yahoo 404 rate — security-master subscribe now clearly low-value.
+- New `scripts/databento/split-crosscheck.mjs`: registry↔detector join →
+  `split-crosscheck-report.csv` + `split-registry-additions.csv` (inband/
+  estimated, registry-schema-compatible). Tested against anchors: NVDA/KTTA
+  confirmed, TBLT flagged yahoo-missed with 1:64 as expected.
+
+**Next** (when sweep lands): full-archive detector run → cross-check → honest
+gap-rate report → then the storage-fork decision (§6, user call, deep tier),
+now informed by the listing-exchange stats.
+
+---
+
+## 2026-09-03 (late) — DataBento XNAS 5y OHLCV-1d archive: audited; Yahoo chosen as split source; sweep ready to run
+
+User downloaded Databento batch `XNAS-20260902-W559N3FC8U` (~266 MB zst → ~1.4 GB,
+20,623 per-symbol CSVs, 2021-09-02→2026-09-01, schema `ohlcv-1d`). Session was
+plan-first (no store changes). Full audit + decisions in
+**`docs/research-databento-import.md`** — read it first when resuming.
+
+Measured findings: bars are **as-traded, NOT split-adjusted** (NVDA/TSLA ex-date steps
+verified) → collides with R1's store-boundary invariant unless normalized by a split
+registry; the feed is **not NASDAQ-only** (NYSE names present via ADF at partial volume;
+`publisher_id` useless for classification); filenames URL-encode inconsistently
+(`%2B` vs literal `#`); `instrument_id` unstable within one symbol; `manifest.json`
+ships sha256 per file (free import integrity check).
+
+Split sourcing evaluated three ways: **Databento Reference API** — exact contract proven
+(`corporate_actions.get_range`, fields `start`/`end` not `start_date`; their NVDA result
+matches our measured steps) but user key gets
+`403 license_reference_dataset_no_subscription` on all three reference datasets (free
+portal subscribe would fix — deferred). **Yahoo v8 events** — chosen: full-history depth
+(AAPL 1987+), 11/12 anchors exact incl. microcap reversals from Databento's own docs;
+two traps recorded (events silently window-filtered ⇒ always `period1=0`; delisted/M&A'd
+names 404 ≈25% of plain sample). One real gap confirmed: `TBLT` 1:65 reversal visible in
+ITCH bars, absent from Yahoo ⇒ in-band detector kept as second opinion (v1 heuristic
+measured unreliable both directions; v2 persistence-gated script saved untested).
+**In-band detection alone** — rejected as primary.
+
+Artifacts ready: `scripts/databento/yahoo-splits-sweep.mjs` (plain symbols only = 16,781;
+resumable journal + registry CSV; smoke-tested, 141 symbols already journaled; start
+command in doc §5, ≈2.9h) and `scripts/databento/split_candidate_detector.py`.
+
+Next session: run sweep → validate/run detector → cross-check & report gap rate → then
+the open storage fork (separate as-traded `VendorBar` archive vs R1-normalized merge into
+`Instrument/Bar`) decides the importer design (`import-databento.ts`, better-sqlite3 bulk,
+sha256 verify, Day-17-style typed validation, R4 return-level cross-validation).
+
+---
+
 ## 2026-09-03 — Provider research: AKShare + TickDB (verdict: add neither) + a live `3195.HK` store defect
 
 ### What was done
