@@ -75,6 +75,62 @@ model ScreenRun {
   results ScreenResult[]
 }
 
+// DataBento XNAS vendor archive (research-databento-import.md §6.5, decided
+// 2026-09-05): AS-TRADED bars kept losslessly under a separate convention;
+// the split registry lives alongside and adjusted series is derived on read.
+// R1 is untouched — these tables never feed Instrument/Bar.
+model VendorBar {
+  vendor String // 'databento-xnas'
+  symbol String // plain symbol, archive filename decoded
+  date   String // session date YYYY-MM-DD (ts_event first 10 chars)
+  open   Float?
+  high   Float?
+  low    Float?
+  close  Float?
+  volume Float?
+
+  @@id([vendor, symbol, date])
+}
+
+// Split registry = Yahoo v8 events (authoritative) ∪ FAR-tier in-band
+// additions (estimated); dedupe on (symbol, exDate), Yahoo wins.
+model SplitEvent {
+  symbol     String
+  exDate     String // ex-date YYYY-MM-DD
+  event      String // "FORWARD_SPLIT" | "REVERSE_SPLIT"
+  ratioNew   Float
+  ratioOld   Float
+  factor     Float // ratioNew / ratioOld
+  source     String // "yahoo" | "inband"
+  confidence String // "authoritative" | "estimated"
+
+  @@id([symbol, exDate])
+}
+
+// Listing classification from symbol-listing-exchange.csv (nasdaqtraded.txt
+// join) — import-universe metadata, not the screen Instrument table.
+model VendorInstrument {
+  symbol          String  @id
+  listingExchange String?
+  type            String?
+  flag            String?
+  securityName    String?
+}
+
+// Per-file import journal — idempotency for import-databento.ts re-runs.
+model VendorImportFile {
+  vendor         String
+  file           String // archive filename
+  symbol         String
+  sha256         String
+  rows           Int
+  noTradeSkipped Int
+  status         String // "ok" | "sha-mismatch" | "error"
+  importedAt     DateTime @default(now())
+
+  @@id([vendor, file])
+}
+
 model ScreenResult {
   runId       Int
   symbol      String

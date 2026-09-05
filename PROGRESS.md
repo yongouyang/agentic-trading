@@ -5,6 +5,38 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-05 (later) — DataBento importer CLI BUILT + full archive imported: 16,765 files, 11.2M rows, 0 failures
+
+Step §7.4 done. `apps/api/src/cli/import-databento.ts`
+(`pnpm -C apps/api import:databento [--limit N] [--symbols …]`):
+
+- **Schema** (additive migration `20260905093000_databento_vendor_archive`):
+  `VendorBar(vendor,symbol,date,OHLCV)` as-traded · `SplitEvent(symbol,exDate,
+  event,ratios,factor,source,confidence)` · `VendorInstrument` (listing
+  classification) · `VendorImportFile` (per-file journal). Instrument/Bar and
+  R1 untouched (decision 6.5). Bulk insert = Prisma `$executeRawUnsafe`
+  `INSERT OR REPLACE` in per-file transactions (no better-sqlite3 in repo —
+  stayed on the existing Prisma layer, no new deps); zstd via system `zstd -dc`.
+- **Universe**: 20,623 files → 16,765 imported (3,842 non-plain, 16 test
+  excluded: 14 listing-CSV `flag=test` + hardcoded Z-class ∪ ZVOL/ZBA — a
+  superset of the doc's "9 known"; the 7 extra are NYSE/IEX/BZX test names).
+- **Full run** (~3 min): 11,203,925 rows inserted, 0 sha256 mismatches,
+  0 failures, 0 zero-tradeable symbols, coverage 2021-09-02 → 2026-09-01,
+  per-file rows min/max/median 1/1254/613. Journal idempotent (re-run skips).
+- **Registry**: 3,848 SplitEvents = 2,645 yahoo ∪ 1,372 inband FAR, 0 conflicts,
+  169 test-symbol rows dropped.
+- **R4 cross-validation** (report-only, 553 shared US symbols, 680,775 return
+  pairs): match rate 37.8% at |Δ|≤0.1%, median |Δ| 0.18% (dominated by Yahoo
+  adjusted-price rounding). Worst outliers are symbol-history artifacts, not
+  import bugs: META 2022-06-09 = FB→META ticker change (vendor 14.04×),
+  BNY/MNST similar one-sided store anomalies — worth a data-quality follow-up.
+- Tests: 20 new (unit + fixture integration), 191 total green; typecheck clean.
+
+**Next**: architecture §4.1 routing-table row for Databento; optionally vet the
+NEAR-tier 719 cross-check rows; META/BNY/MNST store anomalies from R4.
+
+---
+
 ## 2026-09-05 — Sweep + full detector run + cross-check COMPLETE: registry 2,645 events, 1,372 proposed additions (653 high-confidence)
 
 All three execution steps from the research plan are done (doc §7 updated with
