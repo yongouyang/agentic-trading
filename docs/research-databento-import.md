@@ -136,20 +136,22 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
 3. Cadence = conservative courtesy throttle (500ms+jitter, sequential, one retry ladder).
 4. Importer language stays **TypeScript** (§3 pure-TS stack) — the Python snippets floating
    around this topic (yfinance examples) were evaluated only as endpoint probes.
+5. **Storage fork — DECIDED 2026-09-05 (user): option (a), separate lossless
+   `VendorBar(vendor,symbol,date,…)` archive table** keeping the native as-traded
+   convention; split registry stored alongside; adjusted series derived on read.
+   The existing `Instrument/Bar` store and R1 are untouched.
+6. **Registry finalization — DECIDED 2026-09-05 (user): FAR-tier in-band
+   additions only** (653 rows, `source=inband, confidence=estimated`). NEAR-tier
+   719 rows stay in `split-crosscheck-report.csv` for optional later vetting.
+   Exclude the 9 known test symbols (ZVZZT-class) from the final registry.
+7. **Universe scope — DECIDED 2026-09-05 (user): plain symbols only** (16,781,
+   incl. delisted); units/warrants/rights/`=`/`#`/`-` classes not imported.
 
-**Open — needs user call next session:**
-- **Storage fork (the big one)**: (a) separate lossless archive table
-  `VendorBar(vendor,symbol,date,…)` keeping native as-traded convention, adjusted series
-  derived on read; or (b) split-normalize into the existing `Instrument/Bar` store per R1
-  (requires accepting Yahoo ratios as normalization input for ~16.8k symbols incl. its
-  microcap gaps — measured 2026-09-04: FAR-tier Yahoo-missed rate ≈ 2% of answered
-  symbols, plus the 3,365 delisted blind spot; see §7.3). Recommendation was (a)+registry now; revisit with registry stats in hand.
-- Whether to also subscribe Databento **security master** (free) to settle the
-  NASDAQ-listed vs ADF classification authoritatively. Measured 2026-09-04:
-  `nasdaqtraded.txt` (current-only) classifies 11,875 of 16,781 plain symbols
-  (`symbol-listing-exchange.csv`); the 4,906 unmatched are delisted names
-  (spot-verified) — security master would only be needed to classify those.
-- Final universe scope for the DB import (all 20.6k files vs plain-only vs listed-common-only).
+**Resolved without action:**
+- Databento **security master** subscribe: declined (measured 2026-09-04:
+  `nasdaqtraded.txt` classifies the 11,875 currently-listed plain symbols —
+  `symbol-listing-exchange.csv`; the 4,906 unmatched are delisted names, for
+  which listing-exchange classification has no import consequence).
 
 ## 7. Next steps (ordered)
 
@@ -181,12 +183,12 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
    - Yahoo-missed-but-detected FAR rate ≈ 268/13,416 answered symbols ≈ 2% —
      Yahoo's coverage gap is real but small for currently-listed names; the
      detector's main value is the 3,365-symbol delisted blind spot.
-4. Decide storage fork (§6) → implement importer CLI
-   `apps/api/src/cli/import-databento.ts` (better-sqlite3 bulk insert, manifest sha256
-   verify, per-file idempotent journal, Day-17-style typed validation report, R4
-   return-level cross-validation vs Yahoo store on shared symbols).
-   Registry finalization policy to decide with the fork: append FAR-tier
-   additions only (653) vs also vetting NEAR-tier (719).
+4. **READY TO BUILD** (all decisions taken, §6.5–6.7): implement importer CLI
+   `apps/api/src/cli/import-databento.ts` — `VendorBar` + `SplitEvent` tables,
+   plain-symbols universe, registry = Yahoo CSV + FAR-tier additions,
+   better-sqlite3 bulk insert, manifest sha256 verify, per-file idempotent
+   journal, Day-17-style typed validation report, R4 return-level
+   cross-validation vs Yahoo store on shared symbols.
 5. Docs touch-ups: architecture §4.1 routing-table row for Databento (paid archive,
    as-traded convention, ADF caveat); PROGRESS.md after each step.
 
