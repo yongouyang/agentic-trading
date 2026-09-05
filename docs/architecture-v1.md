@@ -225,6 +225,19 @@ Phase 4" — rejected because it leaves the signal layer dependent on a provider
 factor table we cannot inspect (and, per §4.1's HK dividend finding, one that
 silently FX-converts), and because it makes every fallback unusable under R3.
 
+**Vendor-archive identity (agreed 2026-09-05, `docs/research-databento-import.md`
+§6.8):** the Databento `VendorBar` archive is keyed on the raw ticker *string*,
+and tickers get recycled — measured stitches: META (Roundhill ETF → Meta
+Platforms, +1404% phantom return), BNY, FB (Meta → ProShares ETF), plus 627
+detector false positives from the same cause. The archive therefore carries an
+**empirical segmentation layer**: nullable `segment_id` on `VendorBar` +
+`VendorSegment(symbol, segment_id, first_date, last_date, evidence)`, populated
+by a post-import stitch-detection pass (calendar gap > 10 sessions AND price
+jump outside 1/2.5–2.5× AND no `SplitEvent` on the date AND no rational split
+match). Raw bars are never altered; consumers of vendor series must group by
+(symbol, segment_id). This is archive-scoped only — the Yahoo store needs no
+identity concept because its series are continuous through renames.
+
 ### 4.3 Single-provider posture and the weekly sentinel
 
 Yahoo is the only source whose free, no-key coverage spans US + HK

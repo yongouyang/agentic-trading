@@ -146,6 +146,22 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
    Exclude the 9 known test symbols (ZVZZT-class) from the final registry.
 7. **Universe scope — DECIDED 2026-09-05 (user): plain symbols only** (16,781,
    incl. delisted); units/warrants/rights/`=`/`#`/`-` classes not imported.
+8. **Symbol identity — DECIDED 2026-09-05 (user): empirical segmentation,
+   vendor archive only.** Motivation (measured): Databento raw_symbol files
+   silently stitch two securities across ticker reuse (META = Roundhill ETF →
+   Meta Platforms; BNY = prior ETF → BK rename; FB = Meta → ProShares ETF;
+   627/719 NEAR-tier detector candidates were the same artifact). Model:
+   nullable `segment_id` on `VendorBar` + `VendorSegment` table (symbol,
+   segment_id, first_date, last_date, detection_evidence); raw bar values never
+   altered (lossless preserved); populated by a post-import segmentation pass;
+   surrogate segment IDs, name/FIGI enrichment deferred until fundamentals need
+   legal identity. The Yahoo store stays symbol-keyed (its series are
+   continuous through renames). Known-stitched series (META/BNY/FB + full scan
+   output) segmented immediately as the mechanism's validation set.
+   **Stitch rule**: boundary between consecutive bars where (calendar gap >
+   10 sessions) AND (|price jump| outside 1/2.5–2.5×) AND (no `SplitEvent` on
+   that date) AND (jump matches no rational split factor within 5% log) —
+   same-day reuse without a gap is missed by design (reported, not hidden).
 
 **Resolved without action:**
 - Databento **security master** subscribe: declined (measured 2026-09-04:
@@ -177,9 +193,26 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
      spot-checks show these are overwhelmingly real (NESR 3.9×, NINE 46×,
      NIVF 21× all genuine repricings; occasional questionable like MUX 2.5×).
      **NEAR: 719 — treat as needs-manual-verification, do NOT bulk-append.**
-   - **Test symbols leaked**: ZVZZT-class rows appear in both sweep journal and
-     candidates (isPlain doesn't exclude the 9 known test symbols) — exclude
-     them when finalizing the registry.
+   - **NEAR-tier vetting — DONE 2026-09-05, verdict: reject all 719.**
+     Re-scored with a stricter rubric + 17-row independent verification sample
+     (`near-tier-verdicts.csv`): 627 likely-noise (median measured price ratio
+     3,016× — these are **ticker-reuse artifacts**: detector compared the last
+     bar of a delisted company with the first bar of the ticker's next
+     occupant), 78 unscorable (the known test-symbol leak), 13 uncertain + 1
+     likely-real — and the sample check rejected all 14 (zero Yahoo
+     corroboration; the 1 "likely-real" is a 4-day-late echo of registry event
+     EFAX 2023-01-12). Decision 6.6 confirmed by evidence. Detector follow-up
+     worth doing: a price-ratio sanity bound would kill the ticker-reuse class
+     at the source (see §7.4 R4 diagnosis — same root cause as META/BNY).
+   - **R4 anomaly diagnosis — DONE 2026-09-05** (full outlier decomposition in
+     session log): META/BNY = vendor-side ticker-reuse stitches (raw_symbol
+     files silently concatenate two securities across a ticker change; a third
+     stitch, FB→ProShares ETF, was invisible to R4); MNST = store-side phantom
+     half-price bars (data patch); BR 2024-10-04 = false `inband/estimated`
+     registry row (data patch: audit in-band rows); ~3k mid-tier outliers =
+     vendor extended-hours vs Yahoo regular-session convention mismatch.
+     **Design gap surfaced: no symbol-identity concept** (validity windows /
+     ticker history) — parked for user decision, deep tier.
    - Yahoo-missed-but-detected FAR rate ≈ 268/13,416 answered symbols ≈ 2% —
      Yahoo's coverage gap is real but small for currently-listed names; the
      detector's main value is the 3,365-symbol delisted blind spot.
