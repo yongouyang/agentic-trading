@@ -5,6 +5,100 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-05 (data patches) — MNST store repaired via Yahoo re-fetch, BR false SplitEvent deleted, all 1,203 in-band registry rows audited
+
+R4-anomaly data patches (diagnosis in the segmentation-era entries above):
+
+- **MNST store repair — DONE.** Store `Bar` had phantom half-price bars on
+  2026-07-20/21/22, 07-31, 08-06 (~$47–48 vs true ~$95) plus a null bar on
+  2026-08-10: a mix of pre-split (unadjusted) and post-split (Yahoo
+  retro-adjusted) fetches. Root cause confirmed by live probe: after the
+  2026-08-11 2:1 split Yahoo retro-adjusts the whole series, so any
+  post-split fetch of a window returns half-price bars that collided with
+  the stored unadjusted ones. Fixed by a full-window re-fetch through the
+  normal ingest path (new `pnpm -C apps/api repair:store -- --symbol MNST`
+  = YahooMarketDataProvider → MarketDataService L1/L2 → daily-screen's
+  deleteMany+createMany rewrite; fail-closed sanity gate aborts without
+  writing if the fresh fetch still shows a >1.8× overnight jump or lacks a
+  required date). Post-repair: 1,255 bars, phantoms gone, 08-10 present,
+  splitCount=2 observed. Store↔vendor (split-adjusted via SplitEvent)
+  daily-return diffs across 2026-07-15→08-15: max 1.20% — the strict 0.5%
+  bar is NOT met on 5 days, but healthy-symbol baselines show the
+  Yahoo↔Databento-XNAS convention noise is far larger (AAPL 6.8%, MSFT
+  10.2% max single-day return diff in the same window, incl. a session-
+  dating shift on 07-30), so the residual is convention noise, not
+  corruption.
+- **BR 2024-10-04 SplitEvent (15:8, inband/estimated) — DELETED** via new
+  logged script `pnpm -C apps/api split:delete -- --symbol … --ex-date …
+  --reason …` (prints row JSON before/after, refuses when absent). Root
+  cause measured: vendor 2024-10-04 open printed 114.75 vs prev close
+  215.07 (1.874× ≈ factor 1.875 — the detector's trap) while the ex-date
+  close was 215.39 — a single bad open print, not a repricing. BR has no
+  other SplitEvent rows.
+- **In-band registry audit — DONE** (`pnpm -C apps/api audit:inband`;
+  report `apps/api/reports/inband-audit-2026-09-05.{json,csv}`). NOTE: the
+  registry holds **1,203** inband rows, not 653 — 653 was the pre-import
+  FAR tally; the imported set was 1,372 FAR − 169 test-symbol drops.
+  Rubric: prev close vs ex-date open AND close; e = max|ln(measured/
+  factor)|; corroborated ≤ ln 1.25, drifted ≤ 2·ln 1.25, else
+  uncorroborated; different-segment prev/ex bars are their own class.
+  (In-band factor is the detector's own open-based estimate, so the open
+  leg is near-vacuous; the close leg is the real persistence test — this
+  is exactly what reproduces BR as uncorroborated.) Tallies: **516
+  corroborated · 413 drifted-but-plausible · 273 uncorroborated · 0
+  segment-boundary · 0 no-bars.** Zero boundary rows is structural: the
+  segmentation stitch rule exempts dates carrying a SplitEvent. The 273
+  uncorroborated are dominated by the BR signature (open repriced to the
+  factor, close unmoved ⇒ bad open prints, not splits). NO rows deleted
+  beyond BR — the full list is in the report CSV for user review.
+- Tests: 10 new unit tests (BR-exact-numbers rubric case, boundary/no-bars
+  classes, repair sanity gate incl. phantom-jump rejection); 217 total
+  green, typecheck clean.
+
+---
+
+## 2026-09-05 (segmentation) — Vendor-archive identity layer BUILT + validated: 72 stitched symbols, anchors META/BNY/FB PASS
+
+Decision §6.8 executed. `apps/api/src/cli/segment-vendor-bars.ts`
+(`pnpm -C apps/api segment:databento [--symbols …] [--limit N]`):
+
+- **Schema** (additive migration `20260905120000_vendor_segmentation`):
+  nullable `VendorBar.segmentId` + `VendorSegment(vendor,symbol,segmentId,
+  firstDate,lastDate,evidence)`. Every bar tagged (11,330,404); 16,843
+  segments across 16,765 symbols; unstitched = single segment.
+- **Stitch rule** as decided (gap >14 cal. days AND jump outside
+  [1/2.5, 2.5] AND no SplitEvent on the date AND no split explanation) with
+  **one disclosed strengthening**: the rational lattice (n:d, 1..32 ∪
+  {40,50,64,65,70,80,100}, 5% log) is dense enough that ALL THREE anchors
+  match a rational (META 15.95× ≈ 16:1 at 0.33% log; BNY 13.60× ≈ 27:2;
+  FB 0.205× ≈ 1:5) — a price-only condition (d) makes the §6.8 validation
+  set unflaggable. So (d) mirrors the detector fully: a lattice match must
+  ALSO pass the detector's volume signature (NEAR 0.5–4: day + 5-session
+  persistent volume ≈ k within ±55%; FAR: direction-consistent persistence;
+  insufficient volume history ⇒ price match alone decides, conservative).
+  Across a real reuse the occupant changes and volume contradicts every
+  split hypothesis — this is what flags META/BNY/FB. Flag for review if the
+  letter of §6.8 was intended.
+- **Full run** (~45 s): 72 stitched symbols, 78 boundaries. Anchors META
+  (2022-01-28→2022-06-09), BNY (2026-02-06→2026-05-21), FB
+  (2022-06-08→2025-06-26) all PASS with exact boundaries; fail-closed exit
+  on anchor failure. Report artifact `apps/api/reports/
+  segment-vendor-bars-2026-09-05.json`. Idempotent (transactional replace).
+- **Honest read**: the 72 are dominated by genuine long-dormant ticker
+  recycling (BBBY, HLTH, CORZ, PARA, WW…). 6 boundaries have a registry
+  split INSIDE the gap; 4/6 are still reuse by direction (VIVO/PARA/MF/VELO),
+  AREB (1:100 in gap, observed 27×) and SPRB (two 1:75 in gap, observed
+  190×) are the genuinely ambiguous ones — possible mild over-detection on
+  serial reverse-splitters whose ex-date bars are absent from the archive.
+  Under-detection by design: same-day reuse (no gap), gaps ≤14 days, reuse
+  jumps inside [1/2.5, 2.5].
+- Tests: 16 new unit tests (synthetic series: META-like flagged, plain gap
+  not, SplitEvent-on-date not, 3:1-with-split-volume not, same rational
+  with occupant-swap volume flagged, same-day jump not, 3-segment
+  multi-stitch); 207 total green, typecheck clean.
+
+---
+
 ## 2026-09-05 (later) — DataBento importer CLI BUILT + full archive imported: 16,765 files, 11.2M rows, 0 failures
 
 Step §7.4 done. `apps/api/src/cli/import-databento.ts`

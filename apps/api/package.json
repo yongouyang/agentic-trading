@@ -13,7 +13,11 @@
     "prisma:migrate": "prisma migrate dev",
     "screen:daily": "tsx src/cli/daily-screen.ts",
     "screen:sentinel": "tsx src/cli/sentinel.ts",
-    "import:databento": "tsx src/cli/import-databento.ts"
+    "import:databento": "tsx src/cli/import-databento.ts",
+    "segment:databento": "tsx src/cli/segment-vendor-bars.ts",
+    "repair:store": "tsx src/cli/repair-store-bars.ts",
+    "audit:inband": "tsx src/cli/audit-inband-splits.ts",
+    "split:delete": "tsx src/cli/delete-split-event.ts"
   },
   "dependencies": {
     "@agentic-trading/quant-core": "workspace:*",

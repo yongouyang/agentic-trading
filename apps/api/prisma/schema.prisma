@@ -80,16 +80,32 @@ model ScreenRun {
 // the split registry lives alongside and adjusted series is derived on read.
 // R1 is untouched — these tables never feed Instrument/Bar.
 model VendorBar {
-  vendor String // 'databento-xnas'
-  symbol String // plain symbol, archive filename decoded
-  date   String // session date YYYY-MM-DD (ts_event first 10 chars)
-  open   Float?
-  high   Float?
-  low    Float?
-  close  Float?
-  volume Float?
+  vendor    String // 'databento-xnas'
+  symbol    String // plain symbol, archive filename decoded
+  date      String // session date YYYY-MM-DD (ts_event first 10 chars)
+  open      Float?
+  high      Float?
+  low       Float?
+  close     Float?
+  volume    Float?
+  segmentId String? // 'SYM#N' surrogate; set by segment-vendor-bars.ts
 
   @@id([vendor, symbol, date])
+}
+
+// Empirical symbol-identity segments (research-databento-import.md §6.8):
+// ticker reuse stitches two securities into one VendorBar series; the
+// post-import segmentation pass flags stitch boundaries and records one row
+// per contiguous segment. Raw bars are never altered.
+model VendorSegment {
+  vendor    String // 'databento-xnas'
+  symbol    String
+  segmentId String // surrogate, e.g. 'META#1', chronological
+  firstDate String // first session of the segment YYYY-MM-DD
+  lastDate  String // last session of the segment YYYY-MM-DD
+  evidence  String // why the boundary was flagged ('' for an unstitched single segment)
+
+  @@id([vendor, symbol, segmentId])
 }
 
 // Split registry = Yahoo v8 events (authoritative) ∪ FAR-tier in-band
