@@ -17,6 +17,7 @@
     "segment:databento": "tsx src/cli/segment-vendor-bars.ts",
     "repair:store": "tsx src/cli/repair-store-bars.ts",
     "audit:inband": "tsx src/cli/audit-inband-splits.ts",
+    "audit:persistence": "tsx src/cli/audit-inband-persistence.ts",
     "split:delete": "tsx src/cli/delete-split-event.ts"
   },
   "dependencies": {

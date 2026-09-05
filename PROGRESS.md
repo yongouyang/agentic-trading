@@ -5,6 +5,40 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-05 (persistence gate + segment merges) — 331 bad-print rows deleted, detector v4, AREB/SPRB merged (all user-approved)
+
+- **Persistence re-audit of the 929 in-band rows** (new read-only CLI
+  `pnpm -C apps/api audit:persistence`, report
+  `apps/api/reports/inband-audit-persistence-2026-09-05.{csv,json}`). Rule:
+  over ex-day close + next ≤3 same-segment sessions, count closes within
+  25%-log of prevClose (`prevHits`) and of prevClose/factor (`persistHits`);
+  `bad-print` iff prevHits ≥ 2 AND persistHits < 2 (the impliedHits guard
+  rescues shallow factors whose tolerance bands overlap). Result: **598
+  genuine-persistent / 331 bad-print** (of the 413 drifted rows: 329 bad /
+  84 genuine; 2 of the 516 "corroborated" were single-print artifacts —
+  CRIB, LEV+A). Anchors verified: AACT/AAMI bad-print, ACRS/ACRX genuine.
+- **Deletion:** batch mode removed all 331 bad-print rows (0 missing).
+  **Registry now: 2,645 yahoo + 598 in-band = 3,243 SplitEvents.**
+- **Detector close-persistence gate** — new
+  `scripts/databento/split_persistence_filter.py` post-filters the v3
+  candidate CSV (no archive re-scan; same rule/tolerance). v3 3,589 →
+  **v4: 2,583 kept, 1,006 rejected** as bad-open-print
+  (`scripts/databento/detected-split-candidates-v4.csv`). All documented
+  detector anchors preserved.
+- **AREB/SPRB ambiguous boundaries resolved — merged.** Both were
+  over-detection: multi-week trading gaps containing the actual Yahoo
+  reverse split (AREB 1:100 on 2026-03-23; SPRB 1:75 on 2025-08-05).
+  AREB#2→AREB#1 (1,045 bars) and SPRB#2→SPRB#1 (1,159 bars) re-tagged,
+  VendorSegment rows merged with evidence notes (VendorSegment 16,843 →
+  16,841), duplicate SPRB 2025-08-07 Yahoo SplitEvent deleted. Stitched
+  symbols now 70.
+- Tests: 224 passed / 1 skipped (+7 new persistence-gate specs); typecheck
+  clean. Borderline genuine kept: ADAP 2024-10-31 (shallow 0.69 factor,
+  overlap-band rescue) — eyeball if a stricter shallow-factor policy is
+  ever wanted.
+
+---
+
 ## 2026-09-05 (registry cleanup) — 273 uncorroborated in-band SplitEvent rows batch-deleted (user-approved)
 
 `delete-split-event.ts` gained a batch mode (`--from-csv … --class … --yes`,
