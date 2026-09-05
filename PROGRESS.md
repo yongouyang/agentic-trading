@@ -5,6 +5,18 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-05 (registry cleanup) — 273 uncorroborated in-band SplitEvent rows batch-deleted (user-approved)
+
+`delete-split-event.ts` gained a batch mode (`--from-csv … --class … --yes`,
+same loud per-row logging, exit 1 on any missing row). Deleted all 273
+`uncorroborated` rows from the 2026-09-05 in-band audit (bad-open-print class;
+BR was the prototype) — 0 missing, exit 0. Registry now: **2,645 yahoo +
+929 in-band = 3,574 SplitEvents**. The 413 `drifted-but-plausible` rows remain
+pending user review in `apps/api/reports/inband-audit-2026-09-05.csv`.
+Typecheck clean; suite 217 passed / 1 skipped.
+
+---
+
 ## 2026-09-05 (data patches) — MNST store repaired via Yahoo re-fetch, BR false SplitEvent deleted, all 1,203 in-band registry rows audited
 
 R4-anomaly data patches (diagnosis in the segmentation-era entries above):
