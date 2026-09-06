@@ -338,12 +338,14 @@ async function runLane(
 
       // CA handling on rescue (§A.2): eastmoney supplies no usable CA events
       // — keep previously stored Yahoo dividends and continue deriving with
-      // them; if none exist, CA_DEGRADED + loud warning.
-      const storedCas = await prisma.corporateAction.findMany({ where: { instrumentId: item.instrumentId } });
+      // them; if none exist, CA_DEGRADED + loud warning. DIVIDEND rows ONLY:
+      // IN_SPECIE rows (F10 enrichment) never feed adjustment — Yahoo closes
+      // are already net of in-specie.
+      const storedCas = await prisma.corporateAction.findMany({ where: { instrumentId: item.instrumentId, type: "DIVIDEND" } });
       const dividends: CorporateAction[] = storedCas.map((ca) => ({
         date: ca.date,
         type: "DIVIDEND" as const,
-        amount: ca.amount,
+        amount: ca.amount ?? 0, // DIVIDEND rows always carry an amount (schema comment); ?? narrows Float?
         currency: ca.currency,
       }));
       const instrument = (await prisma.instrument.findUniqueOrThrow({ where: { id: item.instrumentId } }))!;

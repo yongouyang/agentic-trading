@@ -47,9 +47,17 @@ model Bar {
 model CorporateAction {
   instrumentId Int
   date         String // ex-date YYYY-MM-DD
-  type         String // v1: "DIVIDEND" only — no split factor is ever applied (R1)
-  amount       Float
+  // "DIVIDEND" | "IN_SPECIE" — no split factor is ever applied (R1).
+  // IN_SPECIE rows come from the weekly F10 enrichment (eastmoney
+  // RPT_HKF10_MAIN_DIVBASIC 特别分配 rows, architecture §4 2026-09-06) and
+  // never feed local adjustment: Yahoo closes are already net of in-specie.
+  type         String
+  // Cash amount per share in `currency`. DIVIDEND writes always set it; only
+  // IN_SPECIE ratio-only rows (no HKD equivalent published) get null.
+  amount       Float?
   currency     String // declared currency; beware Yahoo FX-converted HK amounts
+  // Audit trail for IN_SPECIE rows: raw F10 PLAN_EXPLAIN + parsed ratio.
+  detail       String?
 
   instrument Instrument @relation(fields: [instrumentId], references: [id])
 

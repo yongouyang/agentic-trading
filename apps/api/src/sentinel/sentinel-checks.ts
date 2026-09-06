@@ -213,8 +213,21 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
  *  Date mismatches on a known HKEX half-day (`HKEX_KNOWN_HALF_DAYS`, measured:
  *  2022-01-31 CNY eve — Yahoo drops it as a phantom under RULE L1, eastmoney
  *  carries a genuine bar) are a bounded store-vs-eastmoney calendar divergence:
- *  excluded from the ALARM count, still listed in details. */
-export function checkEastmoneyRaw(stored: Bar[], raw: Bar[], knownHalfDays: ReadonlySet<string> = HKEX_KNOWN_HALF_DAYS): SentinelCheck {
+ *  excluded from the ALARM count, still listed in details.
+ *
+ *  `opts.inSpecieExDates` (Phase-2 CA-source decision, 2026-09-06): when the
+ *  store carries IN_SPECIE events, the LEVEL comparison is restricted to dates
+ *  after the latest in-specie ex-date — Yahoo's pre-ex-date closes are net of
+ *  the distribution while eastmoney fqt=0 is as-traded (R3a), so levels there
+ *  can never agree (measured: 0700.HK 8.48% step). Date-set and half-day logic
+ *  are unchanged (calendars are convention-free). */
+export function checkEastmoneyRaw(
+  stored: Bar[],
+  raw: Bar[],
+  knownHalfDays: ReadonlySet<string> = HKEX_KNOWN_HALF_DAYS,
+  opts: { inSpecieExDates?: string[] } = {},
+): SentinelCheck {
+  const levelCutoff = opts.inSpecieExDates?.length ? [...opts.inSpecieExDates].sort().at(-1)! : null;
   const storedDates = datesOf(stored);
   const rawDates = datesOf(raw);
   const w = overlapWindow(storedDates, rawDates);
@@ -237,6 +250,9 @@ export function checkEastmoneyRaw(stored: Bar[], raw: Bar[], knownHalfDays: Read
 
   const devs: { date: string; pct: number }[] = [];
   for (const b of sRows) {
+    // Convention divergence (R3a): pre-in-specie closes are net-of-distribution
+    // on Yahoo, as-traded on eastmoney — levels there can never agree.
+    if (levelCutoff && b.date <= levelCutoff) continue;
     const r = byDate.get(b.date);
     if (!r || b.close == null || r.close == null || b.close <= 0 || r.close <= 0) continue;
     devs.push({ date: b.date, pct: (r.close / b.close - 1) * 100 });
@@ -259,8 +275,12 @@ export function checkEastmoneyRaw(stored: Bar[], raw: Bar[], knownHalfDays: Read
     onlyStored: onlyStored.length,
     onlyEastmoney: onlyRaw.length,
     knownHalfDayDivergences: halfDayDivergences.length,
+    inSpecieLevelCutoff: levelCutoff ?? "—",
   };
   const details: string[] = [];
+  if (levelCutoff) {
+    details.push(`level window starts after in-specie ex-date ${levelCutoff} (convention divergence, events stored as IN_SPECIE)`);
+  }
   const storedUnknown = onlyStored.filter((d) => !knownHalfDays.has(d));
   const rawUnknown = onlyRaw.filter((d) => !knownHalfDays.has(d));
   if (storedUnknown.length) details.push(`stored sessions eastmoney lacks: ${listed(storedUnknown)}`);
@@ -285,7 +305,11 @@ export function checkEastmoneyRaw(stored: Bar[], raw: Bar[], knownHalfDays: Read
   } else if (devs.length < MIN_COMMON_DATES) {
     status = "warn";
     flag = "WARN ";
-    details.push(`thin overlap: ${devs.length} common dates (< ${MIN_COMMON_DATES})`);
+    details.push(
+      levelCutoff
+        ? `thin overlap after in-specie truncation: ${devs.length} common dates (< ${MIN_COMMON_DATES})`
+        : `thin overlap: ${devs.length} common dates (< ${MIN_COMMON_DATES})`,
+    );
   }
   return {
     check: "eastmoney-raw",

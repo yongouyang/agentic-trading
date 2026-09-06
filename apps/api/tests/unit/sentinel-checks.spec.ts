@@ -5,7 +5,7 @@
  * noise, provider calendar phantoms) that must NOT alarm.
  */
 import type { Bar } from "@agentic-trading/quant-core";
-import { HKEX_ADHOC_CLOSURES, HKEX_KNOWN_NON_SESSIONS } from "@agentic-trading/quant-core";
+import { HKEX_ADHOC_CLOSURES, HKEX_KNOWN_HALF_DAYS, HKEX_KNOWN_NON_SESSIONS } from "@agentic-trading/quant-core";
 import { describe, expect, it } from "vitest";
 import {
   checkCaRevision,
@@ -247,6 +247,35 @@ describe("checkEastmoneyRaw — cross-source raw closes", () => {
 
   it("disjoint windows ⇒ ALARM", () => {
     expect(checkEastmoneyRaw(bars(weekdays("2020-01-06", 5)), bars(weekdays("2026-01-05", 5))).status).toBe("alarm");
+  });
+
+  it("inSpecieExDates: pre-ex-date level step excluded (0700.HK shape: 8.48% before 2023-01-05, clean after) ⇒ ok", () => {
+    const dates = weekdays("2022-06-01", 320); // spans 2023-01-05, ~170 dates after it
+    const stored = bars(dates, () => 100); // Yahoo: net of in-specie, flat
+    const raw = bars(dates, (d) => (d <= "2023-01-05" ? 108.48 : 100)); // eastmoney as-traded: +8.48% step
+    const without = checkEastmoneyRaw(stored, raw);
+    expect(without.status).toBe("alarm"); // the measured 2026-09-02/06 ALARM
+    expect(without.metrics.maxAbsDevPct).toBeCloseTo(8.48, 2);
+    const withSpecie = checkEastmoneyRaw(stored, raw, HKEX_KNOWN_HALF_DAYS, { inSpecieExDates: ["2022-01-20", "2023-01-05"] });
+    expect(withSpecie.status).toBe("ok");
+    expect(withSpecie.metrics.inSpecieLevelCutoff).toBe("2023-01-05"); // max ex-date is the cutoff
+    expect(withSpecie.details.join(" ")).toContain("level window starts after in-specie ex-date 2023-01-05");
+  });
+
+  it("inSpecieExDates: date-set mismatches are NOT excused by the level truncation", () => {
+    const dates = weekdays("2022-06-01", 320);
+    const stored = bars(dates, () => 100);
+    const raw = bars(dates.filter((d) => d !== dates[100]), (d) => (d <= "2023-01-05" ? 108.48 : 100));
+    const r = checkEastmoneyRaw(stored, raw, HKEX_KNOWN_HALF_DAYS, { inSpecieExDates: ["2023-01-05"] });
+    expect(r.status).toBe("alarm");
+    expect(r.metrics.onlyStored).toBe(1);
+  });
+
+  it("inSpecieExDates: <50 common dates left after the cutoff ⇒ thin-window WARN", () => {
+    const dates = weekdays("2023-01-02", 20); // all within days of the ex-date
+    const r = checkEastmoneyRaw(bars(dates), bars(dates), HKEX_KNOWN_HALF_DAYS, { inSpecieExDates: ["2023-01-05"] });
+    expect(r.status).toBe("warn");
+    expect(r.details.join(" ")).toContain("thin overlap after in-specie truncation");
   });
 });
 

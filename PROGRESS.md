@@ -5,6 +5,56 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (Phase-2 CA-source decision — DECIDED + implemented) — eastmoney F10 overlay for CA_DEGRADED + IN_SPECIE events; sentinel down to 1 known ALARM
+
+The standing Phase-2 CA-source open item is closed. New measured fact that
+shaped it: F10 (`datacenter.eastmoney.com`, RPT_HKF10_MAIN_DIVBASIC) carries
+the in-specie class R3a called "invisible to any event-based check" —
+0700.HK 特别分配 rows for JD (2022-01-20, ratio 1/21, no HKD equivalent),
+Meituan (2023-01-05, 1/10 + 18.13 HKD/share), Tencent Music (2018), China
+Literature (2017). User decisions (all four):
+1. **F10 = correction overlay** — Yahoo stays primary for HK stock
+   dividends; F10 corrects amounts for CA_DEGRADED names only. US names and
+   HK ETFs stay Yahoo-only (F10 has neither — measured).
+2. **IN_SPECIE imported** as a new CorporateAction type (ratio +
+   HKD-equivalent-when-present; amount now nullable, `detail` audit column —
+   migration `20260906163032_ca_inspecie_events`). Store price convention
+   unchanged.
+3. **Weekly batch, non-blocking** — `pnpm -C apps/api ca:f10-refresh`
+   enrichment CLI; failure never degrades screen:daily.
+4. Implemented immediately.
+
+**Implementation** (`eastmoney-f10.provider.ts` + pure `parseF10Plan`,
+`refresh-f10-ca.ts` with exported `mergeF10ForSymbol`, sentinel eastmoney
+leg now in-specie-aware: level comparison starts after the latest IN_SPECIE
+ex-date — R3a-prescribed). Tests 252→293 passed / 1 skipped, tsc clean.
+
+**Three load-bearing catches found by live data** (small-lane probe before
+the full run): (a) F10 cash amounts are *as-declared* — 1211.HK's 2025
+bonus row would have overlaid 3×-too-large pre-split amounts; overlay +
+cross-check are now restricted to ex-dates after the latest bonus event;
+(b) same-ex-date cash rows SUM (0005.HK 2024-05-09: ordinary $0.10 +
+special $0.21 — the overlay now exceeds Yahoo's own event stream there,
+flagged loudly); (c) the daily-screen rescue path read all CA rows into
+dividend adjustment — IN_SPECIE null amounts would have produced NaN
+factors; now filters `type="DIVIDEND"`.
+
+**Live results:** full HK lane refreshed (131 entries, ~2.5 min paced, zero
+provider failures): 20 IN_SPECIE rows across 13 names; overlay corrections
+across the CA_DEGRADED cohort (9988 ×4, 9999 ×21, 9987 ×7, 9618 ×3, 0005,
+9961, …); caDegraded roster now 63 HK names. Sentinel `--eastmoney`:
+**0700.HK eastmoney leg 8.48% ALARM → ok (max 0.67%, n898 post-2023-01-05
+window). The only remaining ALARM is 0941.HK 1.08% on 2024-01-15** — the
+standing known marginal divergence.
+
+**Next:** 0941.HK's 1.08% single-session divergence is the last unexplained
+sentinel ALARM (eastmoney vs Yahoo on 2024-01-15; tencent date leg clean) —
+candidate for a one-off triage. Cosmetic: same-ex-date summation leaves
+float artifacts (9988.HK 1.9510839999999998) — round on write if it ever
+matters.
+
+---
+
 ## 2026-09-06 (Yahoo-gap rescue) — 3 missing HK sessions rescued from eastmoney; YAHOO_KNOWN_GAPS curated set; sentinel down to 2 known-class ALARMs
 
 Follow-up to the data-quality batch's item 7. Decision (user): record

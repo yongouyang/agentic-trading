@@ -109,6 +109,16 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
   ex/pay dates**, 94 rows back to 1999 for 0005.HK. The Phase-2 revisit now has a
   concrete, measured candidate; the defer-with-flag decision is unchanged.
   `docs/research-akshare-tickdb.md`.)*
+  *(2026-09-06: revisited and DECIDED — F10 is adopted as a **correction
+  overlay**, not a primary source: Yahoo stays the primary CA feed; F10's HKD
+  equivalents overwrite stored DIVIDEND amounts only on `CA_DEGRADED` names
+  (and set the flag when a non-HKD declaration is newly detected), and F10's
+  `特别分配` rows import distributions-in-specie as a new CorporateAction type
+  `IN_SPECIE` (ratio + HKD equivalent when published). US names and HK ETFs
+  stay Yahoo-only — F10 has neither (measured: no ETF records, no US dividend
+  history). The refresh is a weekly, non-blocking CLI
+  (`pnpm -C apps/api ca:f10-refresh`): its failure never degrades
+  screen:daily.)*
   HK small-cap halts and HK-specific news depth remain unvalidated.
 
 ### 4.1 Routing table (free, no-key) — revised 2026-08-31, extended 2026-09-02 after live probing
@@ -207,7 +217,14 @@ HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
   bonus (`WMT` 0.3333 for its 3:1, `SMCI` 0.1, `UNG` 4.0, `NFLX` 10.0),
   `0700.HK` 0.92186 → 0.94978 → 1.0 across the JD and Meituan in-specie
   ex-dates — **which appear in no event row Yahoo publishes**, so this class is
-  invisible to any event-based check. Two consequences: the rescue guard's
+  invisible to any event-based check. *(2026-09-06: no longer invisible —
+  eastmoney F10 `RPT_HKF10_MAIN_DIVBASIC` publishes these as `特别分配` rows,
+  e.g. 00700 `特殊说明:每10股分派1股美团B类普通股股份(相当于每股派18.13港元)`
+  (ex 2023/01/05) and `特殊说明:每21股腾讯股份分派1股京东集团A类普通股股份`
+  (ex 2022/01/20); they are now imported as `IN_SPECIE` CorporateAction rows by
+  the weekly F10 enrichment, and the sentinel's eastmoney level window starts
+  after the latest in-specie ex-date on such names.)* Two consequences: the
+  rescue guard's
   "agree to tick precision on the surrounding closes" test (§A.4) is what makes
   R3 safe and must not be relaxed to an order-of-magnitude check; and any
   cross-source **level** validation must be split-aware (compare day-over-day

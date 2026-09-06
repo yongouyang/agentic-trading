@@ -32,7 +32,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Bar } from "@agentic-trading/quant-core";
-import { DataOutcome, HKEX_KNOWN_NON_SESSIONS, YAHOO_KNOWN_GAPS } from "@agentic-trading/quant-core";
+import { DataOutcome, HKEX_KNOWN_HALF_DAYS, HKEX_KNOWN_NON_SESSIONS, YAHOO_KNOWN_GAPS } from "@agentic-trading/quant-core";
 import { getMarketDataDeps } from "../market-data/market-data.deps.js";
 import { isDummyProviderLabel } from "./daily-screen.js";
 import { EastmoneyRepairProvider, type RepairProvider } from "../market-data/eastmoney-repair.provider.js";
@@ -188,6 +188,12 @@ async function runSymbol(
     where: { instrumentId: instrument.id, type: "DIVIDEND" },
     orderBy: { date: "asc" },
   });
+  // IN_SPECIE events (weekly F10 enrichment, architecture §4 2026-09-06) bound
+  // the eastmoney level window — Yahoo closes are net of in-specie (R3a).
+  const storedInSpecie = await prisma.corporateAction.findMany({
+    where: { instrumentId: instrument.id, type: "IN_SPECIE" },
+    orderBy: { date: "asc" },
+  });
 
   if (!storedBars.length) {
     return {
@@ -251,11 +257,11 @@ async function runSymbol(
     : await (async () => {
         const res = await eastmoney.fetchRawBars(symbol);
         if ("failure" in res) return skip("eastmoney-raw", `skip ${res.failure}`.slice(0, CELL_WIDTH), `eastmoney fetch failed: ${res.failure}`);
-        return checkEastmoneyRaw(storedBars, res.bars);
+        return checkEastmoneyRaw(storedBars, res.bars, HKEX_KNOWN_HALF_DAYS, { inSpecieExDates: storedInSpecie.map((c) => c.date) });
       })();
 
   // ---- leg 4: CA revision (needs a fresh Yahoo event set) ----
-  const storedEvents: CaEvent[] = storedCas.map((c) => ({ date: c.date, amount: c.amount }));
+  const storedEvents: CaEvent[] = storedCas.map((c) => ({ date: c.date, amount: c.amount ?? 0 })); // DIVIDEND rows always carry an amount (schema comment); ?? narrows Float?
   const freshEvents: CaEvent[] = freshOk ? fresh.corporateActions.map((c) => ({ date: c.date, amount: c.amount })) : [];
   const caWindow = freshOk ? overlapWindow(storedBars.map((b) => b.date).sort(), fresh.bars.map((b) => b.date).sort()) ?? undefined : undefined;
   const caCheck: SentinelCheck = freshOk

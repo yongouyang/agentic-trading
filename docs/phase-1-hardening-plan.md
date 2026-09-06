@@ -49,7 +49,9 @@ distributions; eastmoney `fqt=0` is pure as-traded.** A rescue rewrite of
 such a name shifts its old-bar levels (0700: +8.5% in 2021) and the kept
 Yahoo dividend events do not cover in-specie distributions. Rescue is exact
 for names without in-specie distributions; flag the class in Phase 2's CA
-source decision. First live sentinel eastmoney leg also ran (10/10 names
+source decision. *(Resolved same day: the in-specie class is now imported as
+`IN_SPECIE` CorporateAction rows from eastmoney F10 — see architecture §4,
+2026-09-06 amendment.)* First live sentinel eastmoney leg also ran (10/10 names
 answered, no re-ban) — its ALARMs are all classified conventions, see
 PROGRESS 2026-09-06 (§1 quick wins).
 
