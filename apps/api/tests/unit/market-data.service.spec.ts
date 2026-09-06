@@ -72,4 +72,13 @@ describe("MarketDataService — measured failure taxonomy (verification report G
     expect(repaired.close!).toBeLessThanOrEqual(repaired.high!);
     expect(repaired.close!).toBeGreaterThanOrEqual(repaired.low!);
   });
+
+  it("null-close: still-forming bar never reaches `bars`; droppedNullBars populated (RULE L5)", async () => {
+    const service = serviceWith({ "EA": "null-close" });
+    const result = await service.getDailyBars("EA");
+    expect(result.outcome).toBe(DataOutcome.OK);
+    expect(result.droppedNullBars).toHaveLength(1);
+    expect(result.bars.every((b) => b.close != null)).toBe(true);
+    expect(result.bars.some((b) => b.date === result.droppedNullBars[0])).toBe(false);
+  });
 });

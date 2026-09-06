@@ -15,7 +15,9 @@ import type { Bar, CorporateAction } from "@agentic-trading/quant-core";
  *  - "not-found"                 "No data found" (NOSUCHTICKER / TWTR → GENUINELY_ABSENT)
  *  - "fx-inconsistent-dividends" FX-converted >4dp HKD-labeled dividends on an HK name (9988.HK)
  *  - "holiday-phantom"           zero-volume bar on an HKEX holiday (2022-01-31, RULE L1)
- *  - "close-outside-hl"          close outside [H,L] (LSE UCITS / HK edge names, RULE L2) */
+ *  - "close-outside-hl"          close outside [H,L] (LSE UCITS / HK edge names, RULE L2)
+ *  - "null-close"                still-forming bar with null OHLC on run day (RULE L5,
+ *                                measured: 492 US names 2026-08-28, 22 HK names 2026-09-01) */
 export type DummyBehavior =
   | "ok"
   | "rate-limited"
@@ -25,7 +27,8 @@ export type DummyBehavior =
   | "not-found"
   | "fx-inconsistent-dividends"
   | "holiday-phantom"
-  | "close-outside-hl";
+  | "close-outside-hl"
+  | "null-close";
 
 export const DUMMY_BEHAVIORS: readonly DummyBehavior[] = [
   "ok",
@@ -37,6 +40,7 @@ export const DUMMY_BEHAVIORS: readonly DummyBehavior[] = [
   "fx-inconsistent-dividends",
   "holiday-phantom",
   "close-outside-hl",
+  "null-close",
 ];
 
 /** Raw provider response, pre-classification — the loader's input shape.

@@ -134,6 +134,8 @@ export interface LaneReport {
   genuinelyAbsent: number;
   fetchFailed: FetchFailure[];
   clampedBars: number;
+  nullCloseDropped: number;
+  levelBreakDropped: number;
   degraded: boolean;
   warnings: string[];
   shortlist: ScreenPick[];
@@ -162,6 +164,8 @@ function renderText(r: LaneReport): string {
   const rescuedSegment = r.rescued.length
     ? ` · ${r.rescued.length} rescued via eastmoney (${r.rescued.map((x) => x.symbol).join(", ")})`
     : "";
+  const nullCloseSegment = r.nullCloseDropped ? ` · ${r.nullCloseDropped} null-close bars dropped` : "";
+  const levelBreakSegment = r.levelBreakDropped ? ` · ${r.levelBreakDropped} level-break bars dropped` : "";
   // Synthetic data is the one thing an integrity header must never hide.
   const providerSegment = isDummyProviderLabel(r.provider)
     ? ` · ⚠ PROVIDER=${r.provider} — SYNTHETIC DATA, NOT REAL MARKET DATA`
@@ -169,7 +173,7 @@ function renderText(r: LaneReport): string {
   const lines = [
     `== DATA INTEGRITY ==  ${r.market} ${r.date}${providerSegment}: ${r.ok}/${r.universeSize} screened · ` +
       `${r.fetchFailed.length} fetch-failed (${failedList}) · ${r.genuinelyAbsent} genuinely absent · ` +
-      `${r.clampedBars} clamped bars${rescuedSegment} · DEGRADED: ${r.degraded ? "yes" : "no"}`,
+      `${r.clampedBars} clamped bars${nullCloseSegment}${levelBreakSegment}${rescuedSegment} · DEGRADED: ${r.degraded ? "yes" : "no"}`,
     "== SHORTLIST ==",
     ...r.shortlist.map(
       (p) =>
@@ -198,6 +202,8 @@ async function runLane(
   let ok = 0;
   let genuinelyAbsent = 0;
   let clampedBars = 0;
+  let nullCloseDropped = 0;
+  let levelBreakDropped = 0;
   const inputs: ScreenInput[] = [];
   /** HK tickers needing the post-pass rescue (phase-1-hardening-plan §A.2). */
   const needsRepair: { symbol: string; instrumentId: number; outcome: DataOutcome }[] = [];
@@ -230,6 +236,12 @@ async function runLane(
       clampedBars += result.repairedBars.length;
       warnings.push(`${entry.symbol}: L2 clamped close into [H,L] on ${result.repairedBars.join(",")}`);
     }
+    if (result.droppedNullBars.length) {
+      nullCloseDropped += result.droppedNullBars.length;
+      warnings.push(`${entry.symbol}: L5 dropped null-close bars: ${result.droppedNullBars.join(",")}`);
+    }
+    if (result.levelBreakDropped.length) levelBreakDropped += result.levelBreakDropped.length;
+    for (const w of result.levelBreakWarnings) warnings.push(`${entry.symbol}: ${w}`);
     if (result.splitCount) {
       warnings.push(`${entry.symbol}: ${result.splitCount} split event(s) observed (audit only — never stored/applied, R1)`);
     }
@@ -411,6 +423,8 @@ async function runLane(
     genuinelyAbsent,
     fetchFailed,
     clampedBars,
+    nullCloseDropped,
+    levelBreakDropped,
     degraded,
     warnings,
     shortlist: screen.ranked,

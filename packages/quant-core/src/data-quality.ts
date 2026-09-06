@@ -156,6 +156,111 @@ export function clampOhlc(bars: Bar[]): { bars: Bar[]; repaired: string[] } {
   return { bars: out, repaired };
 }
 
+/** RULE L5 — null-close guard. Yahoo serves still-forming/unfinalized bars
+ *  with null OHLC on run day (measured: 492 US names on 2026-08-28, 22 HK
+ *  names on 2026-09-01; EA/EQR/AVB recur). A bar without a close is unusable
+ *  for every downstream consumer — drop it, loudly: returns the kept bars
+ *  plus the dropped dates for logging. Runs BEFORE L1 in the service so a
+ *  null bar never survives into the store regardless of later rules. */
+export function dropNullCloseBars(bars: Bar[]): { bars: Bar[]; dropped: string[] } {
+  const dropped: string[] = [];
+  const out = bars.filter((b) => {
+    if (b.close == null) {
+      dropped.push(b.date);
+      return false;
+    }
+    return true;
+  });
+  return { bars: out, dropped };
+}
+
+export interface LevelBreakResult {
+  /** Series with any auto-dropped segment removed. */
+  bars: Bar[];
+  /** Dates of the auto-dropped segment (empty if none). */
+  dropped: string[];
+  /** Loud human-readable notes (dropped segment, or keep-and-flag cases). */
+  warnings: string[];
+}
+
+/** RULE L6 — intra-series level-break segment guard (detector documented in
+ *  docs/research-akshare-tickdb.md §4). A contiguous prefix or suffix segment
+ *  of flat (O=H=L=C), zero-volume bars whose level sits >10% off the rest of
+ *  the series indicates cross-currency stitching: when the level ratio matches
+ *  the HKD/USD peg fingerprint ([7.7, 8.1]) the segment is DROPPED (measured
+ *  case: 3195.HK 2024-04-29…2024-08-07, 69 flat bars in USD-counter prices
+ *  stitched onto the HKD series, ratio ~7.77). Any other ratio (measured
+ *  2836.HK ×2.1 class — possible halt/split) is KEPT and flagged for
+ *  adjudication. Assumes date-ascending input, like the neighbors above.
+ *  Never drops more than half the series — a majority "segment" is kept and
+ *  warned instead. */
+export function dropLevelBreakSegment(bars: Bar[]): LevelBreakResult {
+  const warnings: string[] = [];
+  const isFlatZeroVol = (b: Bar): boolean =>
+    b.open != null && b.high != null && b.low != null && b.close != null &&
+    b.open === b.high && b.high === b.low && b.low === b.close && !b.volume;
+
+  const n = bars.length;
+  let leadEnd = 0;
+  while (leadEnd < n && isFlatZeroVol(bars[leadEnd]!)) leadEnd++;
+  let trailStart = n;
+  while (trailStart > leadEnd && isFlatZeroVol(bars[trailStart - 1]!)) trailStart--;
+
+  const droppedDates: string[] = [];
+  const droppedIdx = new Set<number>();
+
+  const judge = (side: "prefix" | "suffix", start: number, end: number, neighborStart: number, neighborEnd: number): void => {
+    const run = bars.slice(start, end);
+    if (!run.length) return;
+    if (run.length < 3) {
+      // Point detector: a single flat zero-volume bar whose close breaks >10%
+      // vs its own previous bar still earns a warning (never a drop).
+      if (run.length === 1 && start > 0) {
+        const prev = bars[start - 1]!;
+        if (prev.close != null && prev.close !== 0) {
+          const ratio = Math.max(run[0]!.close! / prev.close, prev.close / run[0]!.close!);
+          if (Math.abs(run[0]!.close! / prev.close - 1) > 0.1) {
+            warnings.push(`L6 point break: flat zero-volume bar ${run[0]!.date} at ×${ratio.toFixed(2)} vs previous bar ${prev.date} — kept, adjudicate`);
+          }
+        }
+      }
+      return;
+    }
+    const neighbors = bars.slice(neighborStart, neighborEnd).filter((b) => b.close != null);
+    if (neighbors.length < 5) return; // too little context to judge
+    const runMedian = median(run.map((b) => b.close!));
+    const neighborMedian = median(neighbors.map((b) => b.close!));
+    if (!runMedian || !neighborMedian) return;
+    const dev = Math.abs(runMedian / neighborMedian - 1);
+    if (dev <= 0.1) return;
+    const ratio = Math.max(runMedian / neighborMedian, neighborMedian / runMedian);
+    const span = `${run[0]!.date}…${run[run.length - 1]!.date}`;
+    if (ratio >= 7.7 && ratio <= 8.1) {
+      if (droppedIdx.size + run.length > n / 2) {
+        warnings.push(`L6 level break: ${side} segment ${span} (${run.length} bars) matches the HKD/USD peg fingerprint ×${ratio.toFixed(2)} but is the majority of the series — kept, adjudicate`);
+        return;
+      }
+      for (let i = start; i < end; i++) droppedIdx.add(i);
+      droppedDates.push(...run.map((b) => b.date));
+      warnings.push(`L6 dropped ${run.length}-bar flat zero-volume ${side} segment ${span}: level ratio ×${ratio.toFixed(2)} inside the HKD/USD peg band [7.7, 8.1] (cross-currency stitching; measured 3195.HK prefix ~7.77)`);
+    } else {
+      warnings.push(`L6 level break: ${side} segment ${span} (${run.length} flat zero-volume bars) at ×${ratio.toFixed(2)} vs neighbors — not the peg fingerprint (possible halt/split, measured 2836.HK ×2.1 class); kept, adjudicate`);
+    }
+  };
+
+  judge("prefix", 0, leadEnd, leadEnd, Math.min(leadEnd + 20, trailStart));
+  judge("suffix", trailStart, n, Math.max(trailStart - 20, leadEnd), trailStart);
+
+  if (!droppedIdx.size) return { bars, dropped: [], warnings };
+  return { bars: bars.filter((_, i) => !droppedIdx.has(i)), dropped: droppedDates, warnings };
+}
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
 /** Loader-response classification inputs shared by every provider loader. */
 export interface RawResponseShape {
   /** HTTP status (or null for transport failure: timeout / dropped conn). */

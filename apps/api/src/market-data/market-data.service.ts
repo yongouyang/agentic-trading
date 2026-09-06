@@ -1,8 +1,9 @@
 /**
  * MarketDataService — the thinnest possible consumer of the provider seam:
  * classifies the raw response into DataOutcome (quant-core RULE L3/L4) and,
- * on OK, applies the loader repair rules (L1 holiday-phantom drop for HK
- * names, L2 close-outside-[H,L] clamp) plus the CA_DEGRADED flag for
+ * on OK, applies the loader repair rules (L5 null-close drop first, then L1
+ * holiday-phantom drop for HK names, L2 close-outside-[H,L] clamp, L6
+ * level-break segment guard) plus the CA_DEGRADED flag for
  * FX-inconsistent HK dividend events (architecture §4, 9988.HK case).
  */
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
@@ -11,6 +12,8 @@ import {
   classifyResponse,
   DataOutcome,
   dropHolidayPhantomBars,
+  dropLevelBreakSegment,
+  dropNullCloseBars,
   HKEX_HOLIDAYS,
   NYSE_HOLIDAYS,
   type Bar,
@@ -35,6 +38,12 @@ export interface DailyBarsResult {
   droppedPhantomBars: string[];
   /** Dates repaired by RULE L2 (close clamped into [H,L]). */
   repairedBars: string[];
+  /** Dates dropped by RULE L5 (null-close bars). */
+  droppedNullBars: string[];
+  /** Dates dropped by RULE L6 (level-break segment, HKD/USD peg fingerprint). */
+  levelBreakDropped: string[];
+  /** RULE L6 loud notes — dropped segments and keep-and-flag cases. */
+  levelBreakWarnings: string[];
   /** True on an HK name whose dividend events look FX-converted by Yahoo
    *  (USD-declaring payers: 0005.HK, 9988.HK, 2888.HK) — amounts unusable
    *  for local adjustment. Detection (measured live 2026-09-01): the bug's
@@ -69,17 +78,25 @@ export class MarketDataService {
         failureReason: raw.failureReason,
         droppedPhantomBars: [],
         repairedBars: [],
+        droppedNullBars: [],
+        levelBreakDropped: [],
+        levelBreakWarnings: [],
         caDegraded: false,
         splitCount: raw.splitCount ?? 0,
       };
     }
 
     const isHK = symbol.endsWith(".HK");
-    const beforeL1 = raw.bars;
+    // RULE L5 first: a null-close bar must not survive into the store
+    // regardless of the later rules.
+    const { bars: barsAfterL5, dropped: droppedNullBars } = dropNullCloseBars(raw.bars);
     // RULE L1 with the matching exchange calendar (phase-1-spec §2).
-    const barsAfterL1 = dropHolidayPhantomBars(beforeL1, isHK ? HKEX_HOLIDAYS : NYSE_HOLIDAYS);
-    const droppedPhantomBars = beforeL1.filter((b) => !barsAfterL1.includes(b)).map((b) => b.date);
-    const { bars, repaired } = clampOhlc(barsAfterL1);
+    const barsAfterL1 = dropHolidayPhantomBars(barsAfterL5, isHK ? HKEX_HOLIDAYS : NYSE_HOLIDAYS);
+    const droppedPhantomBars = barsAfterL5.filter((b) => !barsAfterL1.includes(b)).map((b) => b.date);
+    const { bars: barsAfterL2, repaired } = clampOhlc(barsAfterL1);
+    // RULE L6 level-break segment guard (3195.HK cross-currency stitching).
+    const levelBreak = dropLevelBreakSegment(barsAfterL2);
+    const bars = levelBreak.bars;
     // CA_DEGRADED (phase-1-spec §2, amended 2026-09-01): the Yahoo FX bug's
     // fingerprint is >4-decimal dividend amounts — the event `currency` field
     // just echoes meta.currency (HKD), so a mismatch can never fire. Both
@@ -100,6 +117,9 @@ export class MarketDataService {
       corporateActions: raw.corporateActions,
       droppedPhantomBars,
       repairedBars: repaired,
+      droppedNullBars,
+      levelBreakDropped: levelBreak.dropped,
+      levelBreakWarnings: levelBreak.warnings,
       caDegraded,
       splitCount: raw.splitCount ?? 0,
     };

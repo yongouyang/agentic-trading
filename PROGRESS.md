@@ -5,6 +5,63 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (data-quality batch, executed) — loader RULE L5 (null-close) + RULE L6 (level-break segment); sentinel half-day allowance; 3195.HK repaired; store healed to 0 null bars
+
+Executed the locked decisions from the earlier 2026-09-06 entry (all four
+recommended options). Tests: quant-core 41→49 passed, apps/api 238→241
+passed / 1 skipped, tsc clean both packages.
+
+**1. RULE L5 — null-close guard** (`quant-core/data-quality.ts`, runs first
+in `MarketDataService.getDailyBars`): any bar with null close is dropped,
+dates returned loudly (Yahoo serves still-forming bars this way — measured
+492 US names 2026-08-28, 22 HK 2026-09-01). New `"null-close"` dummy
+provider behavior exercises it end-to-end.
+
+**2. RULE L6 — intra-series level-break segment guard** (runs after L2): a
+maximal leading/trailing run (≥3) of flat zero-volume bars sitting >10% off
+the adjacent 20-bar median is cross-currency stitching; ratio in the
+[7.7, 8.1] HKD-peg band → auto-drop with loud warning (3195.HK case);
+any other ratio (2836.HK ×2.1 class) → keep + adjudication warning; <3-bar
+runs get a point-detector warning; never drops more than half the series.
+
+**3. Sentinel half-day allowance**: `HKEX_KNOWN_HALF_DAYS = {2022-01-31}`
+(quant-core calendars); `checkEastmoneyRaw` excludes it from the
+date-mismatch ALARM trigger, still listed in details annotated "known HKEX
+half-day divergence". Store convention (L1 drops the CNY-eve phantom) is
+unchanged.
+
+**4. Integrity header**: screen:daily now reports `N null-close bars
+dropped` / `N level-break bars dropped` per lane; warnings flow into
+ScreenRun warningsJson.
+
+**5. 3195.HK repaired.** `repair:store -- --symbol 3195.HK` rewrote the
+series through the hardened loader: 508 bars starting 2024-08-08 at the
+correct HKD level (8.13); the 69-bar USD-counter prefix (66 flat zero-vol +
+3 null) was dropped by L5/L6 during the re-fetch. Sentinel eastmoney max
+|dev| for 3195.HK: **709% → 0.18%**.
+
+**6. Null-bar heal — DONE.** Full `screen:daily -- --market all`:
+US 555/555, HK 131/131, 0 fetch-failed; 61 US + 86 HK null-close bars
+dropped at ingest; stored null-close bars: **646 → 0** (the EA/EQR/AVB
+recurrence did not survive the guarded rewrite).
+
+**7. Sentinel re-run (--eastmoney): 4 ALARMs, all classified, none new-class:**
+- 0700.HK max 8.48% on 2021-09-20 — the known Yahoo net-of-in-specie-
+  distribution divergence (JD/Meituan steps; Phase-2 CA-source decision).
+- 0941.HK max 1.08% — marginally over the 1% line, as before.
+- 2800.HK and 3195.HK: **store missing 2025-10-24** (both eastmoney and
+  tencent carry it → a Yahoo gap, not a phantom); 3195.HK also missing
+  2026-03-06. New follow-up: rescue those single sessions via the §A
+  eastmoney path.
+- The 2022-01-31 half-day ALARMs are gone (9 names quieted); zero
+  yahoo-rewrite ALARMs (every leg "identical").
+
+**Next:** repair the two missing ETF sessions (2800.HK 2025-10-24,
+3195.HK 2025-10-24 + 2026-03-06) from eastmoney; then the Phase-2 CA-source
+decision remains the standing open item.
+
+---
+
 ## 2026-09-06 (quick wins) — architecture §4.1 Databento row extended to XNYS; eastmoney ban LIFTED + §A live validation done; first sentinel eastmoney leg run (ALARMs all classified)
 
 **1. architecture-v1 §4.1**: the existing Databento routing-table row now

@@ -116,6 +116,14 @@ export class DummyMarketDataProvider implements MarketDataProvider {
         bars[0] = { ...first, close: (first.high ?? first.close ?? 1) * 1.05 };
         return { ...OK_BASE, bars, corporateActions: [] };
       }
+      case "null-close": {
+        // Yahoo's still-forming run-day bar: null OHLC, no volume (RULE L5 —
+        // measured 492 US names 2026-08-28, 22 HK names 2026-09-01).
+        const bars = syntheticBars(symbol);
+        const last = bars[bars.length - 1]!;
+        bars[bars.length - 1] = { date: last.date, open: null, high: null, low: null, close: null, volume: null };
+        return { ...OK_BASE, bars, corporateActions: [] };
+      }
       case "ok":
         return { ...OK_BASE, bars: syntheticBars(symbol), corporateActions: [] };
     }

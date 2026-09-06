@@ -17,7 +17,10 @@
  *   2. `eastmoney-raw`  cross-source raw closes (the only source with raw HK
  *      bars). ALARM if max |dev| > 1% or an in-window date mismatch; WARN if
  *      mean |dev| > 0.27% — the measured Yahoo-vs-eastmoney baseline for
- *      0005.HK (verification report A2), i.e. the noise floor.
+ *      0005.HK (verification report A2), i.e. the noise floor. Date mismatches
+ *      on a known HKEX half-day (`HKEX_KNOWN_HALF_DAYS` — measured 2022-01-31,
+ *      eastmoney carries a genuine bar Yahoo drops under L1) are listed but
+ *      excluded from the ALARM count.
  *   3. `tencent-dates`  cross-source session calendar. Dates only — closes are
  *      never even fetched (RULE R4, tencent has no raw series). Any in-window
  *      mismatch ⇒ ALARM, EXCEPT dates HKEX was demonstrably shut (published
@@ -46,7 +49,7 @@
  * and tencent caps at 1200 bars. Dates outside the **overlap** of the two date
  * sets are never a mismatch — only in-window differences are.
  */
-import { HKEX_KNOWN_NON_SESSIONS, type Bar } from "@agentic-trading/quant-core";
+import { HKEX_KNOWN_HALF_DAYS, HKEX_KNOWN_NON_SESSIONS, type Bar } from "@agentic-trading/quant-core";
 
 export type SentinelStatus = "alarm" | "warn" | "ok" | "skip";
 
@@ -187,8 +190,12 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
   };
 }
 
-/** Check 2 — eastmoney raw closes vs the stored raw series (cross-source). */
-export function checkEastmoneyRaw(stored: Bar[], raw: Bar[]): SentinelCheck {
+/** Check 2 — eastmoney raw closes vs the stored raw series (cross-source).
+ *  Date mismatches on a known HKEX half-day (`HKEX_KNOWN_HALF_DAYS`, measured:
+ *  2022-01-31 CNY eve — Yahoo drops it as a phantom under RULE L1, eastmoney
+ *  carries a genuine bar) are a bounded store-vs-eastmoney calendar divergence:
+ *  excluded from the ALARM count, still listed in details. */
+export function checkEastmoneyRaw(stored: Bar[], raw: Bar[], knownHalfDays: ReadonlySet<string> = HKEX_KNOWN_HALF_DAYS): SentinelCheck {
   const storedDates = datesOf(stored);
   const rawDates = datesOf(raw);
   const w = overlapWindow(storedDates, rawDates);
@@ -219,7 +226,10 @@ export function checkEastmoneyRaw(stored: Bar[], raw: Bar[]): SentinelCheck {
   const mean = abs.length ? abs.reduce((s, x) => s + x, 0) / abs.length : 0;
   const max = abs.length ? Math.max(...abs) : 0;
   const worst = devs.find((d) => Math.abs(d.pct) === max);
-  const dateMismatch = onlyStored.length + onlyRaw.length;
+  const storedHalfDays = onlyStored.filter((d) => knownHalfDays.has(d));
+  const rawHalfDays = onlyRaw.filter((d) => knownHalfDays.has(d));
+  const halfDayDivergences = [...storedHalfDays, ...rawHalfDays];
+  const dateMismatch = onlyStored.length + onlyRaw.length - halfDayDivergences.length;
 
   const metrics: Record<string, number | string> = {
     commonDates: devs.length,
@@ -229,10 +239,16 @@ export function checkEastmoneyRaw(stored: Bar[], raw: Bar[]): SentinelCheck {
     maxDevDate: worst?.date ?? "—",
     onlyStored: onlyStored.length,
     onlyEastmoney: onlyRaw.length,
+    knownHalfDayDivergences: halfDayDivergences.length,
   };
   const details: string[] = [];
-  if (onlyStored.length) details.push(`stored sessions eastmoney lacks: ${listed(onlyStored)}`);
-  if (onlyRaw.length) details.push(`eastmoney sessions not in store: ${listed(onlyRaw)}`);
+  const storedUnknown = onlyStored.filter((d) => !knownHalfDays.has(d));
+  const rawUnknown = onlyRaw.filter((d) => !knownHalfDays.has(d));
+  if (storedUnknown.length) details.push(`stored sessions eastmoney lacks: ${listed(storedUnknown)}`);
+  if (rawUnknown.length) details.push(`eastmoney sessions not in store: ${listed(rawUnknown)}`);
+  if (halfDayDivergences.length) {
+    details.push(`known HKEX half-day divergence (excluded from ALARM): ${listed(halfDayDivergences)}`);
+  }
   if (worst && max > 0) details.push(`max |dev| ${max.toFixed(4)}% on ${worst.date} (stored ${metrics.commonDates} common days, mean ${mean.toFixed(4)}%)`);
 
   let status: SentinelStatus = "ok";

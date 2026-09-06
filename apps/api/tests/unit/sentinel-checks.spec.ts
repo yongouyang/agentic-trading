@@ -173,6 +173,27 @@ describe("checkEastmoneyRaw — cross-source raw closes", () => {
     expect(r.metrics.onlyStored).toBe(1);
   });
 
+  it("known HKEX half-day (2022-01-31: L1 drops Yahoo's phantom, eastmoney carries a genuine bar) is listed but never ALARMs", () => {
+    const dates = weekdays("2022-01-03", 60); // window contains 2022-01-31
+    const stored = bars(dates.filter((d) => d !== "2022-01-31"));
+    const r = checkEastmoneyRaw(stored, bars(dates));
+    expect(r.status).toBe("ok");
+    expect(r.metrics.onlyEastmoney).toBe(1);
+    expect(r.metrics.knownHalfDayDivergences).toBe(1);
+    expect(r.details.join(" ")).toContain("known HKEX half-day divergence");
+    expect(r.details.join(" ")).toContain("2022-01-31");
+  });
+
+  it("a non-whitelisted mismatch on top of the half-day still ALARMs", () => {
+    const dates = weekdays("2022-01-03", 60);
+    const stored = bars(dates.filter((d) => d !== "2022-01-31"));
+    const raw = bars(dates.filter((d) => d !== dates[40]));
+    const r = checkEastmoneyRaw(stored, raw);
+    expect(r.status).toBe("alarm");
+    expect(r.metrics.knownHalfDayDivergences).toBe(1);
+    expect(r.metrics.onlyStored).toBe(1);
+  });
+
   it("eastmoney's longer history beyond the store is a window edge, not a mismatch", () => {
     const stored = weekdays("2026-01-05", 60);
     const raw = weekdays("2025-12-01", 12).concat(stored);

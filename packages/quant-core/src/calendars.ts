@@ -160,6 +160,12 @@ export const HKEX_ADHOC_CLOSURES: ReadonlySet<string> = new Set([
  *  of alarming. */
 export const HKEX_KNOWN_NON_SESSIONS: ReadonlySet<string> = new Set([...HKEX_HOLIDAYS, ...HKEX_ADHOC_CLOSURES]);
 
+/** HKEX half-day sessions that Yahoo's feed drops as zero-volume phantoms while
+ *  eastmoney carries a genuine bar — a known, bounded store-vs-eastmoney
+ *  calendar divergence. Measured: 2022-01-31 (CNY eve) is the only case seen
+ *  across the whole HK lane. */
+export const HKEX_KNOWN_HALF_DAYS: ReadonlySet<string> = new Set(["2022-01-31"]);
+
 /** NYSE full-day holidays 2021–2027: New Year's Day, MLK Day, Washington's
  *  Birthday, Good Friday, Memorial Day, Juneteenth, Independence Day,
  *  Labor Day, Thanksgiving, Christmas — with weekend observed-date shifts.

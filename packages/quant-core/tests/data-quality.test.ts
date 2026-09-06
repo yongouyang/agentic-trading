@@ -9,6 +9,8 @@ import {
   findOutlierMoves,
   runChecks,
   dropHolidayPhantomBars,
+  dropNullCloseBars,
+  dropLevelBreakSegment,
   clampOhlc,
   classifyResponse,
 } from "../src/data-quality.js";
@@ -125,5 +127,98 @@ describe("loader rules (measured facts, verification report 2026-08-31)", () => 
     expect(classifyResponse({ httpStatus: 200, hasTimestamps: true, barCount: 1227, providerSaysNotFound: false })).toBe(
       DataOutcome.OK,
     );
+  });
+});
+
+const flatBar = (date: string, level: number): Bar => ({ date, open: level, high: level, low: level, close: level, volume: 0 });
+
+/** 3195.HK shape: a prefix of flat zero-volume bars at 1.0x stitched onto a
+ *  ~7.8x HKD series (the USD-counter segment, measured ratio ~7.77). */
+function stitchedSeries(prefixBars: number, prefixLevel: number, mainBars: number, mainLevel: number): Bar[] {
+  const out: Bar[] = [];
+  let d = 1;
+  for (let i = 0; i < prefixBars; i++, d++) out.push(flatBar(`2024-04-${String(d).padStart(2, "0")}`, prefixLevel));
+  let m = 8, day = 8;
+  for (let i = 0; i < mainBars; i++) {
+    out.push(bar(`2024-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`, mainLevel * (1 + (i % 5) * 0.005)));
+    if (++day > 28) {
+      day = 1;
+      m++;
+    }
+  }
+  return out;
+}
+
+describe("RULE L5 — dropNullCloseBars (still-forming bars with null OHLC)", () => {
+  it("drops null-close bars, keeps others, returns the dropped dates", () => {
+    const nullBar: Bar = { date: "2026-08-28", open: null, high: null, low: null, close: null, volume: null };
+    const { bars: out, dropped } = dropNullCloseBars([bar("2026-08-27", 100), nullBar, bar("2026-08-31", 101)]);
+    expect(out.map((b) => b.date)).toEqual(["2026-08-27", "2026-08-31"]);
+    expect(dropped).toEqual(["2026-08-28"]);
+  });
+
+  it("handles empty and all-null input", () => {
+    expect(dropNullCloseBars([])).toEqual({ bars: [], dropped: [] });
+    const nullBar = (d: string): Bar => ({ date: d, open: null, high: null, low: null, close: null, volume: null });
+    const r = dropNullCloseBars([nullBar("2026-09-01"), nullBar("2026-09-02")]);
+    expect(r.bars).toEqual([]);
+    expect(r.dropped).toEqual(["2026-09-01", "2026-09-02"]);
+  });
+});
+
+describe("RULE L6 — dropLevelBreakSegment (cross-currency stitching guard)", () => {
+  it("drops the 3195.HK peg-fingerprint prefix and warns with the ratio", () => {
+    const bars = stitchedSeries(10, 1.05, 30, 8.19);
+    const r = dropLevelBreakSegment(bars);
+    expect(r.dropped).toHaveLength(10);
+    expect(r.dropped[0]).toBe("2024-04-01");
+    expect(r.bars).toHaveLength(30);
+    expect(r.bars.some((b) => b.date.startsWith("2024-04"))).toBe(false);
+    expect(r.warnings.join(" ")).toMatch(/×7\.8/);
+    expect(r.warnings.join(" ")).toContain("peg");
+  });
+
+  it("keeps a non-peg level break (2836.HK ×2.1 class) and flags it", () => {
+    const bars = stitchedSeries(10, 50, 30, 105);
+    const r = dropLevelBreakSegment(bars);
+    expect(r.dropped).toEqual([]);
+    expect(r.bars).toHaveLength(40);
+    expect(r.warnings.join(" ")).toMatch(/×2\.1/);
+    expect(r.warnings.join(" ")).toContain("adjudicate");
+  });
+
+  it("drops a peg-fingerprint SUFFIX segment the same way", () => {
+    const main = stitchedSeries(0, 1, 30, 8.1);
+    const suffix: Bar[] = [];
+    let d = 1;
+    for (let i = 0; i < 8; i++, d++) suffix.push(flatBar(`2025-01-${String(d).padStart(2, "0")}`, 1.04));
+    const r = dropLevelBreakSegment([...main, ...suffix]);
+    expect(r.dropped).toEqual(suffix.map((b) => b.date));
+    expect(r.bars).toHaveLength(30);
+  });
+
+  it("leaves a no-break series untouched", () => {
+    const bars = stitchedSeries(0, 1, 40, 100);
+    const r = dropLevelBreakSegment(bars);
+    expect(r.bars).toHaveLength(40);
+    expect(r.dropped).toEqual([]);
+    expect(r.warnings).toEqual([]);
+  });
+
+  it("short run (<3): a single flat zero-volume bar breaking >10% vs its previous bar warns but never drops", () => {
+    const bars = [...stitchedSeries(0, 1, 30, 100), flatBar("2025-01-02", 130)];
+    const r = dropLevelBreakSegment(bars);
+    expect(r.dropped).toEqual([]);
+    expect(r.bars).toHaveLength(31);
+    expect(r.warnings.join(" ")).toContain("point break");
+    expect(r.warnings.join(" ")).toContain("2025-01-02");
+  });
+
+  it("never drops a majority segment — keeps everything and warns instead", () => {
+    const bars = [...stitchedSeries(40, 1.05, 0, 0), ...stitchedSeries(0, 1, 30, 8.19)];
+    const r = dropLevelBreakSegment(bars);
+    expect(r.dropped).toEqual([]);
+    expect(r.bars).toHaveLength(70);
+    expect(r.warnings.join(" ")).toContain("majority");
   });
 });
