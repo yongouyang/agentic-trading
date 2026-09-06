@@ -1,0 +1,127 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>agentic-trading — architecture map</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 2100px; margin: 2rem auto; padding: 0 1.5rem;
+         font: 16px/1.6 ui-sans-serif, system-ui, sans-serif; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.2rem; margin-top: 2.5rem; }
+  p, li { color: #555; }
+  .mermaid { background: #fff; border: 1px solid #ddd; border-radius: 8px;
+             padding: 1rem; overflow-x: auto; text-align: center; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  footer { margin: 3rem 0; font-size: .85rem; }
+</style>
+<body>
+<h1>agentic-trading — architecture map</h1>
+<p>Generated from <code>docs/architecture-map.md</code> by <code>scripts/render-architecture-map.mjs</code>.
+   Solid = shipped · dashed = designed · P2/P3/P4 = phase.</p>
+<section>
+    <h2>1. System map (the one to keep on the wall)</h2>
+    
+    <pre class="mermaid">%%{init: {'flowchart':{'useMaxWidth':false},'themeVariables':{'fontSize':'20px'}}}%%
+flowchart TB
+    subgraph EXT["External (free, no-key)"]
+        YH["Yahoo v8 chart&lt;br/&gt;SOLE daily feed · US + HK"]
+        EM["eastmoney F10&lt;br/&gt;CA correction overlay · statements"]
+        GN["Google News RSS&lt;br/&gt;+ Yahoo news (P2)"]
+        TC["tencent / eastmoney push2his&lt;br/&gt;repair only · HK raw bars"]
+        DB["Databento batch&lt;br/&gt;one-off US archive (done)"]
+    end
+
+    subgraph ING["apps/api — ingestion &amp; quality"]
+        LOAD["market-data providers&lt;br/&gt;pinned UA · 200ms spacing"]
+        DQ["Day-17 quality gate&lt;br/&gt;7 checks → DataOutcome"]
+        CA["Corporate actions&lt;br/&gt;DIVIDEND / SPLIT / IN_SPECIE"]
+        CLI["CLIs: screen:daily · screen:sentinel&lt;br/&gt;repair:store · ca:f10-refresh"]
+    end
+
+    subgraph QC["packages/quant-core — TRUSTED (deterministic)"]
+        ADJ["adjustment.ts&lt;br/&gt;R1: store raw, derive adjusted"]
+        IND["indicators.ts&lt;br/&gt;trend / momentum / vol"]
+        SCR["screening.ts&lt;br/&gt;rank → top 10-15 per lane"]
+        DQ2["data-quality.ts · calendars.ts"]
+    end
+
+    subgraph AG["packages/agents — PROPOSES (never authoritative) · P2"]
+        CTX["context.ts&lt;br/&gt;DeepDiveContext assembly"]
+        NA["news / fundamentals analyst&lt;br/&gt;(parallel · ETFs: news only)"]
+        DEB["bull vs bear debate&lt;br/&gt;2 rounds"]
+        VER["verdict.ts&lt;br/&gt;5-tier + conviction + abstain"]
+        LOG["AgentDecision&lt;br/&gt;sha256(agent|model|pv|prompts)"]
+    end
+
+    subgraph ST["SQLite (Prisma)"]
+        B[(Bar · Instrument&lt;br/&gt;CorporateAction · SplitEvent)]
+        V[(VendorBar · VendorSegment&lt;br/&gt;VendorInstrument)]
+        S[(ScreenRun · ScreenResult)]
+        D[(DeepDiveRun · DeepDiveReport&lt;br/&gt;AgentDecision · P2)]
+    end
+
+    subgraph UI["apps/web — Next.js · P3"]
+        CHAT["Chat session (centerpiece)&lt;br/&gt;drill / challenge / compare"]
+        RPT["Daily report view&lt;br/&gt;ranked watchlist + transcripts"]
+        CH["lightweight-charts"]
+    end
+
+    YH --&gt; LOAD --&gt; DQ --&gt; B
+    EM --&gt; CA --&gt; B
+    DB --&gt; V
+    TC --&gt; LOAD
+    B --&gt; ADJ --&gt; IND --&gt; SCR --&gt; S
+    CA --&gt; ADJ
+    DQ2 --&gt; DQ
+    S --&gt; CTX
+    GN --&gt; CTX
+    B --&gt; CTX
+    CTX --&gt; NA --&gt; DEB --&gt; VER --&gt; LOG --&gt; D
+    VER -.-&gt;|"advisory only"| S
+    S --&gt; RPT
+    D --&gt; RPT
+    D --&gt; CHAT
+    B --&gt; CH --&gt; CHAT
+    CLI --&gt; LOAD
+
+    classDef built fill:#e8f4ea,stroke:#2d6a4f
+    classDef planned fill:#fdf6e3,stroke:#b08968,stroke-dasharray:4 3
+    class YH,EM,TC,DB,LOAD,DQ,CA,CLI,ADJ,IND,SCR,DQ2,B,V,S,CH built
+    class GN,CTX,NA,DEB,VER,LOG,D,CHAT,RPT planned
+</pre>
+  </section>
+<section>
+    <h2>2. Daily data flow (two runs: ~16:45 HKT HK · ~06:00 HKT US)</h2>
+    
+    <pre class="mermaid">flowchart LR
+    A["1 · Ingest&lt;br/&gt;raw OHLCV + CA&lt;br/&gt;~800 tickers"] --&gt; B["2 · Quality gate&lt;br/&gt;OK / GENUINE_ABSENT&lt;br/&gt;/ FETCH_FAILED"]
+    B --&gt;|"FETCH_FAILED ≠ no opportunity&lt;br/&gt;→ run marked degraded"| C["3 · Re-derive&lt;br/&gt;adjusted series (R1)"]
+    B --&gt;|"repair path: raw only, R3"| A
+    C --&gt; D["4 · Technical screen&lt;br/&gt;trend · momentum · volume · vol&lt;br/&gt;→ top 10–15 / lane"]
+    D --&gt; E["5 · Deep-dive (P2)&lt;br/&gt;top 10 / lane · 6–8 calls&lt;br/&gt;cache hit = $0"]
+    E --&gt; F["6 · Persist + report&lt;br/&gt;data-integrity header first"]
+    F --&gt; G["7 · User reads, trades manually&lt;br/&gt;(no broker in v1)"]
+    D --&gt;|"P3"| F
+    G -.-&gt;|"P4: backtest the screen&lt;br/&gt;itself, OOS discipline"| D
+</pre>
+  </section>
+<section>
+    <h2>3. Evolution path</h2>
+    
+    <pre class="mermaid">flowchart TB
+    P0["Phase 0 — DONE&lt;br/&gt;scaffold · ingestion · quality report&lt;br/&gt;gate: Yahoo verified for HK + US"]
+    P1["Phase 1 — DONE (+hardening)&lt;br/&gt;quant-core indicators · screening · screen:daily CLI&lt;br/&gt;sentinel green · F10 CA overlay · Databento archive"]
+    P2["Phase 2 — NEXT&lt;br/&gt;agents pipeline · DeepDiveRun/Report&lt;br/&gt;AgentDecision cache+audit · screen:deep-dive"]
+    P3["Phase 3&lt;br/&gt;Next.js chat + daily report view&lt;br/&gt;charts · transcripts"]
+    P4["Phase 4&lt;br/&gt;backtest the screen · param iteration&lt;br/&gt;train/OOS · Day 21-23 engine"]
+    P5["Later&lt;br/&gt;broker: Futu / IBKR&lt;br/&gt;paper → live"]
+
+    P0 --&gt; P1 --&gt; P2 --&gt; P3 --&gt; P4 --&gt; P5
+</pre>
+  </section>
+<footer>Source: <code>docs/architecture-map.md</code> · authoritative design:
+  <code>docs/architecture-v1.md</code></footer>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "default", securityLevel: "loose" });
+</script>
+</body>
