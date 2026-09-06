@@ -390,11 +390,20 @@ budget guard.)*
 
 ## 8. UI (apps/web)
 
-- **Chat session as centerpiece**: drill into candidates, challenge theses,
-  compare tickers, request charts — tool-calling into the Nest.js API, with
-  charts/tables rendered inline.
-- **Daily report view**: ranked watchlist per market with ratings, one-line
-  theses, and links into full debate transcripts.
+*Ordering amended 2026-09-06 (phase-3-plan.md): **report-first, chat
+second** — 3a ships the read-only report UI on a new read API; the chat
+session (3b) lands on the same API afterwards, as full tool-calling chat.
+Localhost-only in v1: the browser never calls the API directly — all data
+flows through Next server components (`API_INTERNAL_URL`), so no auth and no
+CORS. The UI can never trigger an LLM call.*
+
+- **Daily report view** (3a): ranked watchlist per market with ratings,
+  conviction, one-line theses, data-integrity header, per-name verdict card +
+  price chart (adjusted close via `deriveAdjustedBars`, CA markers) + full
+  debate transcripts.
+- **Chat session** (3b): drill into candidates, challenge theses, compare
+  tickers — tool-calling into the Nest.js API, with charts/tables rendered
+  inline. Read-only tools, per-session call caps, cost display.
 
 ## 9. Explicitly out of v1
 

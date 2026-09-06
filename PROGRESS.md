@@ -5,6 +5,30 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (Phase 3 plan — DECIDED) — report-first, chat second; plan doc is the execution spec for 3a
+
+Phase 3 design review (deep tier). Four forks decided by the user, spec in
+`docs/phase-3-plan.md`:
+
+1. **Report-first, chat second** — 3a = read-only report UI (daily dashboard
+   + per-name deep-dive page) on a new read API; chat lands after as 3b.
+2. **Chat (3b) = full tool-calling chat** — free-form questions, LLM
+   tool-calls into the Nest API; its own planning pass before implementation.
+3. **Price charts in 3a** — lightweight-charts (decided stack), adjusted
+   close via the same `deriveAdjustedBars` the screen uses, CA markers.
+4. **Localhost only** — browser never calls the API directly (server
+   components + `API_INTERNAL_URL`); no auth, no CORS.
+
+3a scope: 3 read-only endpoints (`/reports/daily`, `/reports/deep-dive/:run/:symbol`,
+`/instruments/:symbol/price-history`), 2 routes (`/`, `/symbol/[symbol]`),
+one new dep (`lightweight-charts`). Invariant: **the UI can never trigger an
+LLM call.** Architecture §8 amended to the report-first ordering.
+
+Execution starts tomorrow — fast tier (k3-256k low thinking) per the model
+policy; all decisions are recorded in the plan doc.
+
+---
+
 ## 2026-09-06 (NEAR-tier vetting + F10 rounding) — 51 XNYS candidates vetted: 2 appends (ITRG, LAC), 24 confirmed echoes; F10 sums now rounded to 6dp
 
 **1. NEAR-tier + echo-class vetting — DONE (27+24, the last open registry item).**
