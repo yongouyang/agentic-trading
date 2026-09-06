@@ -5,6 +5,41 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (0941.HK divergence triaged + fixed) — sentinel fully green: 0 ALARM / 0 WARN / 10 ok, exit 0
+
+The last sentinel ALARM (0941.HK eastmoney max 1.08% on 2024-01-15) is
+resolved. Root cause: **Yahoo served a flat zero-volume stale phantom on a
+full trading session** — O=H=L=C=65.05, repeating the 2024-01-11 close,
+while eastmoney shows a real day (close 65.75, high 66.00, low 64.90,
+~10M shares) and tencent carries the session. The other 7 zero-volume
+0941.HK stored bars are all CNY-eve/Christmas half-days whose closes match
+eastmoney to the tick — harmless; 2024-01-15 was the only defective one.
+(Why no loader rule catches this class: a flat zero-volume bar is genuine
+data for illiquid names — 0623.HK has 250 — so detection needs either a
+liquidity profile or the curated set. That's why the curated set exists.)
+
+**Fix (same locked pattern as the ETF session gaps):**
+1. `repair:store -- --symbol 0941.HK --rescue 2024-01-15` → store now holds
+   the real bar (65.00/65.75/66.00/64.90, vol 9,973,161).
+2. `YAHOO_KNOWN_GAPS` semantics broadened from "session Yahoo drops" to
+   "session Yahoo drops OR serves a demonstrably defective bar on";
+   0941.HK → {2024-01-15} added. `checkYahooRewrite` now excludes
+   known-gap dates from the close-MISMATCH count as well as absence (fresh
+   Yahoo keeps serving the phantom, so the divergence arrives as a
+   mismatch). +2 tests (mismatch-on-known-gap excluded + listed; mismatch
+   off-set still ALARMs). `knownGapDivergences` metric counts all shapes.
+
+**Sentinel after: ALARM 0 · WARN 0 · ok 10 · exit 0** — first fully green
+run. 0941.HK eastmoney max dev 1.08% → 0.38%. Tests 293→295 passed / 1
+skipped, tsc clean.
+
+Every sentinel class measured this week is now either fixed at ingest
+(L5/L6), rescued with curated attribution (YAHOO_KNOWN_GAPS), allowed by
+convention (HKEX_KNOWN_HALF_DAYS), or explained by imported events
+(IN_SPECIE/F10 overlay). No standing unexplained divergences remain.
+
+---
+
 ## 2026-09-06 (Phase-2 CA-source decision — DECIDED + implemented) — eastmoney F10 overlay for CA_DEGRADED + IN_SPECIE events; sentinel down to 1 known ALARM
 
 The standing Phase-2 CA-source open item is closed. New measured fact that

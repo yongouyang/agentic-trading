@@ -146,6 +146,30 @@ describe("checkYahooRewrite — same-provider rewrite detector", () => {
     expect(r.details.join(" ")).toContain(dates[5]!);
   });
 
+  it("a close MISMATCH on a known-gap date (stale Yahoo phantom, eastmoney-rescued) is excluded but listed", () => {
+    // Live case 2026-09-06: 0941.HK 2024-01-15 — Yahoo serves a flat
+    // zero-volume stale bar repeating the prior close; the store holds the
+    // eastmoney rescue. Yahoo keeps serving the phantom, so the divergence
+    // arrives as a mismatch, not an absence.
+    const dates = weekdays("2026-01-05", 12);
+    const stored = bars(dates);
+    const fresh = dates.map((d, i) => ({ ...bars([d])[0]!, close: i === 5 ? 90 : 100 }));
+    const r = checkYahooRewrite(stored, fresh, "yahoo", new Set([dates[5]!]));
+    expect(r.status).toBe("ok");
+    expect(r.metrics.closeMismatch).toBe(0);
+    expect(r.metrics.knownGapDivergences).toBe(1);
+    expect(r.details.join(" ")).toContain("known Yahoo gap (eastmoney-rescued, excluded from ALARM)");
+    expect(r.summary).toContain("+1 known Yahoo gap rescued");
+  });
+
+  it("a close mismatch NOT on a known-gap date still ALARMs", () => {
+    const dates = weekdays("2026-01-05", 12);
+    const fresh = dates.map((d, i) => ({ ...bars([d])[0]!, close: i === 5 ? 90 : 100 }));
+    const r = checkYahooRewrite(bars(dates), fresh, "yahoo", new Set([dates[6]!]));
+    expect(r.status).toBe("alarm");
+    expect(r.metrics.closeMismatch).toBe(1);
+  });
+
   it("an onlyStored date NOT in the known-gap set still ALARMs", () => {
     const dates = weekdays("2026-01-05", 12);
     const fresh = bars(dates.filter((d) => d !== dates[5]));

@@ -166,14 +166,19 @@ export const HKEX_KNOWN_NON_SESSIONS: ReadonlySet<string> = new Set([...HKEX_HOL
  *  across the whole HK lane. */
 export const HKEX_KNOWN_HALF_DAYS: ReadonlySet<string> = new Set(["2022-01-31"]);
 
-/** Yahoo session gaps confirmed against TWO independent carriers (eastmoney
+/** Yahoo session defects confirmed against TWO independent carriers (eastmoney
  *  fqt=0 raw + tencent session dates, both serving the day while fresh Yahoo
- *  does not — measured 2026-09-06). These sessions are rescued from eastmoney
- *  raw bars (§A path), so a stored bar on such a date is eastmoney-sourced and
- *  must not count as a yahoo-rewrite divergence. */
+ *  either drops it or serves a demonstrably wrong bar — measured 2026-09-06).
+ *  Two shapes: a MISSING session (2800.HK/3195.HK entries) or a flat
+ *  zero-volume stale phantom repeating a prior close on a full trading session
+ *  (0941.HK 2024-01-15: Yahoo pinned 65.05, the 01-11 close; eastmoney shows
+ *  close 65.75 on ~10M shares). These sessions are rescued from eastmoney raw
+ *  bars (§A path), so a stored bar on such a date is eastmoney-sourced and
+ *  must not count as a yahoo-rewrite divergence — by absence OR by mismatch. */
 export const YAHOO_KNOWN_GAPS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["2800.HK", new Set(["2025-10-24"])],
   ["3195.HK", new Set(["2025-10-24", "2026-03-06"])],
+  ["0941.HK", new Set(["2024-01-15"])],
 ]);
 
 /** NYSE full-day holidays 2021–2027: New Year's Day, MLK Day, Washington's

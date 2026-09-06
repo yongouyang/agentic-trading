@@ -124,13 +124,15 @@ function listed(dates: string[]): string {
 }
 
 /** Check 1 — Yahoo fresh fetch vs the stored series (same-provider rewrite).
- *  Date mismatches on a curated known Yahoo session gap (`knownGaps`, from
+ *  Divergences on a curated known Yahoo session defect (`knownGaps`, from
  *  `YAHOO_KNOWN_GAPS` — measured 2026-09-06: genuine HKEX sessions Yahoo's
- *  feed drops while eastmoney fqt=0 raw AND tencent both serve them, rescued
- *  from eastmoney per §A) are a bounded feed-gap divergence: a stored bar on
- *  such a date is eastmoney-sourced, not a rewrite. Excluded from the ALARM
- *  count, still listed in details (same pattern as the half-day exclusion in
- *  checkEastmoneyRaw). */
+ *  feed drops (2800.HK/3195.HK) or serves a demonstrably wrong bar on
+ *  (0941.HK 2024-01-15 flat zero-volume stale phantom) while eastmoney fqt=0
+ *  raw AND tencent both carry the real session, rescued from eastmoney per
+ *  §A) are a bounded feed-defect divergence: a stored bar on such a date is
+ *  eastmoney-sourced, not a rewrite. Excluded from the ALARM count — whether
+ *  they diverge by absence OR by close mismatch — still listed in details
+ *  (same pattern as the half-day exclusion in checkEastmoneyRaw). */
 export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "yahoo", knownGaps: ReadonlySet<string> = new Set()): SentinelCheck {
   if (storedSource !== "yahoo") {
     // Single-source invariant (§A.2): a stored eastmoney series vs a Yahoo
@@ -170,25 +172,34 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
   const storedGaps = onlyStored.filter((d) => knownGaps.has(d));
   const freshGaps = onlyFresh.filter((d) => knownGaps.has(d));
   const byDate = new Map(fRows.map((b) => [b.date, b]));
-  const mismatch = sRows.filter((b) => {
+  const mismatchAll = sRows.filter((b) => {
     const f = byDate.get(b.date);
     return f !== undefined && !closeEquals(b.close, f.close);
   });
+  // A known-gap date can diverge by MISMATCH too, not just absence: Yahoo
+  // serves a demonstrably defective bar there (measured 2026-09-06: 0941.HK
+  // 2024-01-15 flat zero-volume stale phantom repeating the 01-11 close while
+  // eastmoney+tencent show a real session) and the store holds the eastmoney
+  // rescue. Same bounded class — excluded, still listed.
+  const mismatch = mismatchAll.filter((b) => !knownGaps.has(b.date));
+  const mismatchGaps = mismatchAll.filter((b) => knownGaps.has(b.date));
 
   const metrics: Record<string, number> = {
     windowDays: sSet.size + fSet.size - new Set([...sDates, ...fDates]).size,
     onlyStored: onlyStored.length,
     onlyFresh: onlyFresh.length,
     closeMismatch: mismatch.length,
-    knownGapDivergences: storedGaps.length + freshGaps.length,
+    knownGapDivergences: storedGaps.length + freshGaps.length + mismatchGaps.length,
   };
   const details: string[] = [];
   const storedUnknown = onlyStored.filter((d) => !knownGaps.has(d));
   const freshUnknown = onlyFresh.filter((d) => !knownGaps.has(d));
   if (storedUnknown.length) details.push(`in store but Yahoo no longer serves: ${listed(storedUnknown)}`);
   if (freshUnknown.length) details.push(`Yahoo serves but not stored: ${listed(freshUnknown)}`);
-  if (storedGaps.length || freshGaps.length) {
-    details.push(`known Yahoo gap (eastmoney-rescued, excluded from ALARM): ${listed([...storedGaps, ...freshGaps].sort())}`);
+  if (storedGaps.length || freshGaps.length || mismatchGaps.length) {
+    details.push(
+      `known Yahoo gap (eastmoney-rescued, excluded from ALARM): ${listed([...storedGaps, ...freshGaps, ...mismatchGaps.map((b) => b.date)].sort())}`,
+    );
   }
   if (mismatch.length) {
     for (const b of mismatch.slice(0, MAX_EXAMPLES)) {
@@ -199,7 +210,8 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
     if (mismatch.length > MAX_EXAMPLES) details.push(`… and ${mismatch.length - MAX_EXAMPLES} more mismatching closes`);
   }
   const dirty = storedUnknown.length + freshUnknown.length + mismatch.length;
-  const gapNote = !dirty && storedGaps.length + freshGaps.length ? ` (+${storedGaps.length + freshGaps.length} known Yahoo gap${storedGaps.length + freshGaps.length > 1 ? "s" : ""} rescued)` : "";
+  const totalGaps = storedGaps.length + freshGaps.length + mismatchGaps.length;
+  const gapNote = !dirty && totalGaps ? ` (+${totalGaps} known Yahoo gap${totalGaps > 1 ? "s" : ""} rescued)` : "";
   return {
     check: "yahoo-rewrite",
     status: dirty ? "alarm" : "ok",
