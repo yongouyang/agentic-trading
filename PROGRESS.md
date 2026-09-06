@@ -5,6 +5,42 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (scheduling — INSTALLED) — launchd runs the daily chain + weekly jobs; last pre-Phase-3 infrastructure item closed
+
+The four CLIs are now automated via user LaunchAgents (`scripts/launchd/`,
+installed to `~/Library/LaunchAgents`, verified loaded via `launchctl list`).
+Decisions (all confirmed with the user):
+
+- **launchd, not cron** — macOS cron silently skips jobs missed during sleep;
+  StartCalendarInterval catches up after wake.
+- **Wrapper per lane** — `scripts/daily-chain.sh hk|us` runs `screen:daily`
+  then `screen:deep-dive --top 10` sequentially, preceded by a cheap LLM auth
+  preflight (the local profile's credential is the Kimi CLI's *rotating* OAuth
+  token). Preflight failure ⇒ skip the deep-dive leg loudly, keep
+  screen:daily's result, exit code names the manual rerun. Durable fix (a
+  Moonshot platform key) belongs to the deploy profile.
+- **Sunday-morning maintenance**, staggered so the two eastmoney hosts aren't
+  hit back-to-back: sentinel **with `--eastmoney`** at 08:47 HKT, then
+  `ca:f10-refresh` at 09:17.
+
+| Job | Schedule (HKT) |
+|---|---|
+| daily-hk (screen + deep-dive) | Mon–Fri 16:50 |
+| daily-us (screen + deep-dive) | Tue–Sat 06:10 |
+| weekly-sentinel (--eastmoney) | Sun 08:47 |
+| weekly-f10 (ca:f10-refresh) | Sun 09:17 |
+
+Logs: `logs/*.log` (launchd StandardOut/ErrorPath; dir gitignored). Docs:
+architecture §5.1 (new), §4.3 cadence note, hardening-plan §B superseded note.
+Smoke-verified: plist lint OK ×4, script syntax OK, token-read preflight OK;
+the chain legs themselves were E2E-proven earlier today, so no full burn.
+
+Remaining recorded items: NEAR-tier split-candidate vetting (27+24, optional),
+F10 amount rounding cosmetic. Next: **Phase 3 chat UI** — deep-tier planning
+session.
+
+---
+
 ## 2026-09-06 (full daily pipeline E2E — PASSED) — screen:daily → deep-dive top-10 both lanes, 20/20 ok; Phase 2 functionally complete
 
 First full-shape run of the daily pipeline (architecture §5 steps 1–5):

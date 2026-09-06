@@ -276,7 +276,8 @@ runs; the sentinel is the cheap insurance for that **where a second source
 exists**, and is not optional.
 
 **Sentinel as built (2026-09-02):** `pnpm -C apps/api screen:sentinel`
-(`apps/api/src/cli/sentinel.ts`, read-only, manual cadence ≈ weekly) over a
+(`apps/api/src/cli/sentinel.ts`, read-only; scheduled weekly via launchd since
+2026-09-06, see §5.1) over a
 pinned 10-name HK sample — `0005 0700 0941 9988 0388 0001 0016 2318 2800 3195`
 (liquid payers incl. the two USD-declaring CA_DEGRADED names, an ETF, and the
 HK-domiciled US tracker). Four checks per name: **yahoo-rewrite** (fresh full
@@ -316,6 +317,27 @@ same-provider for both lanes when it runs on US names).
 Cost estimate: 20–30 deep-dives/day × 6–8 calls ≈ pennies/day at Moonshot
 pricing. Multi-model split: cheap model for analyst summaries, stronger model
 for debate + verdict.
+
+### 5.1 Scheduling (launchd, installed 2026-09-06)
+
+Four user LaunchAgents (`scripts/launchd/`, installed into
+`~/Library/LaunchAgents` by `scripts/launchd/install.sh`; stdout/stderr →
+`logs/` at the repo root). launchd, not cron, because macOS cron silently
+skips jobs missed while asleep; StartCalendarInterval catches up after wake.
+
+| Label | Runs | Schedule (HKT) |
+|---|---|---|
+| `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive --top 10` | Mon–Fri 16:50 |
+| `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
+| `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
+| `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
+
+Caveat: the deep-dive LLM credential is the Kimi CLI's **rotating OAuth
+token**, so an unattended run can find it stale. `daily-chain.sh` runs a cheap
+auth preflight; on failure it **skips the deep-dive leg loudly** (screen:daily
+still runs and its exit code propagates) and names the fix — run any `kimi`
+command to refresh, then rerun manually. The durable fix is a Moonshot
+platform key (see the deploy profile in §7).
 
 ## 6. The two market lanes
 

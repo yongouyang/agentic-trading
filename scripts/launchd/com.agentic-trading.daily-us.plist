@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- US daily chain: Tue–Sat 06:10 HKT (US close 04:00/05:00 HKT DST-dependent
+     + settle; the Tue–Sat morning covers the Mon–Fri US sessions). Install:
+     scripts/launchd/install.sh -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agentic-trading.daily-us</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/yongouyang/projects/agentic-trading/scripts/daily-chain.sh</string>
+    <string>us</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+    <dict><key>Weekday</key><integer>6</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-us.log</string>
+  <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-us.err.log</string>
+</dict>
+</plist>

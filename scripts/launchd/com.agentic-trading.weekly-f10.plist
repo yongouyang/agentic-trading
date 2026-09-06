@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Weekly F10 CA overlay refresh (locked 2026-09-06): Sun 09:17 HKT — 30 min
+     after the sentinel so the two eastmoney hosts are never hit back-to-back. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agentic-trading.weekly-f10</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/yongouyang/projects/agentic-trading/scripts/weekly-maintenance.sh</string>
+    <string>f10</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>17</integer></dict>
+  <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-f10.log</string>
+  <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-f10.err.log</string>
+</dict>
+</plist>

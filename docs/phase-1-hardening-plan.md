@@ -121,9 +121,11 @@ PROGRESS 2026-09-06 (§1 quick wins).
 ## B. Weekly sentinel (`pnpm -C apps/api screen:sentinel`) — IMPLEMENTED 2026-09-02
 
 The §4.3 insurance against silent provider revision — not optional per the
-architecture. Manual CLI (no scheduler in v1); run it roughly weekly.
-Read-only by design: it never writes bars, events or runs — only the JSON
-artifact and the exit code.
+architecture. Manual CLI; run it roughly weekly. *(2026-09-06)* Superseded:
+now scheduled via launchd — `com.agentic-trading.weekly-sentinel` runs it with
+`--eastmoney` every Sunday 08:47 HKT (see architecture §5.1); the CLI remains
+for ad-hoc runs. Read-only by design: it never writes bars, events or runs —
+only the JSON artifact and the exit code.
 
 - **Fixed sample (10, pinned):** `0005.HK 0700.HK 0941.HK 9988.HK 0388.HK
   0001.HK 0016.HK 2318.HK 2800.HK 3195.HK` — liquid mix incl. CA-heavy

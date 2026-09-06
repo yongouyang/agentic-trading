@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- HK daily chain: Mon–Fri 16:50 HKT (HK close 16:00 + settle; §5 cadence).
+     launchd fires missed jobs on wake (StartCalendarInterval) — safe across
+     laptop sleep. Install: scripts/launchd/install.sh -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agentic-trading.daily-hk</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/yongouyang/projects/agentic-trading/scripts/daily-chain.sh</string>
+    <string>hk</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>50</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>50</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>50</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>50</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>16</integer><key>Minute</key><integer>50</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-hk.log</string>
+  <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-hk.err.log</string>
+</dict>
+</plist>
