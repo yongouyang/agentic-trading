@@ -32,7 +32,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Bar } from "@agentic-trading/quant-core";
-import { DataOutcome, HKEX_KNOWN_NON_SESSIONS } from "@agentic-trading/quant-core";
+import { DataOutcome, HKEX_KNOWN_NON_SESSIONS, YAHOO_KNOWN_GAPS } from "@agentic-trading/quant-core";
 import { getMarketDataDeps } from "../market-data/market-data.deps.js";
 import { isDummyProviderLabel } from "./daily-screen.js";
 import { EastmoneyRepairProvider, type RepairProvider } from "../market-data/eastmoney-repair.provider.js";
@@ -210,7 +210,7 @@ async function runSymbol(
   const reference = freshOk && fresh.bars.length ? fresh.bars : storedBars;
 
   const yahooCheck: SentinelCheck = freshOk
-    ? checkYahooRewrite(storedBars, fresh.bars, instrument.dataSource)
+    ? checkYahooRewrite(storedBars, fresh.bars, instrument.dataSource, YAHOO_KNOWN_GAPS.get(symbol) ?? new Set())
     : fresh.outcome === DataOutcome.GENUINELY_ABSENT
       ? {
           check: "yahoo-rewrite",
@@ -237,7 +237,12 @@ async function runSymbol(
           // honest, alarming is noise. The reason is recorded loudly.
           return skip("tencent-dates", `skip ${res.failure}`.slice(0, CELL_WIDTH), `tencent fetch failed: ${res.failure}`);
         }
-        return checkTencentDates(reference.map((b) => b.date), res.dates, deps.knownNonSessions ?? HKEX_KNOWN_NON_SESSIONS);
+        return checkTencentDates(
+          reference.map((b) => b.date),
+          res.dates,
+          deps.knownNonSessions ?? HKEX_KNOWN_NON_SESSIONS,
+          YAHOO_KNOWN_GAPS.get(symbol) ?? new Set(),
+        );
       })();
 
   // ---- leg 3: eastmoney raw closes (opt-in, banned host) ----

@@ -13,7 +13,10 @@
  *   1. `yahoo-rewrite`  same-provider rewrite detector: fresh full-window
  *      Yahoo fetch vs the stored series, on the overlapping date set. ANY
  *      mismatch ⇒ ALARM (there is no benign reason for Yahoo's own raw closes
- *      to change under us).
+ *      to change under us), EXCEPT date mismatches on a curated known Yahoo
+ *      session gap (`YAHOO_KNOWN_GAPS` — genuine HKEX sessions Yahoo's feed
+ *      drops but eastmoney + tencent both carry, rescued from eastmoney raw
+ *      bars per §A): those are listed but excluded from the ALARM count.
  *   2. `eastmoney-raw`  cross-source raw closes (the only source with raw HK
  *      bars). ALARM if max |dev| > 1% or an in-window date mismatch; WARN if
  *      mean |dev| > 0.27% — the measured Yahoo-vs-eastmoney baseline for
@@ -120,8 +123,15 @@ function listed(dates: string[]): string {
   return dates.slice(0, MAX_EXAMPLES).join(",") + (dates.length > MAX_EXAMPLES ? ` (+${dates.length - MAX_EXAMPLES} more)` : "");
 }
 
-/** Check 1 — Yahoo fresh fetch vs the stored series (same-provider rewrite). */
-export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "yahoo"): SentinelCheck {
+/** Check 1 — Yahoo fresh fetch vs the stored series (same-provider rewrite).
+ *  Date mismatches on a curated known Yahoo session gap (`knownGaps`, from
+ *  `YAHOO_KNOWN_GAPS` — measured 2026-09-06: genuine HKEX sessions Yahoo's
+ *  feed drops while eastmoney fqt=0 raw AND tencent both serve them, rescued
+ *  from eastmoney per §A) are a bounded feed-gap divergence: a stored bar on
+ *  such a date is eastmoney-sourced, not a rewrite. Excluded from the ALARM
+ *  count, still listed in details (same pattern as the half-day exclusion in
+ *  checkEastmoneyRaw). */
+export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "yahoo", knownGaps: ReadonlySet<string> = new Set()): SentinelCheck {
   if (storedSource !== "yahoo") {
     // Single-source invariant (§A.2): a stored eastmoney series vs a Yahoo
     // fetch is a cross-source comparison, not a rewrite detector — the
@@ -157,6 +167,8 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
   const fSet = new Set(fDates);
   const onlyStored = sDates.filter((d) => !fSet.has(d));
   const onlyFresh = fDates.filter((d) => !sSet.has(d));
+  const storedGaps = onlyStored.filter((d) => knownGaps.has(d));
+  const freshGaps = onlyFresh.filter((d) => knownGaps.has(d));
   const byDate = new Map(fRows.map((b) => [b.date, b]));
   const mismatch = sRows.filter((b) => {
     const f = byDate.get(b.date);
@@ -168,10 +180,16 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
     onlyStored: onlyStored.length,
     onlyFresh: onlyFresh.length,
     closeMismatch: mismatch.length,
+    knownGapDivergences: storedGaps.length + freshGaps.length,
   };
   const details: string[] = [];
-  if (onlyStored.length) details.push(`in store but Yahoo no longer serves: ${listed(onlyStored)}`);
-  if (onlyFresh.length) details.push(`Yahoo serves but not stored: ${listed(onlyFresh)}`);
+  const storedUnknown = onlyStored.filter((d) => !knownGaps.has(d));
+  const freshUnknown = onlyFresh.filter((d) => !knownGaps.has(d));
+  if (storedUnknown.length) details.push(`in store but Yahoo no longer serves: ${listed(storedUnknown)}`);
+  if (freshUnknown.length) details.push(`Yahoo serves but not stored: ${listed(freshUnknown)}`);
+  if (storedGaps.length || freshGaps.length) {
+    details.push(`known Yahoo gap (eastmoney-rescued, excluded from ALARM): ${listed([...storedGaps, ...freshGaps].sort())}`);
+  }
   if (mismatch.length) {
     for (const b of mismatch.slice(0, MAX_EXAMPLES)) {
       const f = byDate.get(b.date)!;
@@ -180,11 +198,12 @@ export function checkYahooRewrite(stored: Bar[], fresh: Bar[], storedSource = "y
     }
     if (mismatch.length > MAX_EXAMPLES) details.push(`… and ${mismatch.length - MAX_EXAMPLES} more mismatching closes`);
   }
-  const dirty = onlyStored.length + onlyFresh.length + mismatch.length;
+  const dirty = storedUnknown.length + freshUnknown.length + mismatch.length;
+  const gapNote = !dirty && storedGaps.length + freshGaps.length ? ` (+${storedGaps.length + freshGaps.length} known Yahoo gap${storedGaps.length + freshGaps.length > 1 ? "s" : ""} rescued)` : "";
   return {
     check: "yahoo-rewrite",
     status: dirty ? "alarm" : "ok",
-    summary: dirty ? `ALARM ${dirty}/${metrics.windowDays} differ` : `ok ${metrics.windowDays}d identical`,
+    summary: dirty ? `ALARM ${dirty}/${metrics.windowDays} differ` : `ok ${metrics.windowDays}d identical${gapNote}`,
     metrics,
     details,
   };
@@ -278,11 +297,17 @@ export function checkEastmoneyRaw(stored: Bar[], raw: Bar[], knownHalfDays: Read
 }
 
 /** Check 3 — tencent session dates vs the reference calendar. Closes are NOT
- *  compared (this function cannot see them: its inputs are date arrays). */
+ *  compared (this function cannot see them: its inputs are date arrays).
+ *  `knownGaps` (YAHOO_KNOWN_GAPS for the symbol): dates the reference carrier
+ *  (fresh Yahoo) demonstrably lacks while two independent carriers serve them
+ *  — the sessions were rescued from eastmoney into the store, so a
+ *  tencent-only date on that list is attribution class 3 (Yahoo gap), not a
+ *  hole in OUR series: excluded from the ALARM trigger, still listed loudly. */
 export function checkTencentDates(
   referenceDates: string[],
   tencentDates: string[],
   nonSessions: ReadonlySet<string> = HKEX_KNOWN_NON_SESSIONS,
+  knownGaps: ReadonlySet<string> = new Set(),
 ): SentinelCheck {
   const y = [...referenceDates].sort();
   const t = [...tencentDates].sort();
@@ -314,8 +339,9 @@ export function checkTencentDates(
   //     daily run should be looked at.
   const tencentPhantoms = onlyTencent.filter((d) => nonSessions.has(d));
   const ourPhantomSessions = onlyReference.filter((d) => nonSessions.has(d));
-  const tencentHoles = onlyTencent.filter((d) => !nonSessions.has(d));
-  const referenceHoles = onlyReference.filter((d) => !nonSessions.has(d));
+  const yahooGaps = onlyTencent.filter((d) => knownGaps.has(d));
+  const tencentHoles = onlyTencent.filter((d) => !nonSessions.has(d) && !knownGaps.has(d));
+  const referenceHoles = onlyReference.filter((d) => !nonSessions.has(d) && !knownGaps.has(d));
   const common = tw.filter((d) => ySet.has(d)).length;
 
   const metrics: Record<string, number | string> = {
@@ -326,10 +352,14 @@ export function checkTencentDates(
     onlyTencent: tencentHoles.length,
     tencentPhantomClosures: tencentPhantoms.length,
     ourPhantomSessions: ourPhantomSessions.length,
+    knownYahooGaps: yahooGaps.length,
   };
   const details: string[] = [];
   if (referenceHoles.length) details.push(`in our series but absent from tencent: ${listed(referenceHoles)}`);
   if (tencentHoles.length) details.push(`in tencent but absent from our series: ${listed(tencentHoles)}`);
+  if (yahooGaps.length) {
+    details.push(`known Yahoo gap (eastmoney-rescued, excluded from ALARM): ${listed(yahooGaps)}`);
+  }
   const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
   if (ourPhantomSessions.length) {
     details.push(
@@ -344,7 +374,11 @@ export function checkTencentDates(
 
   const alarm = referenceHoles.length + tencentHoles.length > 0;
   const flag = alarm ? "ALARM " : ourPhantomSessions.length ? "WARN " : "";
-  const note = !alarm && !ourPhantomSessions.length && tencentPhantoms.length ? ` (+${tencentPhantoms.length} tencent phantom${tencentPhantoms.length > 1 ? "s" : ""})` : "";
+  const okNotes = [
+    tencentPhantoms.length ? `+${tencentPhantoms.length} tencent phantom${tencentPhantoms.length > 1 ? "s" : ""}` : "",
+    yahooGaps.length ? `+${yahooGaps.length} known Yahoo gap${yahooGaps.length > 1 ? "s" : ""} rescued` : "",
+  ].filter(Boolean);
+  const note = !alarm && !ourPhantomSessions.length && okNotes.length ? ` (${okNotes.join(", ")})` : "";
   return {
     check: "tencent-dates",
     status: alarm ? "alarm" : ourPhantomSessions.length ? "warn" : "ok",

@@ -134,6 +134,35 @@ describe("checkYahooRewrite — same-provider rewrite detector", () => {
     expect(r.details.filter((d) => /^\d{4}-\d{2}-\d{2}: stored/.test(d))).toHaveLength(8);
     expect(r.details.join(" ")).toContain("and 4 more mismatching closes");
   });
+
+  it("stored bar on a curated known Yahoo gap (eastmoney-rescued) is listed but never ALARMs", () => {
+    const dates = weekdays("2026-01-05", 12);
+    const fresh = bars(dates.filter((d) => d !== dates[5]));
+    const r = checkYahooRewrite(bars(dates), fresh, "yahoo", new Set([dates[5]!]));
+    expect(r.status).toBe("ok");
+    expect(r.metrics.onlyStored).toBe(1);
+    expect(r.metrics.knownGapDivergences).toBe(1);
+    expect(r.details.join(" ")).toContain("known Yahoo gap (eastmoney-rescued, excluded from ALARM)");
+    expect(r.details.join(" ")).toContain(dates[5]!);
+  });
+
+  it("an onlyStored date NOT in the known-gap set still ALARMs", () => {
+    const dates = weekdays("2026-01-05", 12);
+    const fresh = bars(dates.filter((d) => d !== dates[5]));
+    const r = checkYahooRewrite(bars(dates), fresh, "yahoo", new Set(["2026-12-25"]));
+    expect(r.status).toBe("alarm");
+    expect(r.metrics.knownGapDivergences).toBe(0);
+    expect(r.details.join(" ")).toContain("in store but Yahoo no longer serves");
+  });
+
+  it("a mixed case — the known gap is excluded, the unknown date still ALARMs", () => {
+    const dates = weekdays("2026-01-05", 12);
+    const fresh = bars(dates.filter((d) => d !== dates[5] && d !== dates[7]));
+    const r = checkYahooRewrite(bars(dates), fresh, "yahoo", new Set([dates[5]!]));
+    expect(r.status).toBe("alarm");
+    expect(r.metrics.onlyStored).toBe(2);
+    expect(r.metrics.knownGapDivergences).toBe(1);
+  });
 });
 
 describe("checkEastmoneyRaw — cross-source raw closes", () => {
@@ -281,6 +310,29 @@ describe("checkTencentDates — session calendar only, never closes", () => {
 
   it("disjoint windows ⇒ ALARM", () => {
     expect(checkTencentDates(weekdays("2020-01-06", 5), weekdays("2026-01-05", 5), holidays).status).toBe("alarm");
+  });
+
+  it("tencent-only date on a known Yahoo gap (eastmoney-rescued) ⇒ ok + annotated, not ALARM", () => {
+    // Live case 2026-09-06: fresh Yahoo lacks 2025-10-24 for 2800.HK, tencent
+    // serves it, the store bar came from eastmoney — the tencent leg's reference
+    // is fresh Yahoo, so without the exclusion this ALARMs forever.
+    const gap = "2026-02-13"; // a Friday session inside the window
+    const reference = weekdays("2026-01-05", 40).filter((d) => d !== gap); // Yahoo-shaped: gap absent
+    const tencent = [...reference, gap].sort();
+    const r = checkTencentDates(reference, tencent, holidays, new Set([gap]));
+    expect(r.status).toBe("ok");
+    expect(r.metrics).toMatchObject({ onlyTencent: 0, knownYahooGaps: 1 });
+    expect(r.details.join(" ")).toContain("known Yahoo gap (eastmoney-rescued, excluded from ALARM)");
+    expect(r.summary).toContain("+1 known Yahoo gap rescued");
+  });
+
+  it("tencent-only date NOT in the known-gap set ⇒ still ALARMs", () => {
+    const gap = "2026-02-13";
+    const reference = weekdays("2026-01-05", 40).filter((d) => d !== gap);
+    const tencent = [...reference, gap].sort();
+    const r = checkTencentDates(reference, tencent, holidays, new Set(["2026-02-14"])); // different date whitelisted
+    expect(r.status).toBe("alarm");
+    expect(r.metrics.onlyTencent).toBe(1);
   });
 
   it("defaults to HKEX_KNOWN_NON_SESSIONS when no set is passed", () => {

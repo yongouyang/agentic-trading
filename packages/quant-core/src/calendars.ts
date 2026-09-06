@@ -166,6 +166,16 @@ export const HKEX_KNOWN_NON_SESSIONS: ReadonlySet<string> = new Set([...HKEX_HOL
  *  across the whole HK lane. */
 export const HKEX_KNOWN_HALF_DAYS: ReadonlySet<string> = new Set(["2022-01-31"]);
 
+/** Yahoo session gaps confirmed against TWO independent carriers (eastmoney
+ *  fqt=0 raw + tencent session dates, both serving the day while fresh Yahoo
+ *  does not — measured 2026-09-06). These sessions are rescued from eastmoney
+ *  raw bars (§A path), so a stored bar on such a date is eastmoney-sourced and
+ *  must not count as a yahoo-rewrite divergence. */
+export const YAHOO_KNOWN_GAPS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["2800.HK", new Set(["2025-10-24"])],
+  ["3195.HK", new Set(["2025-10-24", "2026-03-06"])],
+]);
+
 /** NYSE full-day holidays 2021–2027: New Year's Day, MLK Day, Washington's
  *  Birthday, Good Friday, Memorial Day, Juneteenth, Independence Day,
  *  Labor Day, Thanksgiving, Christmas — with weekend observed-date shifts.

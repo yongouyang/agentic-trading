@@ -5,6 +5,46 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (Yahoo-gap rescue) — 3 missing HK sessions rescued from eastmoney; YAHOO_KNOWN_GAPS curated set; sentinel down to 2 known-class ALARMs
+
+Follow-up to the data-quality batch's item 7. Decision (user): record
+rescued sessions in a curated known-gap constant — no schema migration, no
+per-bar provenance.
+
+**1. `YAHOO_KNOWN_GAPS`** (quant-core calendars): symbol → dates map;
+2800.HK {2025-10-24}, 3195.HK {2025-10-24, 2026-03-06}. Admission bar: two
+independent carriers (eastmoney fqt=0 + tencent) serve the session while a
+fresh Yahoo fetch does not.
+
+**2. `rescueSessions` in repair-store-bars.ts** (`--symbol X --rescue
+d1,d2`): eastmoney full-series fetch → fail-closed gates (fetch failure /
+date missing or null-OHLC / >10% level break vs nearest stored prior close)
+→ upsert only the requested bars. `Instrument.dataSource` stays "yahoo"; no
+CA handling (rescue source has none). Rescued bars verified in level:
+2800.HK 2025-10-24 close 26.80 (neighbors 26.60/27.04); 3195.HK 10.60
+(10.52/10.75) and 10.80 (10.81/10.44).
+
+**3. Sentinel known-gap exclusion — two legs, not one.** `checkYahooRewrite`
+gained a `knownGaps` param (excluded from the dirty count, annotated in
+details, `(+N known Yahoo gaps rescued)` suffix on ok summaries). The
+subagent caught that the **tencent-dates** leg also needed it: its reference
+calendar is the fresh Yahoo series (sentinel.ts:210), not the store, so it
+kept ALARMing on rescued dates — fixed with a 4th `knownGaps` param on
+`checkTencentDates` (new attribution class 3: Yahoo gap, distinct from the
+carrier-phantom classes; semantics of the store-vs-tencent direction
+unchanged).
+
+**4. Sentinel after: ALARM 4 → 2.** 2800.HK and 3195.HK fully OK across all
+four legs. Remaining: 0700.HK 8.48% (Yahoo nets in-specie distributions —
+Phase-2 CA-source decision) and 0941.HK 1.08% (marginally over the 1% line).
+Both pre-classified. Tests: apps/api 250→252 passed / 1 skipped, tsc clean.
+
+**Next:** Phase-2 CA-source decision (the standing open item; covers the
+0700.HK in-specie class). 0941.HK's 1.08%: keep watching — one session
+(2024-01-15) marginally over the line, mean 0.00%.
+
+---
+
 ## 2026-09-06 (data-quality batch, executed) — loader RULE L5 (null-close) + RULE L6 (level-break segment); sentinel half-day allowance; 3195.HK repaired; store healed to 0 null bars
 
 Executed the locked decisions from the earlier 2026-09-06 entry (all four
