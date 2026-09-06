@@ -1,0 +1,12 @@
+{"symbol":"BRK-A","status":"ok","meta":{"longName":"Berkshire Hathaway Inc.","exchange":"NYSE","firstTrade":"1980-03-17"},"splits":[],"fetchedAt":"2026-09-05T12:08:44.834Z"}
+{"symbol":"CBX","status":"not-found","fetchedAt":"2026-09-05T12:08:45.226Z"}
+{"symbol":"CJUL","status":"ok","meta":{"longName":"Corgi U.S. Equities 15% Structu","exchange":"Cboe US","firstTrade":"2026-07-02"},"splits":[],"fetchedAt":"2026-09-05T12:08:45.857Z"}
+{"symbol":"CMAY","status":"ok","meta":{"longName":"Corgi U.S. Equities 15% Structured Buffer ETF - May Series","exchange":"Cboe US","firstTrade":"2026-05-01"},"splits":[],"fetchedAt":"2026-09-05T12:08:46.430Z"}
+{"symbol":"CTAU","status":"ok","meta":{"longName":"Corgi ETF Trust I - Corgi U.S. Equities 30% Structured Buffer ETF - August Series","exchange":"Cboe US","firstTrade":"2026-08-04"},"splits":[],"fetchedAt":"2026-09-05T12:08:47.201Z"}
+{"symbol":"CTJN","status":"ok","meta":{"longName":"Corgi ETF Trust I - Corgi U.S. Equities 30% Structured Buffer ETF - June Series","exchange":"Cboe US","firstTrade":"2026-06-02"},"splits":[],"fetchedAt":"2026-09-05T12:08:47.759Z"}
+{"symbol":"HOS","status":"ok","meta":{"longName":"Hornbeck Offshore Services, Inc","exchange":"NYSE","firstTrade":null},"splits":[],"fetchedAt":"2026-09-05T12:08:48.447Z"}
+{"symbol":"NSAI","status":"ok","meta":{"longName":"NorthStrive Acquisition Corp I. Class A Ordinary Shares","exchange":"NasdaqCM","firstTrade":"2026-09-02"},"splits":[],"fetchedAt":"2026-09-05T12:08:49.036Z"}
+{"symbol":"QQJN","status":"ok","meta":{"longName":"Corgi Growth & Technology 15% Structured Buffer ETF - June Series","exchange":"Cboe US","firstTrade":"2026-06-02"},"splits":[],"fetchedAt":"2026-09-05T12:08:49.583Z"}
+{"symbol":"QQMY","status":"ok","meta":{"longName":"Corgi Technology Leaders 15% Structured Buffer ETF - May Series","exchange":"Cboe US","firstTrade":"2026-05-01"},"splits":[],"fetchedAt":"2026-09-05T12:08:50.111Z"}
+{"symbol":"SCMY","status":"ok","meta":{"longName":"Corgi U.S. Small-Cap 15% Structured Buffer ETF - May Series","exchange":"Cboe US","firstTrade":"2026-05-08"},"splits":[],"fetchedAt":"2026-09-05T12:08:50.718Z"}
+{"symbol":"YFOR","status":"ok","meta":{"longName":"YYForce Inc.","exchange":"NasdaqCM","firstTrade":"2026-08-24"},"splits":[],"fetchedAt":"2026-09-05T12:08:51.301Z"}

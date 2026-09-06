@@ -6,7 +6,7 @@
  * everything except VendorBar.segmentId + VendorSegment; raw bars never
  * altered (lossless).
  *
- *   pnpm -C apps/api segment:databento -- [--symbols META,BNY,FB] [--limit N]
+ *   pnpm -C apps/api segment:databento -- [--vendor databento-xnys] [--symbols META,BNY,FB] [--limit N]
  *
  * Plain script, NOT Nest (same shape as cli/import-databento.ts): constructs
  * PrismaService directly and calls runSegmentation(), which tests drive with
@@ -301,6 +301,9 @@ export interface SegmentDeps {
 }
 
 export interface SegmentOpts {
+  /** Vendor archive to scan (default databento-xnas). The SplitEvent
+   *  registry is symbol-keyed and shared across vendors. */
+  vendor?: string;
   symbols?: string[];
   limit?: number;
 }
@@ -344,6 +347,7 @@ function renderText(r: SegmentReport): string {
 export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {}): Promise<SegmentReport> {
   const { prisma } = deps;
   const log = deps.log ?? console.log;
+  const vendor = opts.vendor ?? VENDOR;
 
   // Split registry, grouped by symbol (condition c lookup).
   const splitEvents = await prisma.splitEvent.findMany({ select: { symbol: true, exDate: true } });
@@ -360,7 +364,7 @@ export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {})
   } else {
     const rows = await prisma.$queryRawUnsafe<{ symbol: string }[]>(
       `SELECT DISTINCT "symbol" FROM "VendorBar" WHERE "vendor" = ? ORDER BY "symbol"`,
-      VENDOR,
+      vendor,
     );
     symbols = rows.map((r) => r.symbol);
   }
@@ -375,7 +379,7 @@ export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {})
     const symbol = symbols[idx]!;
     const rows = await prisma.$queryRawUnsafe<BarRow[]>(
       `SELECT "date", "open", "close", "volume" FROM "VendorBar" WHERE "vendor" = ? AND "symbol" = ? ORDER BY "date"`,
-      VENDOR,
+      vendor,
       symbol,
     );
     const bars: SegBar[] = rows
@@ -386,20 +390,20 @@ export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {})
     const segments = assignSegments(symbol, bars, boundaries);
 
     await prisma.$transaction(async (tx) => {
-      await tx.vendorSegment.deleteMany({ where: { vendor: VENDOR, symbol } });
+      await tx.vendorSegment.deleteMany({ where: { vendor, symbol } });
       await tx.$executeRawUnsafe(
         `UPDATE "VendorBar" SET "segmentId" = NULL WHERE "vendor" = ? AND "symbol" = ?`,
-        VENDOR,
+        vendor,
         symbol,
       );
       await tx.vendorSegment.createMany({
-        data: segments.map((s) => ({ vendor: VENDOR, symbol, ...s })),
+        data: segments.map((s) => ({ vendor, symbol, ...s })),
       });
       for (const s of segments) {
         await tx.$executeRawUnsafe(
           `UPDATE "VendorBar" SET "segmentId" = ? WHERE "vendor" = ? AND "symbol" = ? AND "date" >= ? AND "date" <= ?`,
           s.segmentId,
-          VENDOR,
+          vendor,
           symbol,
           s.firstDate,
           s.lastDate,
@@ -420,7 +424,10 @@ export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {})
   );
 
   const scanned = new Set(symbols);
-  const anchors: AnchorCheck[] = Object.entries(ANCHORS)
+  // Anchors are measured XNAS reuse boundaries; they only apply to the
+  // default vendor (e.g. BNY also exists in the XNYS archive with its own
+  // history, so a foreign-vendor run must not be fail-closed on them).
+  const anchors: AnchorCheck[] = (vendor === VENDOR ? Object.entries(ANCHORS) : [])
     .filter(([sym]) => scanned.has(sym))
     .map(([sym, expected]) => {
       const found = stitched.find((s) => s.symbol === sym);
@@ -444,7 +451,7 @@ export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {})
   });
 
   const report: SegmentReport = {
-    vendor: VENDOR,
+    vendor,
     date: new Date().toISOString().slice(0, 10),
     symbolsScanned: symbols.length,
     stitchedSymbols: stitched.length,
@@ -462,7 +469,7 @@ export async function runSegmentation(deps: SegmentDeps, opts: SegmentOpts = {})
     const dir = deps.reportsDir ?? path.join(PKG_ROOT, "reports");
     mkdirSync(dir, { recursive: true });
     const { text: _text, ...json } = report;
-    writeFileSync(path.join(dir, `segment-vendor-bars-${report.date}.json`), JSON.stringify(json, null, 2));
+    writeFileSync(path.join(dir, `segment-vendor-bars-${report.vendor}-${report.date}.json`), JSON.stringify(json, null, 2));
   }
   return report;
 }
@@ -477,6 +484,11 @@ function parseArgs(argv: string[]): SegmentOpts {
     return i === -1 ? undefined : argv[i + 1];
   };
   const opts: SegmentOpts = {};
+  const vendor = flag("vendor");
+  if (vendor !== undefined) {
+    if (!vendor.trim()) throw new Error(`--vendor must be a non-empty string (got "${vendor}")`);
+    opts.vendor = vendor;
+  }
   const symbols = flag("symbols");
   if (symbols) opts.symbols = symbols.split(",").filter(Boolean);
   const limit = flag("limit");
