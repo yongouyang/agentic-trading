@@ -48,10 +48,26 @@ ALARM classified):
   full-window rewrite, but the loader should refuse null-close bars;
   recommend folding into the pending data-quality decisions (with 3195.HK).
 
-**What's next**: (a) user decisions — 3195.HK repair, null-close loader
-guard, eastmoney half-day convention, HK universe 131-vs-140; (b) Phase 2
-design (deep tier): agent pipeline + Piotroski/earnings inputs +
-eastmoney-F10 CA-source decision.
+**What's next**: Phase 2 design (deep tier): agent pipeline +
+Piotroski/earnings inputs + eastmoney-F10 CA-source decision.
+
+**Decisions taken 2026-09-06 (user) — execution spec for the data-quality
+batch (fast tier, decisions locked):**
+1. **3195.HK repair — drop + re-derive.** Delete its oldest 72 bars (the
+   USD-counter segment, through 2024-04-30 per the sentinel's max-dev date),
+   re-derive the adjusted series. Adopt the intra-series integrity check
+   (per-row level jump vs local level, the >10% class from
+   `docs/research-akshare-tickdb.md`) in the loader so the class is caught
+   at ingest; one run covers both.
+2. **Null-close loader guard + repair now.** Loader drops any bar with null
+   close (loud warning, counted in the integrity header); then re-run the
+   daily ingest (`screen:daily`, both lanes) to rewrite the window and heal
+   the 514 stored null bars (492 US 2026-08-28, 22 HK 2026-09-01).
+3. **HK half-day convention — half-day-excluded confirmed.** Store
+   convention unchanged (L1 drops 2022-01-31); change the sentinel's
+   eastmoney leg to allow the known HKEX half-day set (2022-01-31 today;
+   source the set from the store's L1-drop warnings) instead of alarming.
+4. **HK universe — accept 131.** No non-index H-share chase.
 
 ---
 
