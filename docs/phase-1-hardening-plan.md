@@ -36,6 +36,23 @@ last probe (≈2026-09-04). If bans routinely outlast a day, the "rescue in the
 next daily run" premise is weak and the rescue-source decision must be
 re-opened.
 
+**Update 2026-09-06 — ban lifted; live validation DONE.** Single throttled
+probe to `push2his` answered HTTP 200 with real `fqt=0` klines (0005.HK); the
+ban lasted somewhere between 36h and 6 days. Live rescue-path validation via
+`EastmoneyRepairProvider.fetchRawBars("0700.HK")`: 5,476 raw bars
+2004→2026-09-04 in 2.2s, zero parse failures; vs store: median |Δ| 0.0000%
+on 1,226 overlapping dates. **Measured caveat:** 0700's old bars deviate up
+to 8.48% in exactly two steps (1.0848 → 1.0529 between 2022-02 and 2022-06,
+→ 1.0000 between 2022-12 and 2023-03) — Tencent's JD.com (2022) and Meituan
+(2023) distributions-in-specie. **Yahoo's stored closes are net of in-specie
+distributions; eastmoney `fqt=0` is pure as-traded.** A rescue rewrite of
+such a name shifts its old-bar levels (0700: +8.5% in 2021) and the kept
+Yahoo dividend events do not cover in-specie distributions. Rescue is exact
+for names without in-specie distributions; flag the class in Phase 2's CA
+source decision. First live sentinel eastmoney leg also ran (10/10 names
+answered, no re-ban) — its ALARMs are all classified conventions, see
+PROGRESS 2026-09-06 (§1 quick wins).
+
 ### A.1 Endpoint facts (from spike/data-probe.ts, keep these exact)
 
 - eastmoney:
@@ -130,8 +147,13 @@ artifact and the exit code.
      2026-08-31 IP ban was still in force on 2026-09-02, and a weekly tool must
      not keep re-probing a banned host and extending it. The leg reuses
      `EastmoneyRepairProvider` (no second eastmoney client, same ≥2s + jitter
-     pacing); it is unit/integration tested with fakes and stays unvalidated
-     live until §A's ban re-check (~2026-09-04).
+     pacing). **Live-validated 2026-09-06** (ban lifted; 10/10 sample names
+     answered, no re-ban) — its first-run ALARMs are all classified
+     conventions (PROGRESS 2026-09-06): the 2022-01-31 CNY-eve half-day
+     (eastmoney serves it; the store's L1 rule drops it from Yahoo data —
+     the pending "half-day-excluded eastmoney-raw" decision now has live
+     evidence), the 0700 in-specie-distribution level steps (§A update), and
+     the known 3195.HK USD-counter defect.
   3. **tencent qfq date overlap** (dates are convention-free; closes are NOT
      compared): alarm on date-set mismatch. Enforced structurally — the new
      `TencentKlineProvider` returns **dates only**, so a close comparison is
@@ -245,9 +267,12 @@ MIN/MAX/COUNT per upsert — don't copy that part).
 ## Build order & acceptance
 
 1. `hkSymbolMaps` + eastmoney repair provider + CLI integration (A) — ✔ code +
-   tests 2026-09-02; live rescue validation still blocked on the §A ban
+   tests 2026-09-02; **live rescue validation ✔ 2026-09-06** (ban lifted;
+   0700.HK full-history fetch + store comparison — see §A update for the
+   in-specie-distribution caveat)
 2. Sentinel CLI (B) — ✔ 2026-09-02, live-validated on the two unblocked legs;
-   its eastmoney leg is built, opt-in, and joins A's pending live validation
+   eastmoney leg **live-validated 2026-09-06** (first `--eastmoney` run;
+   ALARMs all classified conventions, not defects)
 3. HSCEI expansion (C) — ✔ 2026-09-02, 9 verified adds (131 total), live
    acceptance run clean
 

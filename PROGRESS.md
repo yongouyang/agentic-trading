@@ -5,6 +5,56 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (quick wins) — architecture §4.1 Databento row extended to XNYS; eastmoney ban LIFTED + §A live validation done; first sentinel eastmoney leg run (ALARMs all classified)
+
+**1. architecture-v1 §4.1**: the existing Databento routing-table row now
+covers both archives (XNAS all-plain-symbols + XNYS NYSE-listed-restricted),
+registry totals post-echo-dedupe (2,642 yahoo + 594 inband = 3,236),
+VendorSegment reuse handling, and space→dot normalization. This closes the
+doc touch-up open since 2026-09-05.
+
+**2. eastmoney ban re-check — LIFTED.** Single throttled probe to `push2his`
+(0005.HK, fqt=0): HTTP 200 with real klines. The 2026-08-31 ban lasted
+between 36h and 6 days. §A's rescue-source decision stands (bans do not
+routinely outlast a week).
+
+**3. §A live rescue-path validation — DONE.** `EastmoneyRepairProvider.
+fetchRawBars("0700.HK")`: 5,476 raw bars 2004→2026-09-04 in 2.2s, 0 parse
+failures; vs store on 1,226 overlapping dates: **median |Δ| 0.0000%**.
+Measured caveat (new): old bars deviate up to 8.48% in exactly two steps —
+Tencent's JD.com (2022) and Meituan (2023) distributions-in-specie.
+**Yahoo's stored closes are net of in-specie distributions; eastmoney fqt=0
+is pure as-traded.** Rescuing such a name shifts its old-bar levels and the
+kept Yahoo dividend events don't cover in-specie distributions. Exact for
+names without them; flagged for the Phase-2 CA-source decision (hardening
+plan §A update).
+
+**4. First `screen:sentinel -- --eastmoney` run — leg works** (10/10 names
+answered at ≥2s+jitter pacing, no re-ban; exit 1 with 10 ALARMs — every
+ALARM classified):
+- `2022-01-31` date-set mismatch on 9 names: CNY-eve half-day. eastmoney
+  serves it; the store's L1 rule drops it from Yahoo data
+  ("holiday-phantom"). This is the live evidence for the pending
+  "eastmoney-raw half-day-excluded" decision (2026-09-03, still open).
+- 0700.HK max 8.48%: the in-specie-distribution steps from §3. 0941.HK
+  1.08% marginally over the 1% alarm line; all others ≤0.54%.
+- 3195.HK max 709%: the known USD-counter defect (user decision still
+  pending — drop/convert its 72 oldest bars).
+- **NEW DEFECT surfaced: null-close bars stored at ingest.** 492 US names
+  carry an all-null bar for 2026-08-28 and 22 HK names (mostly ETFs) for
+  2026-09-01 — Yahoo served still-forming/unfinalized bars on run day and
+  the loader stored them instead of dropping. EA/EQR/AVB show the same
+  pattern repeatedly (17/12/6 nulls in 30d). Self-heals on the next
+  full-window rewrite, but the loader should refuse null-close bars;
+  recommend folding into the pending data-quality decisions (with 3195.HK).
+
+**What's next**: (a) user decisions — 3195.HK repair, null-close loader
+guard, eastmoney half-day convention, HK universe 131-vs-140; (b) Phase 2
+design (deep tier): agent pipeline + Piotroski/earnings inputs +
+eastmoney-F10 CA-source decision.
+
+---
+
 ## 2026-09-06 (echo dedupe + XNYS FAR funnel) — 4 inband echo rows deleted; XNYS FAR review funnels 913 → 1 append (BHVN); new `split:add` CLI
 
 Both follow-ups from the XNYS import session executed, user-approved scopes
