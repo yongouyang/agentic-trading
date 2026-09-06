@@ -353,6 +353,19 @@ Reimplements the TradingAgents org-chart *pattern* in TS, lean variant:
 - Provider-agnostic client (OpenAI-compatible): `LLM_ANALYST_MODEL`,
   `LLM_DEBATE_MODEL`, `LLM_VERDICT_MODEL` env vars.
 
+*(Phase-2 planning 2026-09-06, spec in `docs/phase-2-plan.md` — all forks
+locked: fundamentals analyst = eastmoney F10 statements, stocks only (ETFs
+skip it); news = Google News RSS both lanes (CN+EN for HK) + Yahoo
+supplement; structured output = prompt + strict validate + 1 repair round,
+never `response_format`-dependent; breadth = top 10/lane + `--symbol`;
+models = Kimi all-roles local, DeepSeek `deepseek-v4-flash` on deploy —
+`api.moonshot.cn` is measured-blackholed from AWS ap-east-1. Decision log =
+`AgentDecision` table keyed by sha256(agent|model|promptVersion|system|user)
+with byte-deterministic prompt builders as a tested invariant; reports =
+`DeepDiveRun`/`DeepDiveReport`; orchestration = separate `screen:deep-dive`
+CLI over the latest ScreenRun, per-name failure isolation, `--max-calls`
+budget guard.)*
+
 ## 8. UI (apps/web)
 
 - **Chat session as centerpiece**: drill into candidates, challenge theses,

@@ -5,6 +5,44 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (Phase-2 planning session, deep tier) — agent pipeline fully spec'd; all 5 forks user-locked; ready for fast-tier execution
+
+Planning session for Phase 2 (lean agent pipeline + persisted daily
+reports). Full spec: **`docs/phase-2-plan.md`**; architecture §7 amended
+with the decision summary. Locked forks:
+
+1. **Fundamentals analyst**: eastmoney F10 three-statements, stocks only;
+   HK ETFs skip the fundamentals leg (news+technicals only). One-off probe
+   step pins statement fields before the assembler is written.
+2. **News/sentiment**: Google News RSS per name both lanes (CN+EN for HK) +
+   Yahoo supplement; ~10 headlines; the LLM judges sentiment (no separate
+   model).
+3. **Structured output**: prompt + strict validate + exactly 1 repair round
+   — provider-agnostic, no `response_format` dependency.
+4. **Breadth**: top 10/lane (~140 calls/day, pennies), `--symbol` ad-hoc,
+   `--max-calls` budget guard.
+5. **Models**: Kimi all-roles local; DeepSeek `deepseek-v4-flash` on deploy.
+   Carried-over measured fact (ib-learning-site ai-feedback.md, probe-Lambda
+   verified): `api.moonshot.cn` is blackholed from AWS ap-east-1 — DeepSeek
+   deploy is a network fact, not a preference. Kimi Code CLI subscription
+   credential ≠ open-platform API key; local profile needs a Moonshot
+   platform key in `.env`.
+
+Core design: `AgentDecision` table keyed by
+sha256(agent|model|promptVersion|system|user) — cache/audit/debug in one
+artifact; **byte-deterministic prompt builders are a tested invariant**
+(golden files), because the snapshot travels inside the prompt and an
+unchanged snapshot must hash-hit at $0. `DeepDiveRun`/`DeepDiveReport`
+persist reports with per-name `failed:<slug>` isolation. New
+`screen:deep-dive` CLI over the latest ScreenRun; packages/agents stays
+pure (fetch-based LLM client fully injectable — no new dependencies).
+
+**Next:** switch to the fast tier and execute the build order in
+docs/phase-2-plan.md §Build order (6 steps; live smoke = top-2 HK on the
+local Kimi profile, then a $0 cache rerun).
+
+---
+
 ## 2026-09-06 (0941.HK divergence triaged + fixed) — sentinel fully green: 0 ALARM / 0 WARN / 10 ok, exit 0
 
 The last sentinel ALARM (0941.HK eastmoney max 1.08% on 2024-01-15) is
