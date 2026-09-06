@@ -5,6 +5,42 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (Phase-2 live smoke — PASSED) — first real deep-dives persisted; cache rerun at $0 proven; k3-256k profile wired
+
+Execution per `docs/phase-2-plan.md` step 6, on the user's chosen local
+profile: **k3-256k (low thinking) for all three roles**, using the Kimi Code
+CLI's own subscription credential.
+
+**Endpoint facts measured live** (probe before wiring): the coding endpoint
+`api.kimi.com/coding/v1` accepts model `k3-256k` (the `kimi-code/` prefix is
+CLI-internal — rejected on the wire), requires **temperature = 1** (400s
+otherwise), and accepts `reasoning_effort: "low"`. The credential is an
+OAuth access_token that **rotates** (~hourly expiry observed), so it is
+never copied into `.env`: new `LLM_API_KEY_FILE` env var points at
+`~/.kimi-code/credentials/kimi-code.json` and is read fresh at process
+start. Client gained `reasoningEffort` pass-through +
+`defaultTemperature`/`defaultReasoningEffort` (+4 tests; agents 39, api
+338/1, tsc clean).
+
+**Smoke: `screen:deep-dive -- --market hk --top 2` — 2/2 ok, 14 calls, 0
+failures.** 2269.HK → buy 0.45 (thesis grounded in the F10 fundamentals
+snapshot: revenue +18.4% H1 2026), 1997.HK → neutral 0.15. 14
+AgentDecision rows with full prompts/responses. **Cache rerun: 0 LLM calls,
+14/14 cache hits, AgentDecision count unchanged** — the content-addressed
+$0-rerun property holds end-to-end.
+
+**Known limitation (recorded, not blocking):** the local profile depends on
+the CLI's OAuth token being fresh; if the CLI hasn't run recently the token
+may be expired (run any `kimi` command to refresh). A Moonshot platform key
+remains the stable long-term option; deploy profile stays DeepSeek
+`deepseek-v4-flash` (moonshot blackholed from AWS ap-east-1 — measured).
+
+**Next:** full daily shape — `screen:deep-dive -- --market all --top 10`
+after the next screen:daily; then Phase 3 (chat UI reading DeepDiveRun /
+AgentDecision) whenever scheduled.
+
+---
+
 ## 2026-09-06 (Phase-2 execution, fast tier) — agent pipeline implemented steps 1–5; all suites green; live smoke pending
 
 Per `docs/phase-2-plan.md` build order (steps 1–5; the live smoke is a
@@ -54,6 +90,33 @@ quant-core 49 (unchanged), agents 37 (new), tsc clean in all three.
 local profile (needs a Moonshot platform key in .env) — verify report rows,
 decision-log rows, cache-hit rerun at $0.
 
+
+---
+
+## 2026-09-06 (archify system map) — docs/architecture-system-map.html delivered, 9/9 showcase checks, containment pass at 4 viewports
+
+Same system map rebuilt with the archify skill (architecture type, 10 nodes,
+snake layout: sources → apps/api → store → quant-core → screen → agents → web).
+Validation 9/9, 0 errors, 0 warnings; `deliver` sha256
+`b1fb3d6c…` (spec 5,003 B) → `66ecbcdf…` (HTML 717,183 B); `visual-check`
+containment pass at 1440×900 / 1600×1000 / 1920×1080 / 2048×1320, min projected
+node text 6.80–9.00 px (floor 6). Two geometry repairs were needed: the first
+layout had `decisions→web` crossing `agents`, and `store→quant`'s label needed
+`labelDy: 24`; viewBox ended at 1230×684 to clear a 6px vertical overflow at
+1440×900. **Perceptual visual review is still pending** — the browser evidence
+is containment + readability only. Linked from docs/architecture-map.md; the
+older mermaid `architecture-map.html` stays.
+
+---
+
+## 2026-09-06 (tooling) — archify skill installed for pi + Kimi Code
+
+`~/.agents/skills/archify` (from the repo's packaged `archify.zip`, v2.17, MIT)
+→ pi discovers it globally; Kimi Code gets it by adding `~/.agents/skills`
+to `extra_skill_dirs` in `~/.kimi-code/config.toml` (backup taken). Smoke
+test: `node bin/archify.mjs validate/render architecture examples/web-app.architecture.json`
+passes with **no npm install** — devDeps (ajv/parse5/saxes) are not needed for
+render/validate. pi needs a restart to list it; Kimi picks it up next launch.
 
 ---
 

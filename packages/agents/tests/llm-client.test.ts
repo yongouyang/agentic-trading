@@ -43,6 +43,30 @@ describe("OpenAiCompatLlmClient", () => {
     expect(body).toEqual({ model: "m", messages: REQ.messages, temperature: 0.2, max_tokens: 2048 });
   });
 
+  it("applies client-level defaultTemperature/defaultReasoningEffort; request fields win", async () => {
+    const { fetchImpl, calls } = fakeFetch(async () => jsonResponse(200, okJson));
+    const client = new OpenAiCompatLlmClient({
+      baseUrl: "https://x",
+      apiKey: "k",
+      defaultTemperature: 1,
+      defaultReasoningEffort: "low",
+      fetchImpl,
+      sleep: noSleep,
+    });
+    await client.chat(REQ);
+    // k3-256k profile (measured 2026-09-06): temperature must be 1, effort "low" accepted.
+    expect(JSON.parse(calls[0]!.init.body)).toEqual({ model: "m", messages: REQ.messages, temperature: 1, max_tokens: 2048, reasoning_effort: "low" });
+    await client.chat({ ...REQ, temperature: 0.5, reasoningEffort: "high" });
+    expect(JSON.parse(calls[1]!.init.body)).toEqual({ model: "m", messages: REQ.messages, temperature: 0.5, max_tokens: 2048, reasoning_effort: "high" });
+  });
+
+  it("omits reasoning_effort entirely when neither request nor client sets it", async () => {
+    const { fetchImpl, calls } = fakeFetch(async () => jsonResponse(200, okJson));
+    const client = new OpenAiCompatLlmClient({ baseUrl: "https://x", apiKey: "k", fetchImpl, sleep: noSleep });
+    await client.chat(REQ);
+    expect("reasoning_effort" in JSON.parse(calls[0]!.init.body)).toBe(false);
+  });
+
   it("retries once on 5xx then succeeds", async () => {
     let n = 0;
     const { fetchImpl, calls } = fakeFetch(async () => {

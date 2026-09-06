@@ -30,6 +30,10 @@ export interface LlmRequest {
   messages: LlmMessage[];
   temperature?: number;
   maxTokens?: number;
+  /** OpenAI-style reasoning effort hint ("low" | "high"…). The Kimi coding
+   *  endpoint accepts `reasoning_effort` (measured 2026-09-06: 200 with
+   *  "low"); omitted entirely when unset — providers vary. */
+  reasoningEffort?: string;
 }
 
 /** The port the pipeline depends on — fakes implement this in tests. */
@@ -56,6 +60,13 @@ export interface OpenAiCompatLlmClientOptions {
   apiKey: string;
   /** Default 60s (phase-2-plan). */
   timeoutMs?: number;
+  /** Applied when a request omits temperature. Default 0.2 — EXCEPT the Kimi
+   *  coding endpoint (k3-256k) which 400s on anything but 1 (measured
+   *  2026-09-06): pass 1 there via LLM_TEMPERATURE. */
+  defaultTemperature?: number;
+  /** Applied when a request omits reasoningEffort (e.g. "low" for the
+   *  k3-256k smoke profile — user decision 2026-09-06). */
+  defaultReasoningEffort?: string;
   /** Injectable for tests (default global fetch). */
   fetchImpl?: typeof fetch;
   /** Injectable for tests (default real setTimeout). */
@@ -68,6 +79,8 @@ export class OpenAiCompatLlmClient implements LlmClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
   private readonly timeoutMs: number;
+  private readonly defaultTemperature?: number;
+  private readonly defaultReasoningEffort?: string;
   private readonly fetchImpl: typeof fetch;
   private readonly sleep: (ms: number) => Promise<void>;
 
@@ -75,6 +88,8 @@ export class OpenAiCompatLlmClient implements LlmClient {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
     this.apiKey = opts.apiKey;
     this.timeoutMs = opts.timeoutMs ?? 60_000;
+    this.defaultTemperature = opts.defaultTemperature;
+    this.defaultReasoningEffort = opts.defaultReasoningEffort;
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.sleep = opts.sleep ?? realSleep;
   }
@@ -109,8 +124,11 @@ export class OpenAiCompatLlmClient implements LlmClient {
         body: JSON.stringify({
           model: req.model,
           messages: req.messages,
-          temperature: req.temperature ?? 0.2,
+          temperature: req.temperature ?? this.defaultTemperature ?? 0.2,
           max_tokens: req.maxTokens ?? 2048,
+          ...((req.reasoningEffort ?? this.defaultReasoningEffort)
+            ? { reasoning_effort: req.reasoningEffort ?? this.defaultReasoningEffort }
+            : {}),
         }),
         signal: ac.signal,
       });

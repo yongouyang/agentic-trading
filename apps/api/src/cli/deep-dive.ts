@@ -13,8 +13,12 @@
  * latest ScreenResult metrics (any run) are used when present; rank/score
  * degrade to 0 and screenRunId to the lane's latest run (0 when none).
  *
- * Env contract (phase-2-plan): LLM_BASE_URL, LLM_API_KEY, LLM_ANALYST_MODEL,
- * LLM_DEBATE_MODEL, LLM_VERDICT_MODEL. Loaded via Node's native
+ * Env contract (phase-2-plan): LLM_BASE_URL, LLM_API_KEY (or
+ * LLM_API_KEY_FILE → JSON with access_token, e.g. the Kimi Code CLI's
+ * OAuth store), LLM_ANALYST_MODEL, LLM_DEBATE_MODEL, LLM_VERDICT_MODEL;
+ * optional LLM_TEMPERATURE (k3-256k needs 1 — measured) and
+ * LLM_REASONING_EFFORT ("low" for the smoke profile). Loaded via Node's
+ * native
  * process.loadEnvFile (Node 22; no dotenv in this repo), tried IN ORDER:
  * apps/api/.env first, then the repo-root .env (../../.env from apps/api) —
  * the first file found wins for the vars it defines; missing files are
@@ -110,7 +114,24 @@ export function loadEnvFiles(pkgRoot: string = PKG_ROOT): string[] {
 }
 
 export function missingLlmEnv(env: NodeJS.ProcessEnv = process.env): string[] {
-  return REQUIRED_LLM_ENV.filter((k) => !env[k]);
+  return REQUIRED_LLM_ENV.filter((k) => !env[k] && !(k === "LLM_API_KEY" && env.LLM_API_KEY_FILE));
+}
+
+/** LLM_API_KEY directly, or LLM_API_KEY_FILE pointing at a JSON credential
+ *  with an `access_token` field (the Kimi Code CLI's OAuth store at
+ *  ~/.kimi-code/credentials/kimi-code.json — a ROTATING subscription token,
+ *  so it is read fresh at process start, never copied into .env).
+ *  User decision 2026-09-06: local smoke profile = the CLI's own credential. */
+export function resolveLlmApiKey(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  if (env.LLM_API_KEY) return env.LLM_API_KEY;
+  const file = env.LLM_API_KEY_FILE;
+  if (!file) return undefined;
+  try {
+    const token = (JSON.parse(readFileSync(file, "utf8")) as { access_token?: string }).access_token;
+    return token || undefined;
+  } catch {
+    return undefined; // missing/malformed file → the missing-env check fails loud
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -430,7 +451,14 @@ async function main(): Promise<void> {
         return;
       }
     }
-    const client = new OpenAiCompatLlmClient({ baseUrl: process.env.LLM_BASE_URL!, apiKey: process.env.LLM_API_KEY! });
+    const client = new OpenAiCompatLlmClient({
+      baseUrl: process.env.LLM_BASE_URL!,
+      apiKey: resolveLlmApiKey()!,
+      // Kimi coding endpoint (k3-256k) 400s on temperature ≠ 1 (measured
+      // 2026-09-06); other providers default to the client's 0.2.
+      defaultTemperature: process.env.LLM_TEMPERATURE ? Number(process.env.LLM_TEMPERATURE) : undefined,
+      defaultReasoningEffort: process.env.LLM_REASONING_EFFORT || undefined,
+    });
     const models = {
       analyst: process.env.LLM_ANALYST_MODEL!,
       debate: process.env.LLM_DEBATE_MODEL!,

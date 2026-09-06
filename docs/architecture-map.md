@@ -3,6 +3,11 @@
 Rendered: [`architecture-map.html`](./architecture-map.html) (mermaid via CDN,
 regenerate with `pnpm docs:map` after editing this file).
 
+Archify version (validated standalone HTML, self-contained — no CDN):
+[`architecture-system-map.html`](./architecture-system-map.html), source
+[`architecture-system-map.json`](./architecture-system-map.json). Rebuild with
+`node ~/.agents/skills/archify/bin/archify.mjs deliver architecture <spec.json> <out.html> --quality showcase`.
+
 Reference diagram set for `architecture-v1.md` (§1 objective, §3 layout, §5
 pipeline, §10 build order). Complements, does not replace it.
 

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "agentic-trading — system map",
+    "locale": "en",
+    "output": "architecture-system-map.html",
+    "quality_profile": "showcase",
+    "viewBox": [1230, 684],
+    "views": [
+      {
+        "id": "daily-path",
+        "label": "Daily path",
+        "focus": ["yahoo", "ingest", "dq", "store", "quant", "screen"],
+        "note": "One Yahoo fetch per session becomes a quality-typed bar, a locally derived series, and a ranked shortlist."
+      },
+      {
+        "id": "rescue-and-overlay",
+        "label": "Repair and overlay",
+        "focus": ["f10", "repair", "yahoo", "ingest", "dq"],
+        "note": "Second sources only ever supply raw bars or corporate-action corrections — never a second daily feed."
+      },
+      {
+        "id": "deep-dive",
+        "label": "Deep-dive and delivery",
+        "focus": ["screen", "agents", "web"],
+        "note": "The agent layer reads the shortlist and writes verdicts; it never writes into quant-core."
+      }
+    ]
+  },
+  "components": [
+    { "id": "f10", "type": "external", "label": "eastmoney F10", "sublabel": "CA overlay · statements", "pos": [90, 60], "size": [180, 60] },
+    { "id": "yahoo", "type": "external", "label": "Yahoo v8 chart", "sublabel": "sole daily feed · US + HK", "pos": [90, 200], "size": [180, 60] },
+    { "id": "repair", "type": "external", "label": "tencent / push2his", "sublabel": "repair only · raw bars", "pos": [90, 340], "size": [180, 60] },
+
+    { "id": "ingest", "type": "backend", "label": "apps/api ingestion", "sublabel": "pinned UA · 200ms spacing", "pos": [390, 196], "size": [180, 72] },
+    { "id": "dq", "type": "backend", "label": "Day-17 quality gate", "sublabel": "OK · ABSENT · FETCH_FAILED", "pos": [690, 196], "size": [180, 72], "tag": "typed + loud" },
+    { "id": "store", "type": "database", "label": "SQLite · Prisma", "sublabel": "Bar · CA · SplitEvent", "pos": [990, 196], "size": [180, 72], "tag": "AgentDecision" },
+
+    { "id": "quant", "type": "backend", "label": "quant-core", "sublabel": "derive adjusted · indicators", "pos": [990, 560], "size": [180, 72], "tag": "R1 trusted" },
+    { "id": "screen", "type": "backend", "label": "screening engine", "sublabel": "top 10–15 per lane", "pos": [690, 560], "size": [180, 72] },
+    { "id": "agents", "type": "backend", "label": "packages/agents", "sublabel": "analysts → debate → verdict", "pos": [390, 560], "size": [180, 72], "tag": "P2" },
+    { "id": "web", "type": "frontend", "label": "apps/web", "sublabel": "chat + daily report", "pos": [90, 560], "size": [180, 72], "tag": "P3" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Free · no-key sources", "wraps": ["f10", "yahoo", "repair"] },
+    { "kind": "region", "label": "apps/api — ingestion & quality", "wraps": ["ingest", "dq"] },
+    { "kind": "region", "label": "packages/quant-core — trusted", "wraps": ["quant", "screen"] },
+    { "kind": "region", "label": "packages/agents — proposes", "wraps": ["agents"] }
+  ],
+  "connections": [
+    { "id": "yahoo-to-ingest", "from": "yahoo", "to": "ingest", "label": "raw OHLCV + CA", "variant": "emphasis" },
+    { "id": "f10-to-ingest", "from": "f10", "to": "ingest", "label": "CA overlay", "variant": "dashed", "fromSide": "right", "toSide": "top" },
+    { "id": "repair-to-ingest", "from": "repair", "to": "ingest", "label": "raw only · R3", "variant": "dashed", "fromSide": "right", "toSide": "bottom" },
+    { "id": "ingest-to-dq", "from": "ingest", "to": "dq", "label": "daily bars" },
+    { "id": "dq-to-store", "from": "dq", "to": "store", "label": "OK only" },
+    { "id": "store-to-quant", "from": "store", "to": "quant", "label": "raw + events", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "id": "quant-to-screen", "from": "quant", "to": "screen", "label": "adjusted series" },
+    { "id": "screen-to-agents", "from": "screen", "to": "agents", "label": "top 10 / lane" },
+    { "id": "agents-to-web", "from": "agents", "to": "web", "label": "verdicts + transcripts" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Data invariants",
+      "items": [
+        "R1 — store raw, adjust locally",
+        "R2 — signals adjusted, prices raw",
+        "R3 — never splice providers mid-series",
+        "R3a — raw is not comparable across providers"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Trust boundary",
+      "items": [
+        "Agents propose, quant-core disposes",
+        "FETCH_FAILED is loud — never “no opportunity”",
+        "Abstain ≠ neutral in every blend",
+        "Weekly sentinel guards silent rewrites"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Evolution",
+      "items": [
+        "P2 — agent pipeline + AgentDecision log",
+        "P3 — chat + report UI reads ScreenRun and reports",
+        "P4 — backtest the screen (train/OOS)",
+        "Later — Futu / IBKR execution"
+      ]
+    }
+  ]
+}

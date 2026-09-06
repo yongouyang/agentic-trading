@@ -15,6 +15,7 @@ import {
   MAX_CALLS_PER_NAME,
   missingLlmEnv,
   parseDeepDiveArgs,
+  resolveLlmApiKey,
   runDeepDiveBatch,
   selectTargets,
   type DeepDiveBatchDeps,
@@ -47,6 +48,26 @@ describe("missingLlmEnv", () => {
   it("names every missing var", () => {
     expect(missingLlmEnv({} as NodeJS.ProcessEnv)).toEqual(["LLM_BASE_URL", "LLM_API_KEY", "LLM_ANALYST_MODEL", "LLM_DEBATE_MODEL", "LLM_VERDICT_MODEL"]);
     expect(missingLlmEnv({ LLM_BASE_URL: "x", LLM_API_KEY: "k", LLM_ANALYST_MODEL: "a", LLM_DEBATE_MODEL: "d", LLM_VERDICT_MODEL: "v" } as NodeJS.ProcessEnv)).toEqual([]);
+  });
+
+  it("LLM_API_KEY_FILE satisfies LLM_API_KEY", () => {
+    const env = { LLM_BASE_URL: "x", LLM_API_KEY_FILE: "/tmp/cred.json", LLM_ANALYST_MODEL: "a", LLM_DEBATE_MODEL: "d", LLM_VERDICT_MODEL: "v" } as NodeJS.ProcessEnv;
+    expect(missingLlmEnv(env)).toEqual([]);
+  });
+});
+
+describe("resolveLlmApiKey", () => {
+  it("prefers LLM_API_KEY; falls back to the JSON credential file; loud-undefined otherwise", () => {
+    const tmp = path.join(tmpdir(), `llm-cred-${Date.now()}.json`);
+    writeFileSync(tmp, JSON.stringify({ access_token: "tok-123" }));
+    try {
+      expect(resolveLlmApiKey({ LLM_API_KEY: "direct", LLM_API_KEY_FILE: tmp } as NodeJS.ProcessEnv)).toBe("direct");
+      expect(resolveLlmApiKey({ LLM_API_KEY_FILE: tmp } as NodeJS.ProcessEnv)).toBe("tok-123");
+      expect(resolveLlmApiKey({ LLM_API_KEY_FILE: "/nonexistent.json" } as NodeJS.ProcessEnv)).toBeUndefined();
+      expect(resolveLlmApiKey({} as NodeJS.ProcessEnv)).toBeUndefined();
+    } finally {
+      rmSync(tmp, { force: true });
+    }
   });
 });
 
