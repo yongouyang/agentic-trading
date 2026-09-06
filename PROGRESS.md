@@ -23,18 +23,17 @@ sources (`scripts/databento/xnys-near-tier-verdicts.csv`):
   - **LAC 2023-10-04 — APPENDED** (FORWARD_SPLIT 1.3814, inband/estimated):
     Lithium Americas separation (1 old = 1 new LAC + 1 LAAC), same
     spinoff-class append precedent as BHVN.
-  - **ARI 2026-07-16 — DEFERRED (decision for the user):** real **$3.50
-    special cash dividend** (OCC infomemo 59316; observed −$3.52 step matches
-    exactly) — an *additive* event, and the SplitEvent registry is
-    multiplicative. Appending it as factor 0.6665 would back-adjust returns
-    approximately-right; not appending leaves a wrong −33% "return" in the
-    vendor archive. No dividend layer exists for VendorBar.
+  - **ARI 2026-07-16 — APPENDED** (REVERSE_SPLIT 0.666, inband/estimated):
+    real **$3.50 special cash dividend** (OCC infomemo 59316; observed
+    −$3.52 step matches exactly) — an *additive* event recorded as a
+    multiplicative factor per user decision (option 1), exact at the ex-date
+    close only; revisit if VendorBar gains a dividend layer.
   - False-positive anatomy (for future detector tuning): earnings gaps ×6,
     leveraged-ETF/ETN beta on crash days ×6 (YINN, BITU, BERZ, WTIU, JETD,
     HIYY-halt), microcap pumps/drift/post-IPO fades ×11, ticker-identity
     noise ×1 (CTM = Castellum, not Castor Maritime).
 
-**Registry now: 2,642 yahoo + 596 inband = 3,238 SplitEvents.**
+**Registry now: 2,642 yahoo + 597 inband = 3,239 SplitEvents.**
 
 **2. F10 amount rounding — DONE.** Same-ex-date cash rows summed in binary
 float could leave artifacts (9988.HK 1.9510839999999998 class);
@@ -42,9 +41,8 @@ float could leave artifacts (9988.HK 1.9510839999999998 class);
 (`refresh-f10-ca.ts`). No live rows affected (checked: no long-repr amounts in
 CorporateAction). Suite 338 passed / 1 skipped, tsc clean.
 
-**Open:** ARI special-dividend modeling decision (above). Next
-architecturally-significant chunk: **Phase 3 chat UI** — deep-tier planning
-session.
+**Open:** none from this batch. Next architecturally-significant chunk:
+**Phase 3 chat UI** — deep-tier planning session.
 
 ---
 

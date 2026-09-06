@@ -1,6 +1,6 @@
 symbol,ex_date,detector_factor,tier,verdict,registry_action,evidence
 AGL,2024-11-08,1.55,NEAR,no-ca,Q3 2024 earnings gap-down 2024-11-08 (PR 2024-11-07),none,nasdaq.com PR; only real split is 1:25 reverse 2026-03-30
-ARI,2026-07-16,1.5455,NEAR,real-special-dividend,"$3.50 special cash dividend ex 2026-07-16 (OCC infomemo 59316); observed -$3.52 step matches; additive event, NOT appended to SplitEvent pending modeling decision",deferred,infomemo.theocc.com #59316
+ARI,2026-07-16,1.5455,NEAR,real-special-dividend,"$3.50 special cash dividend ex 2026-07-16 (OCC infomemo 59316); observed -$3.52 step matches; additive event APPENDED as REVERSE_SPLIT factor 0.666 per user decision (option 1) — approximation exact at ex-date close only; revisit if VendorBar gains a dividend layer",appended,infomemo.theocc.com #59316
 ARMP,2022-12-28,1.4444,NEAR,no-ca,thin-market drift across holiday gap; no CA near date (split history: only 2019 1:14),none,companiesmarketcap.com/armata-pharmaceuticals
 BERZ,2022-03-21,1.4545,NEAR,no-ca,-3x inverse ETN beta during FANG rally week; only reverse split 1:20 on 2026-02-24 (BMO),none,BMO PR 2026-02-12
 BITU,2024-08-05,1.5714,NEAR,no-ca,2x bitcoin ETF beta on 2024-08-05 yen-carry crash (BTC -15-20%),none,market record
