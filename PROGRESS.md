@@ -5,6 +5,49 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (NEAR-tier vetting + F10 rounding) — 51 XNYS candidates vetted: 2 appends (ITRG, LAC), 24 confirmed echoes; F10 sums now rounded to 6dp
+
+**1. NEAR-tier + echo-class vetting — DONE (27+24, the last open registry item).**
+Funnel reproduced exactly (`scripts/databento/xnys_near_funnel.py`; 913 − 1
+BHVN = 912 no-exact-registry → echo 24 / NEAR 27 / FAR 5 remaining, universe =
+5,333 imported databento-xnys symbols). All 51 vetted against bars + primary
+sources (`scripts/databento/xnys-near-tier-verdicts.csv`):
+
+- **Echo-class (24): all confirmed echoes, no action.** Every candidate
+  matches a lattice-clean Yahoo registry row within 1–8 days — detector
+  re-fires on the first bar after a no-bar gap, exactly the BNDD/EFAX class.
+- **NEAR (27): 24 false positives, 3 real corporate actions.**
+  - **ITRG 2023-05-26 — APPENDED** (REVERSE_SPLIT 0.4162, inband/estimated):
+    real 1-for-2.5 consolidation (Integra PR + 2023 20-F), Yahoo silent.
+    Close-measured factor per the BHVN lesson.
+  - **LAC 2023-10-04 — APPENDED** (FORWARD_SPLIT 1.3814, inband/estimated):
+    Lithium Americas separation (1 old = 1 new LAC + 1 LAAC), same
+    spinoff-class append precedent as BHVN.
+  - **ARI 2026-07-16 — DEFERRED (decision for the user):** real **$3.50
+    special cash dividend** (OCC infomemo 59316; observed −$3.52 step matches
+    exactly) — an *additive* event, and the SplitEvent registry is
+    multiplicative. Appending it as factor 0.6665 would back-adjust returns
+    approximately-right; not appending leaves a wrong −33% "return" in the
+    vendor archive. No dividend layer exists for VendorBar.
+  - False-positive anatomy (for future detector tuning): earnings gaps ×6,
+    leveraged-ETF/ETN beta on crash days ×6 (YINN, BITU, BERZ, WTIU, JETD,
+    HIYY-halt), microcap pumps/drift/post-IPO fades ×11, ticker-identity
+    noise ×1 (CTM = Castellum, not Castor Maritime).
+
+**Registry now: 2,642 yahoo + 596 inband = 3,238 SplitEvents.**
+
+**2. F10 amount rounding — DONE.** Same-ex-date cash rows summed in binary
+float could leave artifacts (9988.HK 1.9510839999999998 class);
+`mergeF10ForSymbol` now rounds the summed HKD to 6 dp on write
+(`refresh-f10-ca.ts`). No live rows affected (checked: no long-repr amounts in
+CorporateAction). Suite 338 passed / 1 skipped, tsc clean.
+
+**Open:** ARI special-dividend modeling decision (above). Next
+architecturally-significant chunk: **Phase 3 chat UI** — deep-tier planning
+session.
+
+---
+
 ## 2026-09-06 (scheduling — INSTALLED) — launchd runs the daily chain + weekly jobs; last pre-Phase-3 infrastructure item closed
 
 The four CLIs are now automated via user LaunchAgents (`scripts/launchd/`,

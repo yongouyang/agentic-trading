@@ -115,7 +115,10 @@ export function mergeF10ForSymbol(storedCas: StoredCaRow[], f10Rows: F10Dividend
     agg.plans.push(row.plan);
     cashByDate.set(row.exDate, agg);
   }
-  const cashEvents = [...cashByDate.entries()].map(([exDate, a]) => ({ exDate, hkd: a.hkd, detail: a.plans.join(" | ") }));
+  // Round the summed amount to 6 dp: FX-converted terms summed in binary float
+  // leave artifacts (measured 9988.HK: 1.9510839999999998); 6 dp is far below
+  // the 0.5% cross-check band and the amountsDiffer tolerance.
+  const cashEvents = [...cashByDate.entries()].map(([exDate, a]) => ({ exDate, hkd: Math.round(a.hkd * 1e6) / 1e6, detail: a.plans.join(" | ") }));
 
   const degraded = caDegraded || newlyDegraded;
   const storedDividends = new Map(storedCas.filter((c) => c.type === "DIVIDEND").map((c) => [c.date, c]));

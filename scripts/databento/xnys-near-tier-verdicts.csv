@@ -1,0 +1,52 @@
+symbol,ex_date,detector_factor,tier,verdict,registry_action,evidence
+AGL,2024-11-08,1.55,NEAR,no-ca,Q3 2024 earnings gap-down 2024-11-08 (PR 2024-11-07),none,nasdaq.com PR; only real split is 1:25 reverse 2026-03-30
+ARI,2026-07-16,1.5455,NEAR,real-special-dividend,"$3.50 special cash dividend ex 2026-07-16 (OCC infomemo 59316); observed -$3.52 step matches; additive event, NOT appended to SplitEvent pending modeling decision",deferred,infomemo.theocc.com #59316
+ARMP,2022-12-28,1.4444,NEAR,no-ca,thin-market drift across holiday gap; no CA near date (split history: only 2019 1:14),none,companiesmarketcap.com/armata-pharmaceuticals
+BERZ,2022-03-21,1.4545,NEAR,no-ca,-3x inverse ETN beta during FANG rally week; only reverse split 1:20 on 2026-02-24 (BMO),none,BMO PR 2026-02-12
+BITU,2024-08-05,1.5714,NEAR,no-ca,2x bitcoin ETF beta on 2024-08-05 yen-carry crash (BTC -15-20%),none,market record
+BNED,2024-05-23,1.6154,NEAR,no-ca,meme/pump whipsaw week; real 1:100 reverse already registered 2024-06-12,none,publishersmarketplace 2024-05-23
+CTM,2023-08-16,1.4091,NEAR,no-ca,Castellum Inc post-earnings microcap move (Q2 2023 PR 2023-08-14); not Castor Maritime,none,finance.yahoo.com Castellum Q2 2023
+CYH,2023-05-02,1.6471,NEAR,no-ca,post-Q1-2023-earnings selloff (8-K 2023-04-26); CYH never split,none,sec.gov CYH 8-K EX-99.1
+DXF,2025-01-28,0.4769,NEAR,no-ca,Eason Technology ADS post-relisting price discovery (suspension lifted 2025-01-17); bidirectional chaos,none,stockhouse PR 2025-01-17
+GCDT,2026-02-27,1.5882,NEAR,no-ca,post-IPO microcap fade (IPO 2026-01-13); no CA near date,none,6-K 2026-02-12
+HIYY,2026-03-12,0.575,NEAR,no-ca,trading halt 2026-03-05 + NAV restatement; stale-vs-restated pricing not a split,none,GlobeNewswire halt notice 2026-03-05
+IBO,2025-04-04,0.4828,NEAR,no-ca,low-float pump after DSS-dividend share restriction lifted 2025-03-13; tariff-crash session,none,impactbiomedinc.com
+INUV,2023-01-12,0.7,NEAR,no-ca,illiquid penny drift across 13d gap; splits only 2010 and 2025-06-10,none,inuvo.com/investor split history
+INUV,2026-01-29,1.4375,NEAR,no-ca,thin-name repricing; no CA near date,none,inuvo.com/investor split history
+ITRG,2023-05-26,0.4167,NEAR,real-reverse-split,"1-for-2.5 consolidation ex 2023-05-26 (PR + 2023 20-F); APPENDED REVERSE_SPLIT factor 0.4162 close-measured inband/estimated",appended,integraresources.com PR; sec.gov 20-F
+JETD,2025-04-08,0.6562,NEAR,no-ca,-3x inverse airline ETN beta during Apr 2025 tariff crash,none,sec.gov 424B3
+LAC,2023-10-04,1.5556,NEAR,real-spinoff,"old LAC -> 1 new LAC + 1 LAAC ex 2023-10-04 (arrangement closed 10-03); APPENDED FORWARD_SPLIT factor 1.3814 close-measured inband/estimated (BHVN precedent)",appended,sec.gov exhibit 99.5; lithiumamericas.com PR
+LSF,2025-11-11,1.55,NEAR,no-ca,Q3 2025 revenue-miss earnings gap (PR 2025-11-10); never split,none,chartmill 2025-11-11
+MI,2025-07-24,0.6774,NEAR,no-ca,microcap pump; only MI split is 1:80 reverse 2026-05-18,none,wealthsimple CA tracker
+MWG,2023-11-01,2.2222,NEAR,no-ca,post-IPO microcap bleed-out; only split 1:10 reverse 2026-02-23,none,GlobeNewswire PR; sec.gov 20-F
+SYNX,2025-04-01,2.125,NEAR,no-ca,nano-cap decline; market-cap history rules out forward split (no share-count discontinuity),none,sec.gov 424B4; public.com
+TOVX,2023-12-26,1.3913,NEAR,no-ca,month-long biotech slide; reverses only 2022-07 and 2024-08-26,none,sec.gov 10-Q
+WTIU,2025-04-07,1.6875,NEAR,no-ca,3x energy ETN beta through Apr 2025 tariff shock,none,yahoo WTIU profile
+WYY,2025-05-16,1.4,NEAR,no-ca,Q1 2025 earnings-miss day-after (PR 2025-05-15); only split 1:10 reverse 2020-11,none,widepoint.com PR
+XTNT,2023-03-13,1.3913,NEAR,no-ca,post-earnings drift during SVB week; no CA near date,none,globenewswire 2023-03-07
+YINN,2024-10-08,1.4444,NEAR,no-ca,3x China bull ETF beta on 2024-10-08 stimulus-letdown crash (CSI300 -7%),none,mpcmarkets closing bell 2024-10-08
+ZVIA,2026-02-26,1.4,NEAR,no-ca,Q4 2025 revenue-miss earnings gap (PR 2026-02-25); never split,none,investors.zevia.com PR
+AIRI,2022-10-25,0.1053,ECHO,confirmed-echo,registry 2022-10-18 REVERSE_SPLIT 0.1 yahoo (Δ7d); detector re-fire after bar gap,none,structural
+CANF,2023-01-11,0.0938,ECHO,confirmed-echo,registry 2023-01-09 REVERSE_SPLIT 0.1 yahoo (Δ2d),none,structural
+COIA,2026-06-01,0.475,ECHO,confirmed-echo,registry 2026-05-28 REVERSE_SPLIT 0.5 yahoo (Δ4d),none,structural
+CPHI,2025-04-16,0.0968,ECHO,confirmed-echo,registry 2025-04-15 REVERSE_SPLIT 0.1 yahoo (Δ1d),none,structural
+DIPS,2025-12-10,0.1034,ECHO,confirmed-echo,registry 2025-12-02 REVERSE_SPLIT 0.1 yahoo (Δ8d),none,structural
+DUG,2022-01-14,0.2031,ECHO,confirmed-echo,registry 2022-01-13 REVERSE_SPLIT 0.2 yahoo (Δ1d),none,structural
+DULL,2026-02-25,0.02,ECHO,confirmed-echo,registry 2026-02-24 REVERSE_SPLIT 0.02 yahoo (Δ1d),none,structural
+EWV,2024-11-12,0.24,ECHO,confirmed-echo,registry 2024-11-07 REVERSE_SPLIT 0.25 yahoo (Δ5d),none,structural
+FLYD,2024-03-26,0.1034,ECHO,confirmed-echo,registry 2024-03-25 REVERSE_SPLIT 0.1 yahoo (Δ1d),none,structural
+FLYD,2026-02-25,0.11,ECHO,confirmed-echo,registry 2026-02-24 REVERSE_SPLIT 0.1 yahoo (Δ1d),none,structural
+IVOO,2023-03-15,2.0312,ECHO,confirmed-echo,registry 2023-03-14 FORWARD_SPLIT 2 yahoo (Δ1d),none,structural
+MEXX,2023-08-29,5.1667,ECHO,confirmed-echo,registry 2023-08-28 FORWARD_SPLIT 5 yahoo (Δ1d),none,structural
+MWG,2026-02-24,0.0952,ECHO,confirmed-echo,registry 2026-02-23 REVERSE_SPLIT 0.1 yahoo (Δ1d),none,structural
+OARK,2025-12-05,0.1935,ECHO,confirmed-echo,registry 2025-12-02 REVERSE_SPLIT 0.2 yahoo (Δ3d),none,structural
+PXJ,2023-07-18,0.2,ECHO,confirmed-echo,registry 2023-07-17 REVERSE_SPLIT 0.2 yahoo (Δ1d),none,structural
+QSU,2026-03-24,0.17,ECHO,confirmed-echo,registry 2026-03-20 REVERSE_SPLIT 0.1667 yahoo (Δ4d),none,structural
+RSPH,2023-07-18,10.0,ECHO,confirmed-echo,registry 2023-07-17 FORWARD_SPLIT 10 yahoo (Δ1d),none,structural
+SCC,2025-06-17,0.4783,ECHO,confirmed-echo,registry 2025-06-12 REVERSE_SPLIT 0.5 yahoo (Δ5d),none,structural
+SLON,2026-05-29,0.2143,ECHO,confirmed-echo,registry 2026-05-28 REVERSE_SPLIT 0.2 yahoo (Δ1d),none,structural
+SMDD,2025-06-16,0.4923,ECHO,confirmed-echo,registry 2025-06-12 REVERSE_SPLIT 0.5 yahoo (Δ4d),none,structural
+SSG,2024-04-17,0.1935,ECHO,confirmed-echo,registry 2024-04-10 REVERSE_SPLIT 0.2 yahoo (Δ7d),none,structural
+UXRP,2026-05-29,0.2,ECHO,confirmed-echo,registry 2026-05-28 REVERSE_SPLIT 0.2 yahoo (Δ1d),none,structural
+XYZY,2025-12-02,0.2154,ECHO,confirmed-echo,registry 2025-12-01 REVERSE_SPLIT 0.2 yahoo (Δ1d),none,structural
+YXI,2025-11-21,0.475,ECHO,confirmed-echo,registry 2025-11-20 REVERSE_SPLIT 0.5 yahoo (Δ1d),none,structural
