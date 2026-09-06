@@ -5,6 +5,38 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (full daily pipeline E2E — PASSED) — screen:daily → deep-dive top-10 both lanes, 20/20 ok; Phase 2 functionally complete
+
+First full-shape run of the daily pipeline (architecture §5 steps 1–5):
+
+1. **screen:daily --market all**: US 555/555, HK 131/131, neither lane
+   degraded. Loader guards worked at ingest: 61 US + 86 HK null-close bars
+   dropped (L5, Yahoo still-forming bars) and 66 level-break bars dropped
+   (L6 — Yahoo keeps serving 3195.HK's USD-stitch prefix, the rule drops it
+   every run, as designed).
+2. **screen:deep-dive --market all --top 10**: **20/20 names ok, 141 calls,
+   0 failures** (US 71 — MPC needed 8: the verdict repair round fired live
+   and recovered; HK 70). Verdicts are differentiated and sane: HK lane
+   buy-leaning (6160.HK 0.55; 1093/1801/3988 0.45; 0005/0939 0.35), US lane
+   neutral-heavy with two sells (CRL −0.35, IQV −0.30). ~362k total tokens
+   across 155 AgentDecision rows (incl. smoke) — pennies-class cost as
+   budgeted.
+3. Cache semantics confirmed correct in the wild: 0 cache hits because
+   screen:daily refreshed every name's metrics → new prompt bytes → new
+   decisions. ($0 rerun on UNCHANGED data was proven in the smoke.) Note
+   2269.HK moved buy 0.45 → neutral 0.10 between screenRun 10 and 12 —
+   fresh-data sensitivity, expected.
+4. pnpm install wrinkle settled (clean install, agents suite green).
+
+**Phase 2 is functionally complete.** Remaining recorded items: scheduling
+(sentinel + ca:f10-refresh + the daily chain itself are CLIs with no
+automation yet), NEAR-tier split-candidate vetting (27+24, optional),
+F10 amount rounding cosmetic. Next architecturally-significant chunk:
+**Phase 3 chat UI** (Next.js reading ScreenRun/DeepDiveRun/AgentDecision) —
+worth its own deep-tier planning session.
+
+---
+
 ## 2026-09-06 (Phase-2 live smoke — PASSED) — first real deep-dives persisted; cache rerun at $0 proven; k3-256k profile wired
 
 Execution per `docs/phase-2-plan.md` step 6, on the user's chosen local
