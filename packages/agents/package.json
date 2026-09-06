@@ -13,13 +13,14 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "echo \"no tests yet\" && exit 0"
+    "test": "vitest run"
   },
   "dependencies": {
     "@agentic-trading/quant-core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

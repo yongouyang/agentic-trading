@@ -151,8 +151,92 @@ export function parseF10Plan(plan: string): ParsedPlan {
 
 // ---------------------------------------------------------------------------
 
-export class EastmoneyF10Provider implements F10Provider {
-  private readonly spacingMs: number;
+// ---------------------------------------------------------------------------
+// Fundamentals snapshot (Phase 2, phase-2-plan.md): main-indicator tables for
+// HK + US stocks, rendered to a compact pre-rendered text block (~20 lines,
+// it's prompt budget) — latest annual + latest interim/quarter with YoY
+// deltas. Probed 2026-09-06 (fixtures in tests/unit/fixtures/f10-*.json):
+//   HK: RPT_HKF10_FN_MAININDICATOR, source=F10, filter SECURITY_CODE="00700"
+//       (5-digit), fields OPERATE_INCOME(_YOY), HOLDER_PROFIT(_YOY),
+//       GROSS_PROFIT_RATIO, NET_PROFIT_RATIO, ROE_AVG, DEBT_ASSET_RATIO,
+//       BASIC_EPS, NETCASH_OPERATE; CURRENCY is ISO ("HKD").
+//   US: two-step — RPT_USF10_INFO_ORGPROFILE (source=SECURITIES) maps the
+//       bare ticker to a SECUCODE ("TSLA.O"), then
+//       RPT_USF10_FN_GMAININDICATOR, filter SECUCODE + same-ish fields but
+//       PARENT_HOLDER_NETPROFIT and CURRENCY in Chinese ("美元").
+//   DATE_TYPE_CODE "001" = annual; everything else is an interim/quarter row
+//       (002 cumulative H1, 003 Q1, 007 Q4, 008 Q2 — measured).
+//   YoY/ratio fields arrive in PERCENT units (13.8596 = +13.9%); amounts are
+//   absolute in the report currency.
+// ETFs have no records (result:null — same absence semantics as dividends).
+// ---------------------------------------------------------------------------
+
+export interface F10IndicatorRow {
+  /** YYYY-MM-DD. */
+  reportDate: string;
+  /** "001" = annual; other codes = interim/quarter. */
+  dateTypeCode: string;
+  /** Provider label, e.g. "2025年年报" | "2026/Q2". */
+  reportType: string;
+  currency: string;
+  revenue: number | null;
+  revenueYoy: number | null;
+  netProfit: number | null;
+  netProfitYoy: number | null;
+  grossMargin: number | null;
+  netMargin: number | null;
+  roe: number | null;
+  debtRatio: number | null;
+  eps: number | null;
+  /** HK only: operating cash flow (null on US rows). */
+  operatingCashFlow: number | null;
+}
+
+const numOrNull = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const str = (v: unknown): string => (typeof v === "string" ? v : "");
+
+/** Absolute amount → scaled, fixed 2 decimals: 751766000000 → "751.77B". */
+export function scaledMoney(x: number): string {
+  const a = Math.abs(x);
+  if (a >= 1e9) return `${(x / 1e9).toFixed(2)}B`;
+  if (a >= 1e6) return `${(x / 1e6).toFixed(2)}M`;
+  if (a >= 1e3) return `${(x / 1e3).toFixed(2)}K`;
+  return x.toFixed(2);
+}
+
+/** Percent-unit value → signed 1-decimal percent: 13.8596 → "+13.9%". */
+export function signedPct(x: number): string {
+  return `${x >= 0 ? "+" : ""}${x.toFixed(1)}%`;
+}
+
+const field = (label: string, v: number | null, fmt: (x: number) => string): string =>
+  `${label}: ${v === null ? "n/a" : fmt(v)}`;
+
+function renderPeriod(row: F10IndicatorRow): string[] {
+  const lines = [
+    `${row.reportType} (${row.reportDate}, ${row.currency || "currency n/a"})`,
+    `  ${field("revenue", row.revenue, scaledMoney)}${row.revenueYoy === null ? "" : ` (yoy ${signedPct(row.revenueYoy)})`}`,
+    `  ${field("net profit", row.netProfit, scaledMoney)}${row.netProfitYoy === null ? "" : ` (yoy ${signedPct(row.netProfitYoy)})`}`,
+    `  ${field("gross margin", row.grossMargin, signedPct).replace("+", "")}, ${field("net margin", row.netMargin, signedPct).replace("+", "")}`,
+    `  ${field("ROE(avg)", row.roe, signedPct).replace("+", "")}, ${field("debt/assets", row.debtRatio, signedPct).replace("+", "")}, ${field("EPS", row.eps, (x) => x.toFixed(2))}`,
+  ];
+  if (row.operatingCashFlow !== null) lines.push(`  operating cash flow: ${scaledMoney(row.operatingCashFlow)}`);
+  return lines;
+}
+
+/** Pure shaping: rows sorted REPORT_DATE desc → latest annual + latest
+ *  interim/quarter text block. Deterministic (fixed precision everywhere). */
+export function renderFundamentalsSnapshot(rows: F10IndicatorRow[]): string | null {
+  if (!rows.length) return null;
+  const annual = rows.find((r) => r.dateTypeCode === "001");
+  const interim = rows.find((r) => r.dateTypeCode !== "001");
+  const lines: string[] = [];
+  if (interim) lines.push(...renderPeriod(interim));
+  if (annual && annual !== interim) lines.push(...renderPeriod(annual));
+  return lines.length ? lines.join("\n") : null;
+}
+
+export class EastmoneyF10Provider implements F10Provider {  private readonly spacingMs: number;
   private readonly fetchImpl: typeof fetch;
   private readonly sleep: (ms: number) => Promise<void>;
   private lastRequestAt = 0;
@@ -208,5 +292,89 @@ export class EastmoneyF10Provider implements F10Provider {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** Shared GET against datacenter.eastmoney.com, paced + failure-as-value. */
+  private async f10Get(params: string): Promise<{ data: any[] } | { failure: string }> {
+    await this.throttle();
+    const url = `https://datacenter.eastmoney.com/securities/api/data/v1/get?${params}`;
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), F10_TIMEOUT_MS);
+    try {
+      const res = await this.fetchImpl(url, { headers: { "User-Agent": UA }, signal: ac.signal });
+      if (res.status !== 200) return { failure: `http-${res.status}` };
+      const json = (await res.json()) as any;
+      if (typeof json !== "object" || json === null) return { failure: "malformed-json" };
+      // result:null = no report for the name (ETFs) — legitimate absence.
+      if (json.result === null || json.result === undefined) return { data: [] };
+      if (!Array.isArray(json.result.data)) return { failure: "http-200-wrong-shape" };
+      return { data: json.result.data };
+    } catch (err: any) {
+      if (err?.name === "AbortError") return { failure: "timeout" };
+      const detail = String(err?.cause?.code ?? err?.cause?.message ?? err?.message ?? err);
+      return { failure: `transport:${detail}`.slice(0, 160) };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** US names need a SECUCODE ("TSLA.O") before the indicator table can be
+   *  queried (akshare idiom). Cached per symbol — it's static metadata. */
+  private usSecucodeCache = new Map<string, string>();
+
+  private async usSecucode(symbol: string): Promise<{ secucode: string } | { failure: string }> {
+    const cached = this.usSecucodeCache.get(symbol);
+    if (cached) return { secucode: cached };
+    const res = await this.f10Get(
+      `reportName=RPT_USF10_INFO_ORGPROFILE&columns=SECUCODE,SECURITY_CODE&filter=(SECURITY_CODE="${symbol}")&pageNumber=1&pageSize=10&source=SECURITIES&client=PC`,
+    );
+    if ("failure" in res) return res;
+    const secucode = res.data.find((r) => str(r?.SECURITY_CODE) === symbol)?.SECUCODE ?? res.data[0]?.SECUCODE;
+    if (typeof secucode !== "string" || !secucode) return { failure: "no-secucode" };
+    this.usSecucodeCache.set(symbol, secucode);
+    return { secucode };
+  }
+
+  /** Compact fundamentals snapshot for the deep-dive prompt (stocks only —
+   *  ETFs get { text: null }; callers skip ETFs entirely). Returns
+   *  { text: null } on legitimate absence, { failure } on fetch problems. */
+  async fetchFundamentalsSnapshot(symbol: string): Promise<{ text: string | null } | { failure: string }> {
+    let res: { data: any[] } | { failure: string };
+    const isHk = /^\d{4}\.HK$/.test(symbol);
+    if (isHk) {
+      const { eastmoneySecid } = hkSymbolMaps(symbol); // throws on malformed — programming error
+      const code = eastmoneySecid.slice("116.".length);
+      res = await this.f10Get(
+        `reportName=RPT_HKF10_FN_MAININDICATOR&columns=SECUCODE,SECURITY_CODE,REPORT_DATE,DATE_TYPE_CODE,REPORT_TYPE,CURRENCY,` +
+          `OPERATE_INCOME,OPERATE_INCOME_YOY,HOLDER_PROFIT,HOLDER_PROFIT_YOY,GROSS_PROFIT_RATIO,NET_PROFIT_RATIO,ROE_AVG,DEBT_ASSET_RATIO,BASIC_EPS,NETCASH_OPERATE` +
+          `&filter=(SECURITY_CODE="${code}")&pageNumber=1&pageSize=12&sortTypes=-1&sortColumns=REPORT_DATE&source=F10&client=PC`,
+      );
+    } else {
+      const sec = await this.usSecucode(symbol);
+      if ("failure" in sec) return { failure: `orgprofile-${sec.failure}` };
+      res = await this.f10Get(
+        `reportName=RPT_USF10_FN_GMAININDICATOR&columns=SECUCODE,SECURITY_CODE,REPORT_DATE,DATE_TYPE_CODE,REPORT_TYPE,CURRENCY,` +
+          `OPERATE_INCOME,OPERATE_INCOME_YOY,PARENT_HOLDER_NETPROFIT,PARENT_HOLDER_NETPROFIT_YOY,GROSS_PROFIT_RATIO,NET_PROFIT_RATIO,ROE_AVG,DEBT_ASSET_RATIO,BASIC_EPS` +
+          `&filter=(SECUCODE="${sec.secucode}")&pageNumber=1&pageSize=12&sortTypes=-1&sortColumns=REPORT_DATE&source=SECURITIES&client=PC`,
+      );
+    }
+    if ("failure" in res) return res;
+    const rows: F10IndicatorRow[] = res.data.map((r: any) => ({
+      reportDate: str(r?.REPORT_DATE).slice(0, 10),
+      dateTypeCode: str(r?.DATE_TYPE_CODE),
+      reportType: str(r?.REPORT_TYPE),
+      currency: str(r?.CURRENCY),
+      revenue: numOrNull(r?.OPERATE_INCOME),
+      revenueYoy: numOrNull(r?.OPERATE_INCOME_YOY),
+      netProfit: numOrNull(isHk ? r?.HOLDER_PROFIT : r?.PARENT_HOLDER_NETPROFIT),
+      netProfitYoy: numOrNull(isHk ? r?.HOLDER_PROFIT_YOY : r?.PARENT_HOLDER_NETPROFIT_YOY),
+      grossMargin: numOrNull(r?.GROSS_PROFIT_RATIO),
+      netMargin: numOrNull(r?.NET_PROFIT_RATIO),
+      roe: numOrNull(r?.ROE_AVG),
+      debtRatio: numOrNull(r?.DEBT_ASSET_RATIO),
+      eps: numOrNull(r?.BASIC_EPS),
+      operatingCashFlow: isHk ? numOrNull(r?.NETCASH_OPERATE) : null,
+    }));
+    return { text: renderFundamentalsSnapshot(rows) };
   }
 }

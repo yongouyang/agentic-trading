@@ -155,6 +155,49 @@ model VendorImportFile {
   @@id([vendor, file])
 }
 
+// Phase 2 agent pipeline (phase-2-plan.md, 2026-09-06). AgentDecision is the
+// content-addressed decision log: the data snapshot travels inside the user
+// prompt, so an unchanged snapshot → identical hash → $0 cached rerun.
+model AgentDecision {
+  id            Int      @id @default(autoincrement())
+  hash          String   @unique // sha256(agent|model|promptVersion|system|user)
+  agent         String // "news-analyst" | "fundamentals-analyst" | "bull" | "bear" | "verdict"
+  model         String
+  promptVersion String
+  systemPrompt  String
+  userPrompt    String
+  responseText  String
+  usageJson     String?
+  createdAt     DateTime @default(now())
+}
+
+model DeepDiveRun {
+  id           Int      @id @default(autoincrement())
+  runAt        DateTime @default(now())
+  market       String // "US" | "HK"
+  screenRunId  Int
+  topN         Int
+  llmCalls     Int
+  cacheHits    Int
+  failed       Int
+  warningsJson String
+
+  reports DeepDiveReport[]
+}
+
+model DeepDiveReport {
+  id                 Int      @id @default(autoincrement())
+  runId              Int
+  symbol             String
+  status             String // "ok" | "failed:<slug>"
+  verdictJson        String?
+  decisionHashesJson String?
+
+  run DeepDiveRun @relation(fields: [runId], references: [id])
+
+  @@unique([runId, symbol])
+}
+
 model ScreenResult {
   runId       Int
   symbol      String

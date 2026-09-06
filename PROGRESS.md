@@ -5,6 +5,70 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (Phase-2 execution, fast tier) — agent pipeline implemented steps 1–5; all suites green; live smoke pending
+
+Per `docs/phase-2-plan.md` build order (steps 1–5; the live smoke is a
+separate step for the main session):
+
+1. **Migration `20260906180000_agent_pipeline`** (hand-written SQL +
+   `migrate deploy` — `migrate dev` refuses non-interactive, same as the
+   ca_inspecie_events precedent): AgentDecision (content-addressed decision
+   log) + DeepDiveRun + DeepDiveReport exactly as spec'd. Client regenerated.
+2. **packages/agents** (37 new tests): `llm-client.ts` (OpenAI-compatible
+   fetch client, 60s timeout, 1 retry on transport/5xx, typed LlmError),
+   `verdict.ts` (strict parseVerdict + extractJsonCandidate + single-repair
+   message builder; owns RATINGS), `prompts.ts` (PROMPT_VERSION="v1",
+   byte-deterministic builders, num/pct/money fixed-precision helpers, sorted
+   metrics + date/title-sorted news — golden snapshot test), `pipeline.ts`
+   (news+fundamentals parallel, ETF news-only, 2-round debate, verdict + 1
+   repair round, cache lookup before every call). `Verdict` extended with
+   `asOf` + `promptVersion` per plan.
+3. **F10 probe** (6 paced requests, all reachable ~1s): pinned
+   RPT_HKF10_FN_MAININDICATOR (HK, source=F10) and the US two-step
+   RPT_USF10_INFO_ORGPROFILE → SECUCODE → RPT_USF10_FN_GMAININDICATOR
+   (source=SECURITIES; US reportNames from akshare stock_finance_us_em.py
+   source, not guessed). DATE_TYPE_CODE 001=annual; YoY/ratio fields are
+   percent units. Verbatim probe responses saved as test fixtures.
+   `EastmoneyF10Provider.fetchFundamentalsSnapshot` renders a ~12-line block
+   (latest interim/quarter + latest annual, YoY deltas).
+4. **src/agents/news.ts**: Google News RSS (HK: CN name + "0700.HK" lanes;
+   US: "AAPL Apple"), minimal regex RSS parser (degrades titles-only), cap
+   10, exact-title dedupe, Yahoo `search` supplement wrapped in try/catch.
+5. **src/cli/deep-dive.ts** + `screen:deep-dive` script: latest ScreenRun
+   per lane → top-N by rank, `--symbol` ad-hoc bypass, concurrency pool 4,
+   `--max-calls` (default 200) with SYNCHRONOUS 7-call reservation per name
+   (pool-safe, aborts before overspend), per-name try/catch → failed:<slug>,
+   persists DeepDiveRun + reports. Env via native `process.loadEnvFile`
+   (apps/api/.env then root .env; no dotenv in repo); missing LLM_* vars
+   fail loud naming every var when names will be processed.
+
+**Known wrinkle:** pnpm's lockfile carried a stale peerless `vitest@3.2.7`
+resolution for packages/agents that never materialized in the store —
+worked around with a symlink to the peer-suffixed variant quant-core uses;
+regenerate the lockfile at the next normal `pnpm install`.
+
+**Test counts vs baseline:** api 336 passed / 1 skipped (295+1 baseline),
+quant-core 49 (unchanged), agents 37 (new), tsc clean in all three.
+
+**Next:** live smoke `screen:deep-dive -- --market hk --top 2` on the Kimi
+local profile (needs a Moonshot platform key in .env) — verify report rows,
+decision-log rows, cache-hit rerun at $0.
+
+
+---
+
+## 2026-09-06 (architecture map) — docs/architecture-map.md: 3 mermaid diagrams (system map / daily flow / phase evolution) + invariant list
+
+Reference diagrams drawn from architecture-v1.md + the as-built tree:
+solid = shipped (ingestion, Day-17 gate, quant-core, Prisma store, Databento
+archive, F10 overlay, sentinel), dashed = designed. System map encodes the
+core rule visually: agent-layer arrows point into storage, never into
+quant-core. Phase table says why each phase is where it is (2 needs a stable
+ScreenRun; 3 is a viewer over persisted runs; 4 needs P2 verdict history to
+score the screen). No code changed.
+
+**Next:** Phase 2 execution per docs/phase-2-plan.md build order (fast tier).
+
 ## 2026-09-06 (Phase-2 planning session, deep tier) — agent pipeline fully spec'd; all 5 forks user-locked; ready for fast-tier execution
 
 Planning session for Phase 2 (lean agent pipeline + persisted daily

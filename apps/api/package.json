@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "screen:daily": "tsx src/cli/daily-screen.ts",
+    "screen:deep-dive": "tsx src/cli/deep-dive.ts",
     "screen:sentinel": "tsx src/cli/sentinel.ts",
     "import:databento": "tsx src/cli/import-databento.ts",
     "import:databento:xnys": "tsx src/cli/import-databento-xnys.ts",
@@ -24,6 +25,7 @@
     "ca:f10-refresh": "tsx src/cli/refresh-f10-ca.ts"
   },
   "dependencies": {
+    "@agentic-trading/agents": "workspace:*",
     "@agentic-trading/quant-core": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
