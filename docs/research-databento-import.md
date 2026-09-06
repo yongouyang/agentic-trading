@@ -227,3 +227,47 @@ tail -f ~/Downloads/XNAS-20260902-W559N3FC8U/sweep.log   # progress every 100 sy
 
 Model policy note (AGENTS.md): steps 1–3 are execution → fast tier fine; step 4's storage
 fork is a design decision → deep tier if it reopens.
+
+## 8. XNYS archive addendum (2026-09-05)
+
+- XNYS.PILLAR 5y OHLCV-1d imported as vendor `databento-xnys` under Option A
+  (listing-reference restriction + XNYS-only backstop): 5,333 symbols,
+  3,993,374 bars, 1,254 day files, 0 failures. NYSE space notation normalized
+  to dot at storage (`BRK B`→`BRK.B`). Manifest
+  `scripts/databento/xnys-import-manifest.csv`; importer
+  `apps/api/src/cli/import-databento-xnys.ts` (per-day streaming); review +
+  quality checks in PROGRESS.md 2026-09-05 (XNYS review).
+- Segmentation pass run for XNYS: 27 stitched symbols / 27 boundaries
+  (report `apps/api/reports/segment-vendor-bars-databento-xnys-2026-09-05.json`);
+  BNY stitched with the same boundary as XNAS (cross-archive corroboration).
+- **Spinoff-as-split class (user decision 2026-09-05: defer, doc note only).**
+  Yahoo v8 reports pro-rata spinoff distributions as "splits" (non-round
+  factors ~1.1–2.0): verified GE 2023-01-04 (GEHC), GE 2024-04-02 (GEV),
+  T 2022-04-11 (WarnerMedia); ~19 more well-known cases (DHR/Veralto,
+  MMM/Solventum, WDC/SanDisk, BHP/Woodside, GSK/Haleon, XPO/RXO,
+  DELL/VMware …) and ~40 unverified candidates. The price discontinuity is
+  real and required for back-adjustment — do NOT delete; if an `eventType`
+  distinction is ever needed, add a column and backfill.
+- Phantom/postponed Yahoo rows deleted 2026-09-05 (primary-source evidence):
+  CENN 2023-12-01 (postponed; real 12-08 row kept), CLSM 2025-10-27 (never
+  happened), CNF 2023-11-08 (inband false positive, stale low-print).
+- XNYS HOS (single 2026-09-02 bar, 950k vol): Yahoo's HOS is the delisted
+  Hornbeck Offshore — probable ticker reuse; no reliable Yahoo coverage.
+- **Registry echo dedupe + XNYS FAR funnel — DONE 2026-09-06** (details in
+  PROGRESS.md same date). 4 inband echo rows deleted with primary-source
+  evidence (BNDD 2025-09-12, EFAX 2023-01-18, FLYD 2024-03-27 + 2026-02-26 —
+  each a detector echo of the real yahoo event, fired on the first archive
+  bar after a multi-session no-bar gap). Echo root cause: the XNAS import
+  ingested all 1,372 crosscheck additions (not the decided FAR-only 653), and
+  the crosscheck matched candidates to the registry on exact/±1-day dates.
+  **Rule for future in-band runs: dedupe candidates against the registry with
+  a ±14-day window + 25%-log factor match.** The XNYS "913 no-registry
+  candidates" funnel: −117 echo-like → 161 FAR → −155 outside the imported
+  universe → 6 verified individually → **1 appended: BHVN 2022-10-04**
+  (FORWARD_SPLIT 18.289:1, inband/estimated, close-measured; Pfizer/new-
+  Biohaven acquisition discontinuity — spinoff class, Yahoo silent). The
+  other 5 were genuine non-corporate-action repricings (RFL Phase-3 failure,
+  QXO placement repricing, LPA/PLAG pump spikes, MI microcap crash) — FAR
+  tier on a new universe still requires per-symbol verification. New CLI
+  `pnpm -C apps/api split:add` for verified single-row appends. Registry:
+  2,642 yahoo + 594 inband = 3,236.

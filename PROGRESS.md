@@ -5,6 +5,184 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-06 (echo dedupe + XNYS FAR funnel) — 4 inband echo rows deleted; XNYS FAR review funnels 913 → 1 append (BHVN); new `split:add` CLI
+
+Both follow-ups from the XNYS import session executed, user-approved scopes
+(item 1: all 4 echo pairs; item 2: verify-then-append the 6 in-universe FAR).
+
+**1. Echo-pair dedupe — DONE.** Systematic sweep (yahoo+inband on same symbol
+within 21d) found BNDD was not alone: 4 echo pairs + 2 incompatible-factor
+pairs (MSPR, SMX — distinct serial-splitter events, left alone). Root cause:
+the XNAS import ingested all 1,372 crosscheck additions (not the decided
+FAR-only 653), so NEAR-tier echoes entered the registry; corroboration and
+persistence audits structurally can't catch them (the reprice is real, only
+date/factor duplicated). Each echo verified against primary sources (real
+event = the yahoo row; inband row = detector firing on the first archive bar
+after a multi-session no-bar gap, lattice-snapping the measured step):
+- BNDD 2025-09-12 deleted (real: 1:8 reverse 2025-09-05 — BOX Exchange memo
+  + MIAX corporate-action alert).
+- EFAX 2023-01-18 deleted (real: 2:1 split 2023-01-12 — OCC Infomemo 51629 +
+  State Street press release).
+- FLYD 2024-03-27 deleted (real: 1:10 reverse 2024-03-25 — BMO press release
+  2024-03-15).
+- FLYD 2026-02-26 deleted (real: 1:10 reverse 2026-02-24 — BMO batch-2
+  reverse-split FWP 2026-02-12).
+All via `split:delete` with evidence in the reason string. Re-segmentation
+safety checked: all four gaps are <10 sessions and/or lattice-matched, so the
+stitch rule can't newly fire on those dates.
+
+**2. XNYS FAR-tier review — DONE, funnel is much smaller than framed.** The
+review's "913 candidates with no registry event" used exact (symbol, exDate)
+matching. Applying the XNAS-precedent filters against the current registry:
+913 → −117 echo-like (≤14d + factor within 25%-log of a registry event — the
+BNDD/EFAX class, must NOT be appended) → 161 FAR (≥4×/≤0.25×) → −155 on
+symbols outside the imported 5,333-symbol XNYS universe (Option A) → **6
+in-universe candidates**. Verification of the 6 (bars + primary sources):
+- **BHVN 2022-10-04 — APPENDED** (FORWARD_SPLIT 18.289:1, inband/estimated):
+  Pfizer acquired old Biohaven 2022-10-03 ($148.50 cash + 0.5 new-Biohaven
+  share per old share; Pfizer 10-K); new BHVN first traded 2022-10-04; Yahoo
+  has no event. Factor = close-measured 151.8/8.3 (true adjustment ≈18.4
+  incl. 0.5-share terms; detector's open-based 21.3 rejected). Spinoff/
+  acquisition class — consistent with the §8 deferral rationale (real price
+  step needed for back-adjustment).
+- **LPA 2024-06-05 — rejected**: de-SPAC low-float pump/collapse
+  ($10→$213→$17 across days, chaotic both directions), no corporate action.
+- **MI 2026-03-10 — rejected**: no corporate action found (Yahoo silent; only
+  2026 split news is the later 1:80 reverse effective 05-18); microcap crash.
+- **PLAG 2026-08-12 — rejected**: 08-11 intraday spike 0.70→6.66 (9.5×) then
+  revert to 1.245; pump-and-revert, not a split.
+- **QXO 2024-07-30 — rejected**: market repricing toward the $9.14 placement
+  price of the $1B private placement (10-Q/8-K); no corporate action that day.
+- **RFL 2021-10-28 — rejected**: 8-K that day = devimistat Phase-3 AVENGER
+  500 failure + ARMADA 2000 stopped; genuine -73% news crash.
+
+**3. New CLI `split:add`** (`apps/api/src/cli/add-split-event.ts`,
+`pnpm -C apps/api split:add`): the append side of `split:delete` — derives
+factor from ratioNew/ratioOld, enforces event/factor direction agreement,
+refuses on existing (symbol, exDate), loud logging. 4 unit tests. Suite
+238 passed / 1 skipped; tsc clean.
+
+**Registry now: 2,642 yahoo + 594 inband = 3,236 SplitEvents.**
+
+**Detector lessons (for any future in-band run):** (a) dedupe candidates
+against the registry with a ±14d window + 25%-log factor match, not exact
+dates — exact matching let 117 echo-likes into the XNYS 913 and 4 into the
+XNAS registry; (b) detector factor is open-based — for verified appends
+prefer close-measured factors; (c) FAR-tier on the imported universe still
+needs per-symbol verification — 5/6 were non-corporate-action repricings
+(trial failure, placement repricing, pump spikes).
+
+**What's next**: XNYS data + registry ready for consumers. Optional: the 27
+NEAR-tier in-universe candidates (and 24 echo-class rows) stay unvetted
+(FAR-only policy); architecture §4.1 routing-table row for Databento still
+open.
+
+---
+
+## 2026-09-06 (XNYS import) — archive IMPORTED under Option A + segmented; 3 phantom registry rows deleted; spinoff class deferred to docs
+
+All user-approved. Six-step sequence from the XNYS review completed:
+
+1. **Import manifest** (`scripts/databento/xnys_import_manifest.py` →
+   `xnys-import-manifest.csv`): 20,189 XNYS symbols → **5,352 approved**
+   (5,325 listed-nyse per reference + 27 backstop). Volume cross-check
+   validates the reference (approved overlap median XNYS/XNAS vol ratio
+   1.23; rejected NASDAQ names 0.11). Backstop set turned out to be mostly
+   NYSE test symbols (NTEST/CTEST/MTEST/PTEST — excluded, user-approved
+   test-symbol convention extended); BRK.A the only economically
+   meaningful capture.
+2. **Yahoo sweep extension** (12 surviving new symbols,
+   `xnys-yahoo-splits-sweep.mjs`): zero split events; BRK-A confirmed;
+   XNYS `HOS` flagged as probable ticker reuse (Yahoo's HOS = delisted
+   Hornbeck Offshore).
+3. **Importer** `apps/api/src/cli/import-databento-xnys.ts`
+   (`import:databento:xnys`): per-day streaming ingest, manifest-driven,
+   space→dot normalization at storage (`BRK B`→`BRK.B`), NYSE test names +
+   space derivative suffixes classified out, sha256 journal. Dry-run
+   reconciled exactly.
+4. **Import DONE**: 1,254/1,254 files, **3,993,374 VendorBar rows**,
+   5,333 symbols, 0 failures/dupes/OHLC violations; VendorInstrument 5,321
+   upserted. Suite 234 passed / 1 skipped; tsc clean.
+5. **Segmentation** (`segment-vendor-bars.ts --vendor databento-xnys`):
+   27 stitched symbols found; BNY stitched at the SAME boundary as XNAS
+   (cross-archive corroboration). 8 ambiguous boundaries (registry event
+   in gap): **all 8 merged after review** (PSIL/BNDD near-exact factor
+   matches; AIM/PAPL/LTL/BKEM/BKSE/RZG consistent with factor + drift over
+   long gaps — leveraged-ETF/microcap-serial-splitter class). Final:
+   **5,352 VendorSegment rows, 19 stitched symbols = genuine ticker reuse**.
+   Flagged: BNDD registry duplicate pair (yahoo 1:8 2025-09-05 + inband
+   1:8.33 2025-09-12, same-event echo — EFAX pattern) not yet deduped.
+6. **Registry patches**: phantom rows CENN 2023-12-01 (postponed; real
+   12-08 kept), CLSM 2025-10-27 (never happened), CNF 2023-11-08 (stale
+   low-print false positive) **deleted** with primary-source evidence —
+   **registry now 2,642 yahoo + 598 inband = 3,240**. Spinoff-as-split
+   class (GE ×2, T, ~19 known + ~40 candidates): user decision = defer,
+   documented in `docs/research-databento-import.md` §8 (do NOT delete —
+   real price steps needed for back-adjustment; add eventType column if
+   ever needed).
+
+**What's next**: (a) BNDD duplicate-pair dedupe (needs one verification
+pass on which date is real); (b) optionally FAR-tier in-band split
+detection over the XNYS universe using `xnys-split-candidates.csv`
+(2,414 plausible, of which 913 have no registry event — the Yahoo-gap
+class); (c) XNYS data is otherwise ready for consumers.
+
+---
+
+## 2026-09-05 (XNYS review) — NYSE 5y OHLCV-1d archive quality-checked: clean, importable; one new decision pending (universe scope)
+
+Read-only review of `~/Downloads/XNYS-20260903-GYR7NW7XTP` (XNYS.PILLAR,
+ohlcv-1d, per-DAY files — structure inverted vs XNAS's per-symbol). Scripts:
+`scripts/databento/xnys_{manifest_check,full_scan,split_detector,registry_crosscheck}.py`;
+candidates `xnys-split-candidates.csv`, cross-check `xnys-registry-crosscheck.csv`.
+
+- **Integrity/coverage**: manifest sha256 1,256/1,256 PASS. 1,254 session
+  files, 2021-09-03→2026-09-02, no gaps; 50 file-less dates = market
+  holidays (condition.json marks holidays "available" — treat as calendar).
+  4 `degraded` days incl. 2023-01-24 (NYSE opening-auction glitch). Total
+  **9,471,460 rows**, zero anomalous days.
+- **OHLC sanity: remarkably clean** — zero violations of any kind across
+  9.47M rows (cleaner than XNAS, which had empty no-trade rows). Flip side:
+  thin names have mid-series holes — importers must treat missing dates as
+  normal. Only 3,085 symbols have full 1,254-bar history.
+- **Symbol universe**: 20,189 symbols; 18,565 plain + 1,624 non-plain in
+  NYSE *space* notation (` WS`, ` U`, ` PRA`, ` WI`, ` RT` vs Nasdaq
+  punctuation). **Feed-purity trap is bidirectional**: XNYS carries the
+  whole NASDAQ universe (AAPL/MSFT/NVDA full history) at ~3–5% UTP volume —
+  mirror of the XNAS ADF caveat; `publisher_id` uniformly 9 doesn't help.
+  2,301 Nasdaq-notation 5-char U/W/R derivatives pass the bare plain-regex
+  (the importer's final classifier must be ported, not just the regex).
+  Test-symbol leak here too: 7 of 14 (ZVZZT full-history).
+- **instrument_id still not fully stable** (194 symbols with 2 ids, 3 with
+  3) → symbol-keyed storage reconfirmed.
+- **Split/stitch detection (v3 gates + persistence + gap classification,
+  all lessons applied)**: 3,119 raw candidates → 163 bad-open-print
+  (persistence gate kills them, same as XNAS), 583 ticker-reuse across
+  >14d gaps (**persistence alone can't kill this class** — the new occupant
+  reprices permanently; the gap signal is essential), 2,414 plausible.
+  META/BNY/FB stitches reproduce identically (132d/104d/1,114d gaps).
+- **Registry cross-check on the overlap** (3,226 events): 96.5% reprice at
+  the right date in the right ballpark; 84.5% tight; detector recall 47.5%
+  (XNAS ~50%) — validates both archive and registry. 913 plausible
+  candidates have no registry event (Yahoo-gap class). Loose end: 3
+  registry rows (CENN 2023-12-01, CLSM 2025-10-27, CNF) show NO repricing
+  in XNYS — possible cancelled/postponed events; spot-check vs a third
+  source before relying on them. Registry also carries **spinoff
+  distributions Yahoo reports as "splits"** (GE 2023-01-04/2024-04-02 =
+  GEHC/GEV, T 2022-04-11 = WarnerMedia) — consumers beware.
+- **Anchors 5/5**: SHOP 10:1 2022-06-29, GME 4:1 2022-07-22, WMT 3:1
+  2024-02-26, CMG 50:1 2024-06-26 (measured 49.97), WSM 2:1 2024-07-09.
+- **Verdict**: importable with existing conventions. Adapt: per-day
+  streaming ingest + regroup by symbol, symbol from the `symbol` column,
+  ported classifier. Keep: symbol-keyed VendorBar, manifest gate,
+  Yahoo/FAR registry, segmentation pass, persistence gate. **NEW DECISION
+  (user, deep tier): universe scope** — importing everything double-stores
+  ~16k NASDAQ names at degraded ~4% volume; recommended to restrict to
+  NYSE/Arca-listed names via the listing-exchange reference (or record a
+  volume-completeness flag).
+
+---
+
 ## 2026-09-05 (persistence gate + segment merges) — 331 bad-print rows deleted, detector v4, AREB/SPRB merged (all user-approved)
 
 - **Persistence re-audit of the 929 in-band rows** (new read-only CLI
