@@ -68,6 +68,14 @@ path" invariant is now **exactly one guarded LLM path**.
   coverage 98% lines / 95% branches) · e2e 4/4 (chat not-configured state
   on the main instance, api-down /chat graceful, dashboard Chat link).
   All builds clean.
+- **Live smoke (same day, k3-256k low-effort, temp=1)**: real HK question
+  ("top 3 names in the latest HK daily report + verdicts") → 2 live calls
+  (tool-select 984 prompt tokens → answer 16,780), `getDailyReport(HK)`
+  tool call, grounded answer (2269/1997/3988 with correct ratings), SSE
+  event sequence clean. Session 2 with the identical turn: **0 live calls,
+  full cache replay ($0)** — the AgentDecision hash cache holds for chat.
+  2 `agent="chat"` decision rows; session token totals correct
+  (16,780/265 on session 1, 0/0 on session 2).
 
 Next: Phase 4 — backtesting design (deep-tier session; screen rules are a
 hypothesis per Days 15/23, out-of-sample discipline per Days 11/23).
