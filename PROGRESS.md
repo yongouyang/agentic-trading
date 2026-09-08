@@ -5,6 +5,33 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-09 (chat ops notes) — cache replay observed in the wild; 401 root-caused; 2 follow-ups recorded
+
+First real user session on the shipped 3b chat. Two observations:
+
+- **Cache replay works in the wild**: the smoke question ("top 3 names in
+  the latest HK daily report…") answered instantaneously on click — a full
+  AgentDecision hash replay, 0 live calls. Working as designed.
+- **401 on the first cache-miss turn**: `llm http-401 invalid_authentication_error`.
+  Root cause is the known rotating-token limitation, now with a daemon-shaped
+  twist: chat-config reads `LLM_API_KEY_FILE` once **at API process start**,
+  so a server running longer than the token's ~hourly expiry is guaranteed to
+  401 on its next live call. The deep-dive CLI never hits this (short-lived
+  process). Workaround: restart the API (the CLI keeps the token fresh).
+
+**Follow-ups recorded (tomorrow, fast tier):**
+1. **401 self-heal** — re-read `LLM_API_KEY_FILE` per request (or re-read +
+   retry once on 401) in the chat LLM path, so the local profile survives
+   token rotation without a restart.
+2. **Durable fix** — Moonshot platform key in `.env` (previously deferred to
+   the deploy profile; would fix local permanently too).
+
+Also noted (not scheduled): chat has no options data — put-selling questions
+get verdicts + price history only. A data-source addition if the use case
+becomes real.
+
+---
+
 ## 2026-09-08 (Phase 3c plan — DECIDED) — historical-run browsing + indicator overlays; spec in docs/phase-3c-plan.md
 
 Short planning pass over the shipped 3a/3b surfaces. All four forks
