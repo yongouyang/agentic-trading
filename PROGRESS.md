@@ -5,6 +5,36 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-08 (Phase 3c plan — DECIDED) — historical-run browsing + indicator overlays; spec in docs/phase-3c-plan.md
+
+Short planning pass over the shipped 3a/3b surfaces. All four forks
+user-locked; execution spec is `docs/phase-3c-plan.md`:
+
+1. **Browsable runs: deep-dive runs only** (runs with verdicts — what
+   `listRuns` already returns; screen-only days stay invisible).
+2. **Run pickers on dashboard + symbol page** — per-lane picker on `/`
+   wired to `?hkRun=`/`?usRun=` (shareable, absent = latest); symbol-page
+   picker rewrites the existing `?run=`.
+3. **All four indicator visuals** — SMA50/SMA200 overlay lines on the price
+   pane + momentum (mom20/60), drawdown (mdd252), volatility (vol60)
+   sub-panels (lightweight-charts v5 panes).
+4. **Same chart component in chat** — the `getPriceHistory` tool card
+   renders the full overlaid/panel chart.
+
+Two additive read-API changes: `GET /reports/runs?market=&limit=&symbol=`
+(exposes listRuns; `symbol` filter = runs containing a DeepDiveReport for
+that symbol — flagged decision, powers the symbol-page picker so it never
+lands on "no deep-dive found") and an `indicators` field on
+price-history (sma50/sma200/mom20/mom60/mdd252/vol60 series rolled from the
+existing quant-core point functions over the full adjusted series,
+window-sliced, null-lookback omitted; 3a contract byte-compatible).
+
+Build order: API endpoints + tests → web chart/pickers/wiring + tests →
+e2e + docs + PROGRESS. Execution is fast-tier work; all decisions are in
+the spec.
+
+---
+
 ## 2026-09-08 (Phase 3b SHIPPED) — full tool-calling chat end-to-end
 
 All five build steps of `docs/phase-3b-plan.md` landed; the 3a "no LLM
