@@ -209,3 +209,30 @@ model ScreenResult {
 
   @@id([runId, symbol])
 }
+
+// Phase 3b chat (phase-3b-plan §"Data model", 2026-09-08): persisted chat
+// sessions with per-session LLM usage totals; messages keep tool provenance
+// (toolName/toolArgsJson) so the transcript is reviewable. Chat LLM calls
+// themselves audit to AgentDecision with agent="chat".
+model ChatSession {
+  id               Int      @id @default(autoincrement())
+  createdAt        DateTime @default(now())
+  title            String? // first user message, truncated
+  llmCalls         Int      @default(0)
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id           Int      @id @default(autoincrement())
+  sessionId    Int
+  role         String // "user" | "assistant" | "tool"
+  content      String
+  toolName     String? // role="tool": which tool produced it
+  toolArgsJson String?
+  createdAt    DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id])
+}

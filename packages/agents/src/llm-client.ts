@@ -8,10 +8,33 @@
  * transport errors and 5xx, no retry on 4xx (a bad request fails loudly and
  * immediately). Returns { content, usage }; every failure path throws a typed
  * LlmError — the pipeline catches and turns it into a per-name failure.
+ *
+ * Phase-3b added native function calling (optional `tools` on the request,
+ * `toolCalls` on the response, role="tool" messages). Everything is additive:
+ * a request without `tools` serializes byte-identically to the phase-2 shape.
  */
+export interface LlmToolCall {
+  id: string;
+  name: string;
+  /** Raw `function.arguments` JSON string from the provider. */
+  argumentsJson: string;
+}
+
+/** OpenAI-style function tool definition (phase-3b chat). */
+export interface LlmTool {
+  name: string;
+  description: string;
+  /** JSON schema for the arguments object. */
+  parameters: Record<string, unknown>;
+}
+
 export interface LlmMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
+  /** role="assistant": tool calls the model requested (wire: `tool_calls`). */
+  toolCalls?: LlmToolCall[];
+  /** role="tool": which call this answers (wire: `tool_call_id`). */
+  toolCallId?: string;
 }
 
 export interface LlmUsage {
@@ -23,6 +46,9 @@ export interface LlmUsage {
 export interface LlmResponse {
   content: string;
   usage: LlmUsage | null;
+  /** Present when the model requested tool calls instead of (or alongside)
+   *  a text answer. */
+  toolCalls?: LlmToolCall[];
 }
 
 export interface LlmRequest {
@@ -34,6 +60,9 @@ export interface LlmRequest {
    *  endpoint accepts `reasoning_effort` (measured 2026-09-06: 200 with
    *  "low"); omitted entirely when unset — providers vary. */
   reasoningEffort?: string;
+  /** Phase-3b chat: native function calling. Omitted from the request body
+   *  entirely when unset — plain requests are byte-identical to before. */
+  tools?: LlmTool[];
 }
 
 /** The port the pipeline depends on — fakes implement this in tests. */
@@ -123,11 +152,24 @@ export class OpenAiCompatLlmClient implements LlmClient {
         },
         body: JSON.stringify({
           model: req.model,
-          messages: req.messages,
+          messages: req.messages.map((m) => {
+            if (m.role === "tool") return { role: "tool", tool_call_id: m.toolCallId, content: m.content };
+            if (m.toolCalls?.length) {
+              return {
+                role: m.role,
+                content: m.content,
+                tool_calls: m.toolCalls.map((tc) => ({ id: tc.id, type: "function", function: { name: tc.name, arguments: tc.argumentsJson } })),
+              };
+            }
+            return { role: m.role, content: m.content };
+          }),
           temperature: req.temperature ?? this.defaultTemperature ?? 0.2,
           max_tokens: req.maxTokens ?? 2048,
           ...((req.reasoningEffort ?? this.defaultReasoningEffort)
             ? { reasoning_effort: req.reasoningEffort ?? this.defaultReasoningEffort }
+            : {}),
+          ...(req.tools?.length
+            ? { tools: req.tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } })) }
             : {}),
         }),
         signal: ac.signal,
@@ -137,8 +179,24 @@ export class OpenAiCompatLlmClient implements LlmClient {
         throw new LlmError("http", `llm http-${res.status}: ${body.slice(0, 200)}`, res.status);
       }
       const json = (await res.json().catch(() => null)) as any;
-      const content = json?.choices?.[0]?.message?.content;
-      if (typeof content !== "string") throw new LlmError("malformed", "llm 200 without choices[0].message.content");
+      const msg = json?.choices?.[0]?.message;
+      let content = msg?.content;
+      const rawCalls = msg?.tool_calls;
+      const toolCalls: LlmToolCall[] | undefined = Array.isArray(rawCalls) && rawCalls.length
+        ? rawCalls
+            .filter((tc: any) => tc && typeof tc.id === "string" && typeof tc.function?.name === "string")
+            .map((tc: any) => ({
+              id: tc.id,
+              name: tc.function.name,
+              argumentsJson: typeof tc.function.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function.arguments ?? {}),
+            }))
+        : undefined;
+      if (typeof content !== "string") {
+        // Tool-call turns legitimately carry content: null; a text turn
+        // without content is malformed.
+        if (toolCalls?.length) content = "";
+        else throw new LlmError("malformed", "llm 200 without choices[0].message.content");
+      }
       const u = json?.usage;
       const usage: LlmUsage | null =
         u && typeof u === "object"
@@ -148,7 +206,7 @@ export class OpenAiCompatLlmClient implements LlmClient {
               totalTokens: typeof u.total_tokens === "number" ? u.total_tokens : null,
             }
           : null;
-      return { content, usage };
+      return toolCalls?.length ? { content, usage, toolCalls } : { content, usage };
     } catch (err: any) {
       if (err instanceof LlmError) throw err;
       if (err?.name === "AbortError") throw new LlmError("timeout", `llm request timed out after ${this.timeoutMs}ms`);

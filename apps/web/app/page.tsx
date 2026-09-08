@@ -1,14 +1,26 @@
+import Link from "next/link";
 import { ApiHealth } from "./api-health";
+import { LaneSection } from "./components/lane-section";
+import { fetchDailyReport } from "./lib/api";
 
-// ApiHealth reads API_INTERNAL_URL at request time — never prerender.
+// Reads API_INTERNAL_URL at request time — never prerender.
 export const dynamic = "force-dynamic";
 
-export default function Page() {
+export default async function Page() {
+  const [hk, us] = await Promise.all([fetchDailyReport("HK"), fetchDailyReport("US")]);
   return (
     <main>
-      <h1>agentic-trading</h1>
-      <p>Phase 0 scaffold — chat session and daily report land in Phase 3.</p>
-      <ApiHealth />
+      <div className="lane-header">
+        <h1>agentic-trading — daily report</h1>
+        <span className="meta">
+          <Link href="/chat">Chat →</Link>
+        </span>
+      </div>
+      <LaneSection market="HK" result={hk} />
+      <LaneSection market="US" result={us} />
+      <footer>
+        <ApiHealth />
+      </footer>
     </main>
   );
 }

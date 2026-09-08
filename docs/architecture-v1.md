@@ -390,12 +390,37 @@ budget guard.)*
 
 ## 8. UI (apps/web)
 
+*Status 2026-09-08: **3b shipped.** Full tool-calling chat is live: Nest
+`chat` module (in-process tools over `ReportsService`), persisted
+`ChatSession`/`ChatMessage` (SQLite), event-level SSE
+(`status`/`chunk`/`usage`/`done`/`error`), `AgentDecision agent="chat"`
+audit logging ($0 exact-repeat cache hits). Web: `/chat` (session
+picker/resume, markdown assistant text, inline tool cards — metrics table /
+verdict card / mini price chart — cost header, cap notice) and SSE proxy
+route handlers under `app/api/chat/` (the browser still never sees the api
+origin). The 3a "no LLM path" invariant flips to **exactly one guarded LLM
+path**: 20 LLM calls/session hard cap, 5-round tool-loop guard, read-only
+tools, and 503-when-unconfigured isolation (chat env missing → only the two
+LLM-touching routes 503; history and reports stay up).*
+
+*Status 2026-09-07: **3a shipped.** Read API live: `GET /reports/daily`,
+`GET /reports/deep-dive/:runId/:symbol` (apps/api `reports` module),
+`GET /instruments/:symbol/price-history` (store-only read controller).
+Web: `/` daily dashboard (HK + US lanes, integrity header, ranked
+watchlist) and `/symbol/[symbol]?run=` (verdict card, lightweight-charts
+adjusted-close + volume + CA markers, transcript accordion). All data via
+server components + `API_INTERNAL_URL`; per-lane graceful degradation when
+the api is down. 3b chat planned same day — spec in
+`docs/phase-3b-plan.md` (Nest chat module, SQLite sessions, event-level
+SSE, 20-call session cap, 5-round loop guard, read-only tools).*
+
 *Ordering amended 2026-09-06 (phase-3-plan.md): **report-first, chat
 second** — 3a ships the read-only report UI on a new read API; the chat
 session (3b) lands on the same API afterwards, as full tool-calling chat.
 Localhost-only in v1: the browser never calls the API directly — all data
 flows through Next server components (`API_INTERNAL_URL`), so no auth and no
-CORS. The UI can never trigger an LLM call.*
+CORS. Until 3a the UI could never trigger an LLM call; 3b adds exactly one
+guarded LLM path (see status note above).*
 
 - **Daily report view** (3a): ranked watchlist per market with ratings,
   conviction, one-line theses, data-integrity header, per-name verdict card +

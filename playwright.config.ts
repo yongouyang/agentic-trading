@@ -30,8 +30,14 @@ function resolvePort(envName: string, preferred: number, fallbackStart: number):
 // Disjoint fallback pools: concurrent probe-then-bind can never collide.
 const apiPort = resolvePort('PLAYWRIGHT_API_PORT', 3001, 3100);
 const webPort = resolvePort('PLAYWRIGHT_WEB_PORT', 3000, 3200);
+const webDownPort = resolvePort('PLAYWRIGHT_WEB_DOWN_PORT', 3002, 3300);
+const deadApiPort = resolvePort('PLAYWRIGHT_DEAD_API_PORT', 3003, 3400);
 const apiURL = `http://localhost:${apiPort}`;
 const baseURL = `http://localhost:${webPort}`;
+// Resolved free but never bound — the api-down web instance points here so
+// its server-side fetches fail with connection-refused.
+export const apiDownBaseURL = `http://localhost:${webDownPort}`;
+const deadApiURL = `http://localhost:${deadApiPort}`;
 
 console.log(`[playwright] api: ${apiURL}  web: ${baseURL}`);
 
@@ -75,6 +81,17 @@ export default defineConfig({
       timeout: 60000,
       env: {
         API_INTERNAL_URL: apiURL,
+      },
+    },
+    {
+      // Same web build with API_INTERNAL_URL pointing at a dead port — the
+      // api-down smoke asserts graceful per-lane failure, not a 500.
+      command: `pnpm --filter @agentic-trading/web start --port ${webDownPort}`,
+      url: apiDownBaseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+      env: {
+        API_INTERNAL_URL: deadApiURL,
       },
     },
   ],

@@ -5,6 +5,156 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-08 (Phase 3b SHIPPED) — full tool-calling chat end-to-end
+
+All five build steps of `docs/phase-3b-plan.md` landed; the 3a "no LLM
+path" invariant is now **exactly one guarded LLM path**.
+
+- **Schema + migration** `20260908120000_chat_sessions` (hand-written SQL,
+  `migrate deploy`, per the phase-2 idiom): `ChatSession` (usage totals,
+  nullable title) + `ChatMessage` (role/content/toolName/toolArgsJson, FK to
+  session) exactly per the plan's data model. Gotcha worth remembering: the
+  test-db helper splits migration SQL on `;` naively, so migration *comments*
+  must not contain semicolons (a comment-only fragment fails with SQLite
+  code 21 "not an error").
+- **ReportsService extensions** (`apps/api/src/reports/reports.service.ts`,
+  still read-only SQL): `daily(market, runId?)` (runId 404s on unknown run
+  or wrong market; omitted = latest, contract unchanged); `deepDive`
+  refactored onto a shared `loadDeepDive` helper, public shape
+  byte-identical; new `deepDiveIndex(runId, symbol)` (transcript index with
+  500-char response previews, pipeline order), `transcriptEntry(hash)` (full
+  AgentDecision row, 404 on unknown hash), `listRuns(market?, limit=10)`
+  (limit clamped to [1,50], market validated), `compareSymbols(symbols)`
+  (2–5, per-symbol latest screen row + latest verdict overlay, null fields
+  instead of 500s, 404 on unknown symbol).
+- **llm-client**: additive native function-calling support (tools in,
+  tool_calls out) — the wire mechanism for the chat loop; completion API
+  untouched.
+- **Chat module** (`apps/api/src/chat/`): tool registry (6 read-only tools
+  wrapping ReportsService), chat-service loop, SSE controller. Guardrails:
+  20 LLM calls/session hard stop (`cap-reached` event), max 5 tool rounds
+  per user message (round 5 the model answers with what it has — tools
+  omitted from the request), structural-only injection posture (tool results
+  wrapped `<tool-data>`, system prompt states data-never-instructions).
+  Every chat LLM call writes an `AgentDecision` row with `agent="chat"`
+  (content hash → $0 exact-repeat cache hits). 503-when-unconfigured lives
+  in the controller: only `POST /chat/sessions` and `POST …/messages` 503;
+  GET session routes and reports stay up.
+- **Web** (`apps/web`): SSE proxy route handlers under `app/api/chat/`
+  (`ReadableStream` passthrough for the message stream; 503 env-unset / 502
+  unreachable / upstream status relayed; browser never sees the api origin).
+  `/chat` client route: session picker/resume, cost header
+  (`calls: n/20 · tokens: p+c` from `usage` events), cap notice + disabled
+  input, inline error events, `?symbol=X` input preseed. Hand-rolled
+  markdown renderer (no new deps). Inline tool cards rendered from
+  *persisted* role="tool" messages (the stream carries status only;
+  refetch-after-done): daily → watchlist table, compareSymbols →
+  side-by-side table, getDeepDive → verdict card + transcript index,
+  getPriceHistory → mini lightweight-charts chart (`price-chart.tsx` moved
+  to `app/components/`), transcript entry → collapsed pre, unknown payloads
+  → collapsed raw JSON — the message list never breaks. "Chat" nav links on
+  dashboard + symbol pages.
+- **Decisions taken on spec gaps** (flagged during build, within the spec's
+  guardrails): tool-call replay across turns via user-role tool-data blocks;
+  toolCalls ride in `usageJson` so AgentDecision cache hits replay the same
+  tool calls; the session cap counts live LLM calls only (cache hits free);
+  on round 5 tools are omitted from the request rather than forcing a stop;
+  chat history trimmed to last ~20 messages / 60k chars; GET session routes
+  stay up when chat is unconfigured; native function calling (not
+  prompt-based JSON) is the wire mechanism.
+- **Tests**: agents 43 · api 391 passed / 1 skipped · web 72 (incl. markdown
+  renderer, tool cards from fixture sessions, cost header, cap notice, SSE
+  proxy with mocked upstream, client test driving a canned SSE stream;
+  coverage 98% lines / 95% branches) · e2e 4/4 (chat not-configured state
+  on the main instance, api-down /chat graceful, dashboard Chat link).
+  All builds clean.
+
+Next: Phase 4 — backtesting design (deep-tier session; screen rules are a
+hypothesis per Days 15/23, out-of-sample discipline per Days 11/23).
+Standing loose ends: weekly sentinel, Databento archive as the R1 baseline
+candidate, the phase-3a deferred items.
+
+---
+
+## 2026-09-07 (Phase 3b plan — DECIDED) — full tool-calling chat; 12 forks locked, spec in docs/phase-3b-plan.md
+
+3b planning pass over the shipped 3a read API. All forks decided by the
+user; execution spec is `docs/phase-3b-plan.md`:
+
+1. **Loop in a Nest chat module** — tools are in-process ReportsService
+   calls; web is a thin SSE proxy (browser → Next → Nest).
+2. **Sessions persisted** — new `ChatSession`/`ChatMessage` tables;
+   chat LLM calls logged as `AgentDecision` rows with `agent="chat"`
+   (hash cache → $0 exact repeats).
+3. **Event-level SSE** — status/chunk/usage/done/error events; no
+   token-level streaming, no llm-client stream support needed.
+4. **Tools (all read-only)**: getDailyReport (+runId for history),
+   getDeepDive (verdict + transcript *index*), getTranscriptEntry(hash)
+   on-demand, getPriceHistory, compareSymbols (stored-data join, 2–5
+   symbols), listRuns.
+5. **Guardrails**: 20 LLM calls/session hard stop (`cap-reached` event),
+   max 5 tool rounds per user message, tokens-only cost display in the UI
+   header, structural-only prompt-injection posture (tool outputs wrapped
+   as quoted `<tool-data>`; read-only tools bound the blast radius).
+6. **Chat model**: `LLM_CHAT_MODEL` env, k3-256k low-effort default. First
+   time the API process touches an LLM — chat routes 503 when env is
+   missing, reports stay up. The 3a "no LLM path" invariant becomes
+   "exactly one guarded LLM path".
+7. **UI**: `/chat` client route, markdown + inline tool cards reusing 3a
+   components, session picker/resume.
+
+Build order: Prisma models + ReportsService extensions → tool registry +
+chat loop (fake-client tests) → SSE controller → web proxy + `/chat` UI →
+e2e + docs. Execution is fast-tier work; all decisions are in the spec.
+
+---
+
+## 2026-09-07 (Phase 3a SHIPPED) — read-only report UI live: read API + dashboard + deep-dive pages
+
+Executed `docs/phase-3-plan.md` 3a build order end-to-end (fast tier; all
+decisions were locked in the plan):
+
+**1. Read API (apps/api, new `reports` module).** Three read-only SQL
+endpoints — no provider calls, no LLM path (the UI-can-never-trigger-LLM
+invariant holds structurally):
+
+- `GET /reports/daily?market=US|HK` — latest DeepDiveRun joined to its
+  ScreenRun: integrity header (universeSize/ok/genuinelyAbsent/fetchFailed/
+  degraded/warnings) + ranked rows with metrics summary and verdict overlay;
+  screened-but-not-dived names carry `verdict: null`. 404 when no run yet.
+- `GET /reports/deep-dive/:runId/:symbol` — full parsed verdict + ordered
+  transcript (AgentDecision rows resolved from `decisionHashesJson` in
+  pipeline call order, verified against pipeline.ts).
+- `GET /instruments/:symbol/price-history?days=250` — store-only; adjusted
+  close via `deriveAdjustedBars` over the FULL stored series then sliced
+  (out-of-window dividends still back-adjust); CA markers include DIVIDEND +
+  IN_SPECIE. Lives on a separate read-only controller so the live-fetch
+  `/bars` seam stays distinct.
+
+16 new service tests (seeded SQLite via test-db helper); api suite 354
+passed, build clean.
+
+**2. Web UI (apps/web).** `/` dashboard — HK + US lane sections with
+integrity headers (red banner when degraded), ranked watchlist tables
+(rating badge, diverging conviction bar, one-line thesis), rows linking to
+`/symbol/[symbol]?run=` (verdict card with keyRisks/invalidationConditions,
+lightweight-charts adjusted-close + volume chart with DIVIDEND/IN_SPECIE
+markers, native-`<details>` transcript accordion, zero client JS except the
+chart). Plain CSS (`app/globals.css`), no framework. Failure posture per the
+ApiHealth precedent: per-lane `api: unreachable` / `no run yet`, never a
+500 — asserted by a new Playwright api-down instance in the smoke suite.
+New dep: `lightweight-charts@5.2.1` (v5 series API).
+
+**3. Gates.** web Vitest 38/38 (100% lines / 97% branches); web build clean;
+root Playwright 2/2. Bonus live check against the real store: today's HK
+run rendered end-to-end (table, verdict card, 14-entry transcript, chart).
+
+**What's next:** 3b chat — full tool-calling chat per the locked decision;
+gets its own short planning pass (tool schema, per-session call caps, cost
+display, SSE streaming, prompt-injection posture) before implementation.
+
+---
+
 ## 2026-09-06 (Phase 3 plan — DECIDED) — report-first, chat second; plan doc is the execution spec for 3a
 
 Phase 3 design review (deep tier). Four forks decided by the user, spec in

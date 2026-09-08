@@ -122,4 +122,76 @@ describe("OpenAiCompatLlmClient", () => {
     expect((err as LlmError).kind).toBe("malformed");
     expect(calls).toHaveLength(1);
   });
+
+  describe("function calling (phase-3b)", () => {
+    const TOOLS = [
+      { name: "getDailyReport", description: "Latest daily report", parameters: { type: "object", properties: { market: { type: "string" } }, required: ["market"] } },
+    ];
+
+    it("serializes tools and parses tool_calls from the response", async () => {
+      const { fetchImpl, calls } = fakeFetch(async () =>
+        jsonResponse(200, {
+          choices: [{ message: { content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: "getDailyReport", arguments: '{"market":"US"}' } }] } }],
+          usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 },
+        }),
+      );
+      const client = new OpenAiCompatLlmClient({ baseUrl: "https://x", apiKey: "k", fetchImpl, sleep: noSleep });
+      const res = await client.chat({ ...REQ, tools: TOOLS });
+      expect(res).toEqual({
+        content: "",
+        usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+        toolCalls: [{ id: "call_1", name: "getDailyReport", argumentsJson: '{"market":"US"}' }],
+      });
+      const body = JSON.parse(calls[0]!.init.body);
+      expect(body.tools).toEqual([{ type: "function", function: TOOLS[0] }]);
+    });
+
+    it("serializes assistant toolCalls and role=tool messages with tool_call_id", async () => {
+      const { fetchImpl, calls } = fakeFetch(async () => jsonResponse(200, okJson));
+      const client = new OpenAiCompatLlmClient({ baseUrl: "https://x", apiKey: "k", fetchImpl, sleep: noSleep });
+      await client.chat({
+        model: "m",
+        messages: [
+          { role: "user", content: "hi" },
+          { role: "assistant", content: "", toolCalls: [{ id: "call_1", name: "getDailyReport", argumentsJson: "{}" }] },
+          { role: "tool", toolCallId: "call_1", content: "{...}" },
+        ],
+        tools: TOOLS,
+      });
+      expect(JSON.parse(calls[0]!.init.body).messages).toEqual([
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "", tool_calls: [{ id: "call_1", type: "function", function: { name: "getDailyReport", arguments: "{}" } }] },
+        { role: "tool", tool_call_id: "call_1", content: "{...}" },
+      ]);
+    });
+
+    it("omitted-tools requests serialize byte-identically to the plain shape", async () => {
+      const { fetchImpl, calls } = fakeFetch(async () => jsonResponse(200, okJson));
+      const client = new OpenAiCompatLlmClient({ baseUrl: "https://x", apiKey: "k", fetchImpl, sleep: noSleep });
+      await client.chat(REQ);
+      expect(calls[0]!.init.body).toBe(JSON.stringify({ model: "m", messages: REQ.messages, temperature: 0.2, max_tokens: 2048 }));
+    });
+
+    it("coerces non-string function.arguments to a JSON string and drops malformed tool_calls", async () => {
+      const { fetchImpl } = fakeFetch(async () =>
+        jsonResponse(200, {
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  { id: "a", function: { name: "t", arguments: { market: "US" } } },
+                  { function: { name: "no-id" } }, // dropped
+                ],
+              },
+            },
+          ],
+        }),
+      );
+      const client = new OpenAiCompatLlmClient({ baseUrl: "https://x", apiKey: "k", fetchImpl, sleep: noSleep });
+      const res = await client.chat({ ...REQ, tools: TOOLS });
+      expect(res.toolCalls).toEqual([{ id: "a", name: "t", argumentsJson: '{"market":"US"}' }]);
+      expect(res.content).toBe("");
+    });
+  });
 });
