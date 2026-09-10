@@ -542,7 +542,13 @@ async function main(): Promise<void> {
   const prisma = new PrismaService();
   await prisma.$connect();
   try {
-    await runDailyScreen({ prisma, provider, providerLabel: dummyMode ? "dummy" : "yahoo" }, { market });
+    const reports = await runDailyScreen({ prisma, provider, providerLabel: dummyMode ? "dummy" : "yahoo" }, { market });
+    // W1b (docs/ops-hardening-plan.md): a degraded lane is a non-zero outcome.
+    // 'degraded' was computed and then dropped at the process boundary, so a
+    // run ranked from stale data reported success. The ScreenRun row and the
+    // reports/ artifact are still written — the exit code is a quality signal,
+    // not an abort.
+    if (reports.some((r) => r.degraded)) process.exitCode = 1;
   } finally {
     await prisma.$disconnect();
   }

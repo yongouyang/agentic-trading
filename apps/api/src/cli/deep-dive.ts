@@ -484,7 +484,11 @@ async function main(): Promise<void> {
     const log = prismaDecisionLog(prisma);
     const pipeline: PipelineRunner = (ctx, opts) => runDeepDive({ client, log, models }, ctx, opts);
     const reports = await runDeepDiveBatch({ prisma, pipeline, maxCalls: args.maxCalls }, args);
-    if (reports.some((r) => r.failed === r.topN && r.topN > 0)) process.exitCode = 1;
+    // W1a (docs/ops-hardening-plan.md): ANY name failure makes the leg non-zero.
+    // The previous rule required a 100% lane failure (failed === topN), so 9 of
+    // 10 names could fail — or the whole leg could be killed after completing
+    // half the names — and the chain still exited 0.
+    if (reports.some((r) => r.failed > 0)) process.exitCode = 1;
   } finally {
     await prisma.$disconnect();
   }
