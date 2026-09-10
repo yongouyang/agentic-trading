@@ -382,4 +382,43 @@ describe("ReportsService", () => {
       expect(summarizeMetrics(JSON.stringify({ close: "oops" }))).toEqual({});
     });
   });
+
+  // W2 (docs/ops-hardening-plan.md): a crashed run leaves a "running" row, which
+  // must never surface as a report. The row is given an explicit later runAt so
+  // it WOULD win the latest-run pick if the status filter were missing.
+  describe("W2 — only complete runs are reports", () => {
+    let runningRunId: number;
+
+    beforeAll(async () => {
+      const running = await prisma.deepDiveRun.create({
+        data: {
+          runAt: new Date(Date.now() + 60_000),
+          market: "US",
+          screenRunId,
+          topN: 2,
+          llmCalls: 0,
+          cacheHits: 0,
+          failed: 0,
+          warningsJson: "[]",
+          status: "running",
+        },
+      });
+      runningRunId = running.id;
+    });
+
+    it("daily() ignores a newer running run and returns the latest complete one", async () => {
+      const out = await service.daily("US");
+      expect(out.run.id).toBe(deepDiveRunId);
+    });
+
+    it("daily(runId) 404s for a running run", async () => {
+      await expect(service.daily("US", runningRunId)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it("listRuns() lists the complete run and never the running one", async () => {
+      const ids = (await service.listRuns("US", 50)).map((r) => r.id);
+      expect(ids).toContain(deepDiveRunId);
+      expect(ids).not.toContain(runningRunId);
+    });
+  });
 });

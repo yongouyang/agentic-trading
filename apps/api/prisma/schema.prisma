@@ -181,6 +181,10 @@ model DeepDiveRun {
   cacheHits    Int
   failed       Int
   warningsJson String
+  // W2: "running" while the lane's name pool is in flight, "complete" once the
+  // DeepDiveReport rows are written. Read paths filter to "complete", so a
+  // crashed run can never render as a report (docs/ops-hardening-plan.md).
+  status       String   @default("complete")
 
   reports DeepDiveReport[]
 }

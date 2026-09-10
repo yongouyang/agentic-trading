@@ -246,9 +246,11 @@ export class ReportsService {
     if (!REPORT_MARKETS.includes(market as ReportMarket)) {
       throw new BadRequestException(`market must be one of ${REPORT_MARKETS.join("|")}, got "${market}"`);
     }
+    // W2: only "complete" runs are reports. A crashed run leaves a "running"
+    // row, which must never surface as the latest report.
     const run = runId === undefined
-      ? await this.prisma.deepDiveRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } })
-      : await this.prisma.deepDiveRun.findUnique({ where: { id: runId } });
+      ? await this.prisma.deepDiveRun.findFirst({ where: { market, status: "complete" }, orderBy: { runAt: "desc" } })
+      : await this.prisma.deepDiveRun.findFirst({ where: { id: runId, status: "complete" } });
     if (!run || run.market !== market) {
       throw new NotFoundException(
         runId === undefined
@@ -316,7 +318,7 @@ export class ReportsService {
   private async loadDeepDive(runId: number, symbol: string) {
     const report = await this.prisma.deepDiveReport.findUnique({ where: { runId_symbol: { runId, symbol } } });
     if (!report) throw new NotFoundException(`no deep-dive report for run ${runId}, symbol ${symbol}`);
-    const run = await this.prisma.deepDiveRun.findUnique({ where: { id: runId } });
+    const run = await this.prisma.deepDiveRun.findFirst({ where: { id: runId, status: "complete" } });
     if (!run) throw new NotFoundException(`deep-dive run ${runId} not found`);
 
     const hashes = report.decisionHashesJson ? parseJsonArray(report.decisionHashesJson) : [];
@@ -414,6 +416,7 @@ export class ReportsService {
     }
     const runs = await this.prisma.deepDiveRun.findMany({
       where: {
+        status: "complete", // W2: never offer a crashed/partial run in the picker
         ...(market === undefined ? {} : { market }),
         ...(symbol === undefined ? {} : { reports: { some: { symbol } } }),
       },

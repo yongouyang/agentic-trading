@@ -198,13 +198,41 @@ describe("runDeepDiveBatch", () => {
     expect(r.reports.map((x) => x.status)).toEqual(["ok", "ok", "ok"]);
 
     const run = await prisma.deepDiveRun.findFirst({ where: { id: (await prisma.deepDiveRun.findFirst({ orderBy: { id: "desc" } }))!.id } });
-    expect(run).toMatchObject({ market: "US", topN: 3, llmCalls: 21, cacheHits: 0, failed: 0 });
+    expect(run).toMatchObject({ market: "US", topN: 3, llmCalls: 21, cacheHits: 0, failed: 0, status: "complete" });
     const rows = await prisma.deepDiveReport.findMany({ where: { runId: run!.id }, orderBy: { symbol: "asc" } });
     expect(rows.map((x) => x.symbol)).toEqual(["AAPL", "MSFT", "SPY"]);
     const verdict = JSON.parse(rows[0]!.verdictJson!);
     expect(verdict.asOf).toBe("2026-09-05");
     expect(verdict.promptVersion).toBe("v1");
     expect(JSON.parse(rows[0]!.decisionHashesJson!)).toEqual(["h1", "h2"]);
+  });
+
+  // W2 (docs/ops-hardening-plan.md): the run row is created BEFORE the lane's
+  // name pool, so a kill or crash mid-lane leaves a detectable "running" row
+  // instead of nothing. Measured 2026-09-10: the US leg made 40 live calls,
+  // completed 4 of 10 verdicts, and discarded all of it invisibly.
+  it("a crash after the lane pool leaves a 'running' row and no reports", async () => {
+    const exploding = new Proxy(prisma, {
+      get(target, prop) {
+        if (prop === "deepDiveReport") {
+          return new Proxy((target as any).deepDiveReport, {
+            get(rt, rp) {
+              if (rp === "createMany") return async () => { throw new Error("simulated kill before report write"); };
+              return Reflect.get(rt, rp);
+            },
+          });
+        }
+        return Reflect.get(target, prop);
+      },
+    }) as unknown as PrismaService;
+
+    await expect(
+      runDeepDiveBatch(depsWith(async () => okOutcome(), { prisma: exploding }), { market: "us", top: 3, maxCalls: 200 }),
+    ).rejects.toThrow(/simulated kill/);
+
+    const latest = await prisma.deepDiveRun.findFirst({ orderBy: { id: "desc" } });
+    expect(latest).toMatchObject({ market: "US", topN: 3, status: "running", llmCalls: 0, failed: 0 });
+    expect(await prisma.deepDiveReport.count({ where: { runId: latest!.id } })).toBe(0);
   });
 
   it("per-name failure isolation: one failing pipeline never aborts the lane", async () => {

@@ -310,6 +310,24 @@ export async function runDeepDiveBatch(deps: DeepDiveBatchDeps, args: DeepDiveCl
       reports: [],
     };
 
+    // W2: create the run row BEFORE the name pool so a crash or kill leaves a
+    // detectable "running" row instead of nothing (docs/ops-hardening-plan.md).
+    // Counters are reconciled and the status flipped to "complete" only after
+    // the DeepDiveReport rows are written, so a half-written run is never
+    // presented as complete.
+    const run = await deps.prisma.deepDiveRun.create({
+      data: {
+        market: lane.market,
+        screenRunId: lane.screenRunId,
+        topN: lane.targets.length,
+        llmCalls: 0,
+        cacheHits: 0,
+        failed: 0,
+        warningsJson: "[]",
+        status: "running",
+      },
+    });
+
     const outcomes = await pool(lane.targets, deps.concurrency ?? 4, async (target) => {
       // Budget guard: reserved BEFORE the name starts; never overshoots.
       if (budgetExhausted || callsReserved + MAX_CALLS_PER_NAME > deps.maxCalls) {
@@ -377,20 +395,19 @@ export async function runDeepDiveBatch(deps: DeepDiveBatchDeps, args: DeepDiveCl
       log(`⚠ budget exhausted: ${callsUsed}/${deps.maxCalls} calls used`);
     }
 
-    // Persist (one DeepDiveRun per lane + DeepDiveReport rows).
-    const run = await deps.prisma.deepDiveRun.create({
+    // Persist: the reports first, then close out the pre-created run row.
+    await deps.prisma.deepDiveReport.createMany({
+      data: laneReport.reports.map((r) => ({ runId: run.id, symbol: r.symbol, status: r.status, verdictJson: r.verdictJson, decisionHashesJson: r.decisionHashesJson })),
+    });
+    await deps.prisma.deepDiveRun.update({
+      where: { id: run.id },
       data: {
-        market: lane.market,
-        screenRunId: lane.screenRunId,
-        topN: lane.targets.length,
         llmCalls: laneReport.llmCalls,
         cacheHits: laneReport.cacheHits,
         failed: laneReport.failed,
         warningsJson: JSON.stringify(warnings),
+        status: "complete",
       },
-    });
-    await deps.prisma.deepDiveReport.createMany({
-      data: laneReport.reports.map((r) => ({ runId: run.id, symbol: r.symbol, status: r.status, verdictJson: r.verdictJson, decisionHashesJson: r.decisionHashesJson })),
     });
     log(
       `deep-dive ${lane.market} run=${run.id} screenRun=${lane.screenRunId} names=${lane.targets.length} ` +
