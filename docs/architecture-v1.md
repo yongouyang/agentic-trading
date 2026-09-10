@@ -299,7 +299,9 @@ same-provider for both lanes when it runs on US names).
   1. Update **raw** OHLCV + corporate actions for ~800 tickers (Yahoo; rescue
      paths per §4.1) → re-derive the adjusted series locally (R1/R3)
   2. Data-quality gate (Day 17 checklist) → typed DataOutcome per ticker;
-     non-trivial FETCH_FAILED count marks the run degraded (see §4)
+     two independent **degraded** triggers (see §5.2): FETCH_FAILED > 2 % of the
+     lane, or one date accounting for null-close drops across > 50 % of it
+     (a whole-universe session gap)
   3. Technical screen (deterministic, quant-core):
        trend structure (MA alignment, Day 3/18), momentum, volume
        confirmation, volatility/Sharpe bounds (Day 12)
@@ -311,7 +313,8 @@ same-provider for both lanes when it runs on US names).
          ∈ [-1,1] (abstain tracked separately from neutral), thesis,
          key risks, invalidation conditions
   5. Persist report → chat UI / daily report view, led by a
-     data-integrity header (screened/excluded/degraded counts)
+     data-integrity header (screened/excluded/degraded counts plus the
+     **effective data cutoff** — the newest bar date the lane holds)
 ```
 
 Cost estimate: 20–30 deep-dives/day × 6–8 calls ≈ pennies/day at Moonshot
@@ -320,7 +323,7 @@ for debate + verdict.
 
 ### 5.1 Scheduling (launchd, installed 2026-09-06)
 
-Four user LaunchAgents (`scripts/launchd/`, installed into
+Five user LaunchAgents (`scripts/launchd/`, installed into
 `~/Library/LaunchAgents` by `scripts/launchd/install.sh`; stdout/stderr →
 `logs/` at the repo root). launchd, not cron, because macOS cron silently
 skips jobs missed while asleep; StartCalendarInterval catches up after wake.
@@ -331,13 +334,60 @@ skips jobs missed while asleep; StartCalendarInterval catches up after wake.
 | `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
 | `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
 | `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
+| `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 07:15, 17:30 daily |
 
-Caveat: the deep-dive LLM credential is the Kimi CLI's **rotating OAuth
-token**, so an unattended run can find it stale. `daily-chain.sh` runs a cheap
-auth preflight; on failure it **skips the deep-dive leg loudly** (screen:daily
-still runs and its exit code propagates) and names the fix — run any `kimi`
-command to refresh, then rerun manually. The durable fix is a Moonshot
-platform key (see the deploy profile in §7).
+### 5.2 Failure visibility (R0, 2026-09-10)
+
+Built after three defects were found where the pipeline reported success while
+work was silently lost — the 09-10 US deep-dive made 40 live calls, completed 4
+of 10 verdicts, was killed, and left no trace at all.
+
+**Exit codes.** `daily-chain.sh` reports the **worst** of its legs:
+`0` clean · `2` screen failed · `3` deep-dive skipped (auth preflight) · `4`
+deep-dive failed or partial · `5` post-condition health failed. Both legs always
+run before the verdict, so a degraded screen never skips the deep-dive. The
+CLIs back this up: `screen:daily` exits non-zero on a degraded lane, and
+`screen:deep-dive` on **any** name failure (it previously required a 100 % lane
+failure).
+
+**Crashed runs are visible.** `DeepDiveRun.status` is `running` while a lane's
+name pool is in flight and `complete` only after its reports are written. Every
+read path filters to `complete`, so a crashed run can never render as a report
+or appear in the picker — but the stale `running` row is what `ops:health`
+alerts on (older than 2 h).
+
+**The post-condition.** The chain ends with `ops:health --lane <L>`, the only
+check that can catch a **killed** process, which reports no exit code of its own.
+It is lane-scoped so a stale HK lane cannot fail the US chain.
+
+**Health model.** Per lane: newest complete run, newest screen run, store data
+cutoff, missed scheduled runs, and stale `running` rows. Cadence is
+weekday-arithmetic from the plists (HK Mon–Fri 16:50, US Tue–Sat 06:10 HKT) with
+**no** market-holiday calendar; 1 missed slot is **warn** (runs are
+catch-up-on-wake by design, so "late" must not read as "broken") and 2+, a stale
+`running` row, or an overdue weekly job is **alert**. Weekly jobs are judged from
+dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`).
+
+**Arming.** `install.sh` uses `bootout`/`bootstrap`/`enable` and then runs
+`scripts/launchd/verify.sh`, which **asserts each job's calendar stream is
+`watching`** and fails the install otherwise. The deprecated `unload`/`load -w`
+pair left the jobs loaded-but-unarmed on 2026-09-06 (no registration is logged at
+install time; the first arming was an incidental domain event on 09-08), which
+is why exactly one scheduled run fired in four days. A loaded-but-unarmed job is
+invisible: `launchctl list` shows it and the plist is valid.
+
+Caveat carried forward: the 2026-09-10 kill was **not** sleep (`pmset -g log`
+shows a true wake at 08:31:22 and no sleep until 21:29:01) and left no crash
+report, so its cause remains unidentified. W1/W2 make that class visible and
+alertable regardless of cause, rather than depending on knowing it.
+
+Caveat: the deep-dive LLM credential prefers the durable `LLM_API_KEY` from
+`.env` (Moonshot platform key, added 2026-09-09) and falls back to the Kimi CLI's
+**rotating OAuth token**. `daily-chain.sh` runs a cheap auth preflight first; on
+failure it **skips the deep-dive leg loudly and exits 3** — never as success
+(see §5.2). The deploy profile in §7 still pins `deepseek-v4-flash`, which the
+model catalog has since superseded (the current DeepSeek model is exposed as
+`deepseek-flash`, "DeepSeek V4.1 Flash") — a deploy-time correction.
 
 ## 6. The two market lanes
 

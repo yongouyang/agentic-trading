@@ -5,6 +5,71 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-10 (R0 EXECUTED) — W1–W5 landed; chain fails loudly; health banner live; jobs re-armed
+
+Executed `docs/ops-hardening-plan.md` end to end (fast tier, all forks locked).
+Five commits, tree clean, 535 tests green.
+
+- `8e89470` **W2** — `DeepDiveRun.status` (`running` → `complete`). Additive
+  migration with an explicit `'complete'` default (the 6 existing rows are
+  complete by definition — verified after deploy). The row is created BEFORE the
+  lane's name pool, so a killed run leaves a detectable row; all four read paths
+  in `reports.service.ts` filter to `complete`, so it can never render as a
+  report or appear in the picker. +4 tests.
+- `cecd55f` **W3** — null-close drops counted **by date**; a single date at
+  >50 % of the lane degrades the run with a dated warning. `dataThrough` =
+  `max(Bar.date)` per market on read (no migration) and rendered in the integrity
+  header. +9 tests.
+- `0f0ae12` **W4** — `ops/health.ts` `computeHealth`, `ops:health` CLI +
+  artifact, `GET /ops/health`, dashboard `HealthBanner`, `ops-health` launchd job,
+  and an f10 artifact (that job previously left no on-disk trace). +18 api / +8 web.
+- `d47e853` **W1** — exit taxonomy `0/2/3/4/5`; both preflight paths no longer
+  return `$SCREEN_RC`; the chain reports the worst leg and ends with
+  `ops:health --lane <L>`. Adds `scripts/tests/daily-chain.test.sh` (11 cases).
+- **W5** — arming fixed and verified (see below).
+
+**Two more silent paths found while building (beyond the three in the entry
+below):** `cli/deep-dive.ts:470` set exit 1 only when `failed === topN`, so 9 of
+10 names failing exited 0; and `daily-screen.ts` computed `degraded` then dropped
+it at the process boundary. Both now non-zero.
+
+**W5 diagnosis — jobs were loaded but UNARMED.** install.sh used the deprecated
+`launchctl unload`/`load -w`. Evidence: log retention covers the 09-06 21:54
+install (102 entries in that window) with **zero** `agentic-trading` launchd
+activity, and the first `StartCalendarInterval` registration is **09-08 20:18** —
+so arming happened via later incidental domain events, not the install. That is
+why exactly one scheduled run fired in four days. Fix: `bootout`/`bootstrap`/
+`enable` plus `scripts/launchd/verify.sh`, which asserts each job's calendar
+stream is `watching` and fails the install otherwise (a loaded-but-unarmed job is
+invisible to `launchctl list`). All 5 jobs re-armed; `ops-health` installed and
+**kickstart-verified under launchd's bare PATH** (`launchctl list` shows exit 1,
+correctly alerting).
+
+**Corrected claim:** the plan asserted a post-crash rerun is ~free via the
+`AgentDecision` cache. Measured: the US rerun scored **0 cache hits / 72 live
+calls** — the prompt carries date-dependent bars and news, so the 08:37 calls did
+not replay. Recovery is cheap in *engineering* effort, not in tokens.
+
+**Acceptance (09-10 state repaired):** `screen:deep-dive --market us` →
+run=**7**, screenRun=**15**, 10/10 ok, 72 calls. `ops:health --lane us` now
+**HEALTHY** (was ALERT / 3 missed). Deliberate deviation from the plan's "rerun
+the chain": it was 23:21 HKT with the US market **open**, so re-running
+`screen:daily` would have written a partial 09-10 session into the store. The
+missing 09-09 session, and `dataThrough` still reading 2026-09-08, heal at the
+next scheduled US run (Fri 06:10 HKT, after the US close) — not forced now.
+
+**Still open:** the 08:37 kill cause is **unidentified** — sleep is ruled out
+(`pmset -g log`: true wake 08:31:22, no sleep until 21:29:01) and there is no
+crash report. W1/W2 make the class visible and alertable without knowing the
+cause. W5's on-time-fire verification needs the next slots (Fri 06:10 US / 16:50
+HK). The f10 health alert is expected until Sun 09-13 (first artifact).
+
+Next: observe one scheduled cycle (Fri) to confirm arming + a clean chain run,
+then Phase-4 plan lock (success bar + fold thinness). Standing: R2 LLM-layer
+prospective scoring, Databento R1 baseline, deploy profile.
+
+---
+
 ## 2026-09-10 (R0 spec — LOCKED) — W1–W4 detailed + W5 added; all forks and values decided
 
 Second planning pass, turning `docs/ops-hardening-plan.md` from a draft into the
