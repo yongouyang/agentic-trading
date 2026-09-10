@@ -5,6 +5,57 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-10 (Ops hardening — PLANNED, awaiting lock) — "next rounds" review; 3 silent failures found; R0 chosen; 3c committed
+
+Enhancement-review session that turned into a finding session. User reviewed
+candidate rounds (R0 ops trust / R1 Phase-4 backtest / R2 LLM-layer validation
+/ R3 data gaps / R4 deploy / R5 quality gates) and **locked R0 as next work**,
+plus "commit 3c first".
+
+**Committed (tree was 26 modified + 3 untracked since the 3c ship):**
+- `a68f687` fix(scheduling): launchd PATH + durable-key preflight in
+  daily/weekly chains (this is the uncommitted 09-10 fix for `pnpm: command
+  not found`).
+- `ee9e04d` feat(phase-3c): historical-run browsing + indicator overlays.
+- `49d27e8` docs(phase-4): plan + PROGRESS through 3c.
+- Verified before committing: web 92/92, api 404 passed + 1 skipped.
+
+**Three silent failures found (measured, none previously recorded):**
+1. **09-10 US deep-dive died mid-run and discarded everything.** Log ends at
+   `screen:daily exit=0` with no `screen:deep-dive exit=` line. `AgentDecision`
+   proves 40 live calls (08:35:17→08:37:43) completing 4/10 verdicts; no
+   `DeepDiveRun` row for `screenRunId=15` because the run row is created only
+   after the lane's `pool()` resolves (`cli/deep-dive.ts:381`).
+2. **Skipping the deep-dive exits 0** — both preflight-fail paths in
+   `scripts/daily-chain.sh` do `exit "$SCREEN_RC"`. Silent failure is by
+   design today; launchd sees a clean job.
+3. **US ranked on T-1 data and reported clean.** Today's `nullCloseDropped:
+   619` = **555 symbols × the single date 2026-09-09**; store `max(date)` US =
+   **2026-09-08** (HK current at 09-09/131). Live Yahoo has a real 09-09 AAPL
+   close (315.34 @ 65.4M), so the session was lost, not absent. `degraded`
+   stayed false — it is fetched-failure-only (`daily-screen.ts:384`) and the
+   integrity header has no cutoff field.
+
+**Also noted:** since launchd install (09-06) exactly **one** scheduled run has
+fired (09-10 08:35 US, caught up on wake); HK has not run since 09-06. Plists
+are loaded and correct — machine sleep plus the two silent paths explain it.
+
+**Spec written:** `docs/ops-hardening-plan.md` (R0, ~167 lines, **not yet
+locked** — 4 forks: W2 status-only vs incremental persistence; alert channel;
+staleness threshold; whole-universe gap rule). Workstreams: W1 chain exit
+codes + post-condition, W2 `DeepDiveRun.status` so crashed runs are visible
+and never become "the latest report", W3 `dataThrough`/whole-universe-gap
+integrity field + banner, W4 `ops:health` CLI + launchd alert via `osascript`.
+The 09-10 evidence is the acceptance fixture.
+
+Next: user locks the 4 R0 forks, then execution is fast-tier work. Still
+standing: Phase-4 plan lock (success bar + fold thinness), R2 LLM-layer
+prospective scoring, Databento R1 baseline, deploy profile (architecture §7
+still pins the now-superseded `deepseek-v4-flash` — the catalog's current
+model is `deepseek-flash` = "DeepSeek V4.1 Flash").
+
+---
+
 ## 2026-09-10 (Phase 4 plan — DRAFTED, awaiting lock) — backtest spec written; 4 forks user-locked
 
 Deep-tier planning session for backtesting the screen (H1). Spec written to
