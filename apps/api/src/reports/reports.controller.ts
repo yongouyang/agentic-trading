@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from "@nestjs/common";
-import { parseRunIdParam, ReportsService, type DailyReport, type DeepDiveTranscript } from "./reports.service.js";
+import { parseRunsLimitParam, parseRunIdParam, ReportsService, type DailyReport, type DeepDiveTranscript, type RunSummary } from "./reports.service.js";
 
 /** Read-only report endpoints (phase-3-plan §3a). No provider/LLM calls. */
 @Controller("reports")
@@ -19,5 +19,13 @@ export class ReportsController {
   @Get("deep-dive/:runId/:symbol")
   async deepDive(@Param("runId") runId: string, @Param("symbol") symbol: string): Promise<DeepDiveTranscript> {
     return this.reports.deepDive(parseRunIdParam(runId), symbol);
+  }
+
+  /** GET /reports/runs?market=&limit=&symbol= — DeepDiveRun summaries, newest
+   *  first (phase-3c). market optional (US|HK); limit default 20 clamped to
+   *  [1, 50]; symbol optional — only runs with a DeepDiveReport for it. */
+  @Get("runs")
+  async runs(@Query("market") market?: string, @Query("limit") limit?: string, @Query("symbol") symbol?: string): Promise<RunSummary[]> {
+    return this.reports.listRuns(market, parseRunsLimitParam(limit), symbol);
   }
 }

@@ -141,7 +141,7 @@ function PriceHistoryCard({ history }: { history: PriceHistory }) {
         {history.symbol} · adjusted close, {history.days}d
       </p>
       <div className="chart-box">
-        <PriceChart bars={history.bars} markers={history.markers} />
+        <PriceChart bars={history.bars} markers={history.markers} indicators={history.indicators} />
       </div>
     </div>
   );

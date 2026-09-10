@@ -4,11 +4,12 @@ import { useEffect, useRef } from "react";
 import {
   AreaSeries,
   HistogramSeries,
+  LineSeries,
   createChart,
   createSeriesMarkers,
   type SeriesMarker,
 } from "lightweight-charts";
-import type { PriceBar, PriceMarker } from "../types";
+import type { IndicatorPoint, PriceBar, PriceHistoryIndicators, PriceMarker } from "../types";
 
 function toChartMarker(m: PriceMarker): SeriesMarker<string> {
   const dividend = m.type === "DIVIDEND";
@@ -21,12 +22,42 @@ function toChartMarker(m: PriceMarker): SeriesMarker<string> {
   };
 }
 
+/** Indicator series colors — keep in sync with the static legend row below. */
+const INDICATOR_COLORS = {
+  sma50: "#e8590c",
+  sma200: "#7048e8",
+  mom20: "#0ca678",
+  mom60: "#b45309",
+  mdd252: "#c9372c",
+  vol60: "#7048e8",
+} as const;
+
+/** Sub-pane series carry ratios — scale to % for display. */
+const PCT_FORMAT = { type: "custom", formatter: (v: number) => `${v.toFixed(1)}%` } as const;
+
+function toPoints(pts: IndicatorPoint[], pct = false) {
+  return pts.map((p) => ({ time: p.date, value: pct ? p.value * 100 : p.value }));
+}
+
 /**
  * Price chart: adjusted close as an area series, volume as a histogram on a
  * separate overlay scale, corporate-action markers (DIVIDEND vs IN_SPECIE
  * visually distinct). Data is fetched in the RSC and passed as props.
+ *
+ * Phase-3c: with the optional `indicators` prop the chart gains SMA50/SMA200
+ * overlays on the price pane plus three sub-panes (momentum, drawdown,
+ * volatility, all rendered as %) and a static CSS legend row. Without it the
+ * chart renders exactly as before.
  */
-export function PriceChart({ bars, markers }: { bars: PriceBar[]; markers: PriceMarker[] }) {
+export function PriceChart({
+  bars,
+  markers,
+  indicators,
+}: {
+  bars: PriceBar[];
+  markers: PriceMarker[];
+  indicators?: PriceHistoryIndicators;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +66,7 @@ export function PriceChart({ bars, markers }: { bars: PriceBar[]; markers: Price
 
     const chart = createChart(el, {
       width: el.clientWidth || 640,
-      height: 320,
+      height: indicators ? 560 : 320,
       layout: { background: { color: "#ffffff" }, textColor: "#606770" },
       grid: {
         vertLines: { color: "#f0f1f3" },
@@ -71,6 +102,55 @@ export function PriceChart({ bars, markers }: { bars: PriceBar[]; markers: Price
       );
     }
 
+    if (indicators) {
+      const sma50 = chart.addSeries(
+        LineSeries,
+        { color: INDICATOR_COLORS.sma50, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false },
+        0,
+      );
+      sma50.setData(toPoints(indicators.sma50));
+      const sma200 = chart.addSeries(
+        LineSeries,
+        { color: INDICATOR_COLORS.sma200, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false },
+        0,
+      );
+      sma200.setData(toPoints(indicators.sma200));
+
+      const mom20 = chart.addSeries(
+        LineSeries,
+        { color: INDICATOR_COLORS.mom20, lineWidth: 1, priceLineVisible: false, priceFormat: PCT_FORMAT },
+        1,
+      );
+      mom20.setData(toPoints(indicators.mom20, true));
+      const mom60 = chart.addSeries(
+        LineSeries,
+        { color: INDICATOR_COLORS.mom60, lineWidth: 1, priceLineVisible: false, priceFormat: PCT_FORMAT },
+        1,
+      );
+      mom60.setData(toPoints(indicators.mom60, true));
+
+      const mdd = chart.addSeries(
+        AreaSeries,
+        {
+          lineColor: INDICATOR_COLORS.mdd252,
+          topColor: "rgba(201, 55, 44, 0.02)",
+          bottomColor: "rgba(201, 55, 44, 0.25)",
+          lineWidth: 1,
+          priceLineVisible: false,
+          priceFormat: PCT_FORMAT,
+        },
+        2,
+      );
+      mdd.setData(toPoints(indicators.mdd252, true));
+
+      const vol = chart.addSeries(
+        LineSeries,
+        { color: INDICATOR_COLORS.vol60, lineWidth: 1, priceLineVisible: false, priceFormat: PCT_FORMAT },
+        3,
+      );
+      vol.setData(toPoints(indicators.vol60, true));
+    }
+
     chart.timeScale().fitContent();
 
     const onResize = () => chart.applyOptions({ width: el.clientWidth });
@@ -79,7 +159,21 @@ export function PriceChart({ bars, markers }: { bars: PriceBar[]; markers: Price
       window.removeEventListener("resize", onResize);
       chart.remove();
     };
-  }, [bars, markers]);
+  }, [bars, markers, indicators]);
 
-  return <div ref={containerRef} data-testid="price-chart" />;
+  return (
+    <>
+      {indicators && (
+        <div className="chart-legend" data-testid="chart-legend">
+          {(Object.keys(INDICATOR_COLORS) as (keyof typeof INDICATOR_COLORS)[]).map((k) => (
+            <span key={k} className="chart-legend-key">
+              <span className="chart-legend-swatch" style={{ background: INDICATOR_COLORS[k] }} />
+              {k}
+            </span>
+          ))}
+        </div>
+      )}
+      <div ref={containerRef} data-testid="price-chart" />
+    </>
+  );
 }

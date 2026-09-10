@@ -133,4 +133,80 @@ describe("API integration (dummy provider + throwaway SQLite)", () => {
       await strictApp.close();
     }
   });
+
+  /** Phase-3c: route wiring for the read-only additions — one seeded lane. */
+  describe("reports runs + price-history indicators", () => {
+    let runId: number;
+
+    beforeAll(async () => {
+      const screenRun = await prisma.screenRun.create({
+        data: { market: "US", universeSize: 1, ok: 1, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]" },
+      });
+      const run = await prisma.deepDiveRun.create({
+        data: { runAt: new Date("2026-09-08T10:00:00Z"), market: "US", screenRunId: screenRun.id, topN: 1, llmCalls: 5, cacheHits: 1, failed: 0, warningsJson: "[]" },
+      });
+      runId = run.id;
+      await prisma.deepDiveReport.create({
+        data: { runId: run.id, symbol: "AAPL", status: "ok", verdictJson: null, decisionHashesJson: null },
+      });
+      const inst = await prisma.instrument.create({ data: { symbol: "INDX", market: "US", currency: "USD" } });
+      await prisma.bar.createMany({
+        data: Array.from({ length: 60 }, (_, i) => ({
+          instrumentId: inst.id,
+          date: new Date(Date.UTC(2026, 5, 1) + i * 86_400_000).toISOString().slice(0, 10),
+          open: 100 + i,
+          high: 100 + i,
+          low: 100 + i,
+          close: 100 + i,
+          volume: 1000,
+        })),
+      });
+    });
+
+    it("GET /reports/runs returns the seeded run newest-first", async () => {
+      const res = await fetch(`${baseUrl}/reports/runs`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body[0]).toMatchObject({ id: runId, market: "US", topN: 1, llmCalls: 5, cacheHits: 1, failed: 0 });
+      expect(typeof body[0].runAt).toBe("string");
+    });
+
+    it("GET /reports/runs?market= filters and validates", async () => {
+      const us = await fetch(`${baseUrl}/reports/runs?market=US`);
+      expect((await us.json()).map((r: { id: number }) => r.id)).toContain(runId);
+      const hk = await fetch(`${baseUrl}/reports/runs?market=HK`);
+      expect(await hk.json()).toEqual([]);
+      const bad = await fetch(`${baseUrl}/reports/runs?market=CN`);
+      expect(bad.status).toBe(400);
+    });
+
+    it("GET /reports/runs?limit= clamps into [1, 50] and 400s on non-integers", async () => {
+      const clamped = await fetch(`${baseUrl}/reports/runs?limit=999`);
+      expect(clamped.status).toBe(200);
+      const bad = await fetch(`${baseUrl}/reports/runs?limit=abc`);
+      expect(bad.status).toBe(400);
+    });
+
+    it("GET /reports/runs?symbol= only runs with a DeepDiveReport for that symbol", async () => {
+      const aapl = await fetch(`${baseUrl}/reports/runs?symbol=AAPL`);
+      expect((await aapl.json()).map((r: { id: number }) => r.id)).toEqual([runId]);
+      const none = await fetch(`${baseUrl}/reports/runs?symbol=NOPE`);
+      expect(await none.json()).toEqual([]);
+    });
+
+    it("GET /instruments/:symbol/price-history carries the additive indicators field", async () => {
+      const res = await fetch(`${baseUrl}/instruments/INDX/price-history?days=30`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.bars).toHaveLength(30);
+      expect(Object.keys(body.indicators)).toEqual(["sma50", "sma200", "mom20", "mom60", "mdd252", "vol60"]);
+      // 60 stored bars, days=30 → window = series indices 30..59. sma50 is
+      // defined from index 49 → 11 points starting at window index 19; mom20
+      // (defined from index 20) covers every windowed date. Exact values are
+      // unit-tested against hand computations in reports.service.spec.ts.
+      expect(body.indicators.sma50[0].date).toBe(body.bars[19].date); // index 49 overall
+      expect(body.indicators.mom20.map((p: { date: string }) => p.date)).toEqual(body.bars.map((b: { date: string }) => b.date));
+      expect(body.indicators.sma200).toEqual([]);
+    });
+  });
 });

@@ -3,9 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 // PriceChart is canvas-backed; stub it (its own tests live in price-chart.test.tsx).
 vi.mock("@/app/components/price-chart", () => ({
-  PriceChart: (props: { bars: unknown[]; markers: unknown[] }) => (
+  PriceChart: (props: { bars: unknown[]; markers: unknown[]; indicators?: { sma50: unknown[] } }) => (
     <div data-testid="price-chart">
       bars:{props.bars.length} markers:{props.markers.length}
+      {props.indicators ? ` sma50:${props.indicators.sma50.length}` : " no-indicators"}
     </div>
   ),
 }));
@@ -46,6 +47,36 @@ describe("ToolCard edge cases", () => {
   it("falls back to the message's toolName when the wrapper is missing", () => {
     render(<ToolCard toolName="weirdTool" content="garbage" />);
     expect(screen.getByTestId("tool-card-raw")).toHaveTextContent("weirdTool (raw)");
+  });
+
+  it("getPriceHistory card passes indicators through to the chart (phase 3c)", () => {
+    const payload = {
+      symbol: "0005.HK",
+      days: 250,
+      bars: [{ date: "2026-09-01", close: 98.02, volume: 1000 }],
+      markers: [],
+      indicators: {
+        sma50: [{ date: "2026-09-01", value: 97 }],
+        sma200: [],
+        mom20: [],
+        mom60: [],
+        mdd252: [],
+        vol60: [],
+      },
+    };
+    render(<ToolCard toolName="getPriceHistory" content={toolData("getPriceHistory", payload)} />);
+    expect(screen.getByTestId("price-chart")).toHaveTextContent("sma50:1");
+  });
+
+  it("getPriceHistory card renders without indicators (pre-3c persisted payloads)", () => {
+    const payload = {
+      symbol: "0005.HK",
+      days: 250,
+      bars: [{ date: "2026-09-01", close: 98.02, volume: 1000 }],
+      markers: [],
+    };
+    render(<ToolCard toolName="getPriceHistory" content={toolData("getPriceHistory", payload)} />);
+    expect(screen.getByTestId("price-chart")).toHaveTextContent("no-indicators");
   });
 });
 

@@ -208,6 +208,23 @@ describe("ReportsService chat tools (phase 3b)", () => {
     it("400s on an invalid market", async () => {
       await expect(service.listRuns("CN")).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it("symbol filter (phase 3c): only runs with a DeepDiveReport for that symbol", async () => {
+      // AAPL was dived in both US runs; MSFT only in the new run (failed
+      // report still counts — a DeepDiveReport row exists for it).
+      expect((await service.listRuns(undefined, 10, "AAPL")).map((r) => r.id)).toEqual([usRunNew, usRunOld]);
+      expect((await service.listRuns(undefined, 10, "MSFT")).map((r) => r.id)).toEqual([usRunNew]);
+    });
+
+    it("symbol filter combines with market", async () => {
+      expect((await service.listRuns("US", 10, "AAPL")).map((r) => r.id)).toEqual([usRunNew, usRunOld]);
+      expect((await service.listRuns("HK", 10, "AAPL"))).toEqual([]);
+    });
+
+    it("symbol with no reports anywhere → empty list (never a 404/500)", async () => {
+      expect(await service.listRuns(undefined, 10, "0005.HK")).toEqual([]); // HK run has zero reports
+      expect(await service.listRuns(undefined, 10, "NOSUCH")).toEqual([]);
+    });
   });
 
   describe("compareSymbols", () => {

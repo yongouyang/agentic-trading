@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { RatingBadge } from "../../components/rating-badge";
 import { ConvictionBar } from "../../components/conviction-bar";
-import { fetchDeepDive, fetchPriceHistory } from "../../lib/api";
+import { RunPicker } from "../../components/run-picker";
+import { fetchDeepDive, fetchPriceHistory, fetchRuns } from "../../lib/api";
 import type { DeepDiveReport, TranscriptEntry } from "../../types";
 import { PriceChart } from "../../components/price-chart";
 
@@ -113,7 +114,10 @@ export default async function SymbolPage({
     );
   }
 
-  const [dd, ph] = await Promise.all([fetchDeepDive(runId, symbol), fetchPriceHistory(symbol)]);
+  const [dd, ph, runs] = await Promise.all([fetchDeepDive(runId, symbol), fetchPriceHistory(symbol), fetchRuns(undefined, symbol)]);
+  const picker = (
+    <RunPicker runs={runs.kind === "ok" ? runs.runs : []} param="run" current={runId} />
+  );
 
   if (dd.kind === "unreachable") {
     return (
@@ -127,6 +131,7 @@ export default async function SymbolPage({
     return (
       <main>
         <h1>{symbol}</h1>
+        {picker}
         <p className="notice">no deep-dive found for {symbol} in run {runId}.</p>
       </main>
     );
@@ -139,6 +144,7 @@ export default async function SymbolPage({
         <h1>
           {report.symbol} <span className="meta">{report.run.market}</span>
         </h1>
+        {picker}
         <span className="meta">
           run {report.run.id} · {new Date(report.run.runAt).toLocaleString("en-GB", { hour12: false })}
         </span>
@@ -151,7 +157,7 @@ export default async function SymbolPage({
         <h2>Price — adjusted close, 250d</h2>
         {ph.kind === "ok" ? (
           <div className="chart-box">
-            <PriceChart bars={ph.history.bars} markers={ph.history.markers} />
+            <PriceChart bars={ph.history.bars} markers={ph.history.markers} indicators={ph.history.indicators} />
           </div>
         ) : (
           <p className="notice" data-testid="chart-unavailable">

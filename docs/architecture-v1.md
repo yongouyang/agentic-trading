@@ -390,6 +390,16 @@ budget guard.)*
 
 ## 8. UI (apps/web)
 
+*Status 2026-09-09: **3c shipped.** Historical-run browsing + indicator
+overlays: `GET /reports/runs?market=&limit=&symbol=` (DeepDiveRun summaries,
+symbol filter = runs with a DeepDiveReport for that name) and an additive
+`indicators` field on `price-history` (sma50/sma200/mom20/mom60/mdd252/vol60
+rolled over the full adjusted series, null-lookback points omitted). Web:
+4-pane price chart (SMA overlays + momentum/drawdown/volatility sub-panes,
+static legend) shared by `/symbol/[symbol]` and the chat `getPriceHistory`
+card, and a shareable run-picker on the dashboard (`?hkRun`/`?usRun`) and
+symbol page (`?run=`). Read-only everything; no new LLM surface.*
+
 *Status 2026-09-08: **3b shipped.** Full tool-calling chat is live: Nest
 `chat` module (in-process tools over `ReportsService`), persisted
 `ChatSession`/`ChatMessage` (SQLite), event-level SSE

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchDailyReport, fetchDeepDive, fetchPriceHistory } from "@/app/lib/api";
+import { fetchDailyReport, fetchDeepDive, fetchPriceHistory, fetchRuns } from "@/app/lib/api";
 import { dailyReportFixture } from "./fixtures";
 
 describe("lib/api fetch helpers", () => {
@@ -68,5 +68,44 @@ describe("lib/api fetch helpers", () => {
       "http://api.test/instruments/0005.HK/price-history?days=250",
       { cache: "no-store" },
     );
+  });
+
+  it("fetchDailyReport passes runId through when given (phase 3c)", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 200, ok: true, json: async () => dailyReportFixture }),
+    );
+    await fetchDailyReport("HK", 7);
+    expect(fetch).toHaveBeenCalledWith("http://api.test/reports/daily?market=HK&runId=7", {
+      cache: "no-store",
+    });
+  });
+
+  it("fetchRuns builds the query from market/symbol and maps 200 to ok (phase 3c)", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 200, ok: true, json: async () => [{ id: 7 }] }),
+    );
+    expect(await fetchRuns("HK", "0005.HK")).toEqual({ kind: "ok", runs: [{ id: 7 }] });
+    expect(fetch).toHaveBeenCalledWith("http://api.test/reports/runs?market=HK&symbol=0005.HK", {
+      cache: "no-store",
+    });
+  });
+
+  it("fetchRuns never throws: unset base, 5xx, network error and non-array payloads degrade", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "");
+    expect((await fetchRuns("US")).kind).toBe("unreachable");
+    vi.stubEnv("API_INTERNAL_URL", "http://api.test");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 500, ok: false }));
+    expect((await fetchRuns("US")).kind).toBe("unreachable");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
+    expect((await fetchRuns("US")).kind).toBe("unreachable");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 200, ok: true, json: async () => ({ not: "an array" }) }),
+    );
+    expect(await fetchRuns("US")).toEqual({ kind: "ok", runs: [] });
   });
 });

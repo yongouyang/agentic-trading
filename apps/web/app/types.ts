@@ -106,11 +106,29 @@ export interface PriceMarker {
   currency?: string;
 }
 
+/** Phase-3c indicator overlays (GET .../price-history `indicators` field).
+ *  Optional on the web type: persisted chat tool payloads from before 3c
+ *  don't carry it — the chart renders pane 0 only when absent. */
+export interface IndicatorPoint {
+  date: string;
+  value: number;
+}
+
+export interface PriceHistoryIndicators {
+  sma50: IndicatorPoint[];
+  sma200: IndicatorPoint[];
+  mom20: IndicatorPoint[];
+  mom60: IndicatorPoint[];
+  mdd252: IndicatorPoint[];
+  vol60: IndicatorPoint[];
+}
+
 export interface PriceHistory {
   symbol: string;
   days: number;
   bars: PriceBar[];
   markers: PriceMarker[];
+  indicators?: PriceHistoryIndicators;
 }
 
 /**

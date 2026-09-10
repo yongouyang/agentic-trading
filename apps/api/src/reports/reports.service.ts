@@ -7,7 +7,7 @@
  * this module.
  */
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { deriveAdjustedBars } from "@agentic-trading/quant-core";
+import { annualizedVol, deriveAdjustedBars, maxDrawdown, momentum, sma } from "@agentic-trading/quant-core";
 import type { Bar, CorporateAction } from "@agentic-trading/quant-core";
 import type { Rating } from "@agentic-trading/quant-core";
 import type { AgentDecision as AgentDecisionRow } from "@prisma/client";
@@ -170,12 +170,30 @@ export interface PriceHistoryMarker {
   currency: string;
 }
 
+export interface IndicatorPoint {
+  date: string;
+  value: number;
+}
+
+/** Phase-3c: indicator overlays rolled over the FULL adjusted series (null
+ *  lookback points omitted), then sliced to the requested window. Additive —
+ *  the 3a bars/markers contract is unchanged. */
+export interface PriceHistoryIndicators {
+  sma50: IndicatorPoint[];
+  sma200: IndicatorPoint[];
+  mom20: IndicatorPoint[];
+  mom60: IndicatorPoint[];
+  mdd252: IndicatorPoint[];
+  vol60: IndicatorPoint[];
+}
+
 export interface PriceHistory {
   symbol: string;
   days: number;
   bars: PriceHistoryBar[];
   /** ALL corporate actions (DIVIDEND and IN_SPECIE) for chart overlays. */
   markers: PriceHistoryMarker[];
+  indicators: PriceHistoryIndicators;
 }
 
 // ---------------------------------------------------------------------------
@@ -384,9 +402,10 @@ export class ReportsService {
     };
   }
 
-  /** Phase-3b chat tool: recent DeepDiveRuns (newest first) so the model can
-   *  target historical runs. market optional; limit clamped to [1, 50]. */
-  async listRuns(market?: string, limit = 10): Promise<RunSummary[]> {
+  /** Phase-3b chat tool / phase-3c runs endpoint: recent DeepDiveRuns (newest
+   *  first). market optional; limit clamped to [1, 50]. symbol optional
+   *  (phase-3c) — only runs that have a DeepDiveReport for that symbol. */
+  async listRuns(market?: string, limit = 10, symbol?: string): Promise<RunSummary[]> {
     if (market !== undefined && !REPORT_MARKETS.includes(market as ReportMarket)) {
       throw new BadRequestException(`market must be one of ${REPORT_MARKETS.join("|")}, got "${market}"`);
     }
@@ -394,7 +413,10 @@ export class ReportsService {
       throw new BadRequestException(`limit must be an integer in [1, 50], got ${limit}`);
     }
     const runs = await this.prisma.deepDiveRun.findMany({
-      where: market === undefined ? {} : { market },
+      where: {
+        ...(market === undefined ? {} : { market }),
+        ...(symbol === undefined ? {} : { reports: { some: { symbol } } }),
+      },
       orderBy: { runAt: "desc" },
       take: limit,
     });
@@ -475,11 +497,33 @@ export class ReportsService {
     const adjusted = deriveAdjustedBars(bars, dividends);
     const window = adjusted.slice(-days);
 
+    // Phase-3c: roll the quant-core point functions over the FULL adjusted
+    // series, then slice to the same window as the bars; null lookback points
+    // are omitted, never zeroed.
+    const closes = adjusted.map((b) => b.adjustedClose);
+    const start = adjusted.length - window.length;
+    const roll = (fn: (closes: number[], n: number) => number | null, n: number): IndicatorPoint[] => {
+      const out: IndicatorPoint[] = [];
+      for (let i = start; i < closes.length; i++) {
+        const value = fn(closes.slice(0, i + 1), n);
+        if (value !== null) out.push({ date: adjusted[i]!.date, value });
+      }
+      return out;
+    };
+
     return {
       symbol,
       days,
       bars: window.map((b) => ({ date: b.date, close: b.adjustedClose, volume: b.volume })),
       markers: cas.map((c) => ({ date: c.date, type: c.type, amount: c.amount, currency: c.currency })),
+      indicators: {
+        sma50: roll(sma, 50),
+        sma200: roll(sma, 200),
+        mom20: roll(momentum, 20),
+        mom60: roll(momentum, 60),
+        mdd252: roll(maxDrawdown, 252),
+        vol60: roll(annualizedVol, 60),
+      },
     };
   }
 }
@@ -492,6 +536,20 @@ export function parseDaysParam(raw: string | undefined): number {
     throw new BadRequestException(`days must be an integer in [1, ${MAX_PRICE_HISTORY_DAYS}], got "${raw}"`);
   }
   return n;
+}
+
+export const DEFAULT_RUNS_LIMIT = 20;
+export const MAX_RUNS_LIMIT = 50;
+
+/** Validate the /reports/runs `limit` query param (phase-3c): default 20,
+ *  integers clamped into [1, 50], BadRequest on non-numeric input. */
+export function parseRunsLimitParam(raw: string | undefined): number {
+  if (raw === undefined) return DEFAULT_RUNS_LIMIT;
+  const n = Number(raw);
+  if (raw.trim() === "" || !Number.isInteger(n)) {
+    throw new BadRequestException(`limit must be an integer in [1, ${MAX_RUNS_LIMIT}], got "${raw}"`);
+  }
+  return Math.min(MAX_RUNS_LIMIT, Math.max(1, n));
 }
 
 /** Parse a path-param runId: BadRequest on non-numeric. */

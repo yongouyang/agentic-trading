@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { deriveAdjustedBars } from "@agentic-trading/quant-core";
 import { createTestDatabase, destroyTestDatabase, type TestDatabase } from "../helpers/test-db.js";
 import { PrismaService } from "../../src/prisma.service.js";
-import { parseDaysParam, parseRunIdParam, ReportsService, summarizeMetrics } from "../../src/reports/reports.service.js";
+import { parseDaysParam, parseRunsLimitParam, parseRunIdParam, ReportsService, summarizeMetrics } from "../../src/reports/reports.service.js";
 
 const VERDICT_AAPL = {
   instrumentId: "AAPL",
@@ -30,6 +30,8 @@ describe("ReportsService", () => {
   let service: ReportsService;
   let screenRunId: number;
   let deepDiveRunId: number;
+  let seededIndCloses: number[];
+  let seededIndDates: string[];
   const hashes = ["h-news", "h-fund", "h-bull1", "h-bear1", "h-verdict"];
 
   beforeAll(async () => {
@@ -122,6 +124,23 @@ describe("ReportsService", () => {
       ],
     });
     await prisma.instrument.create({ data: { symbol: "NOBARS", market: "US", currency: "USD" } });
+
+    // Indicator fixture (phase-3c): 260 bars, no corporate actions (adjusted
+    // close == close). Rises 100→229 over the first 130 bars, then falls to
+    // 101 — a single clean peak so drawdown/vol are hand-checkable.
+    const indCloses: number[] = [];
+    for (let i = 0; i < 260; i++) indCloses.push(i < 130 ? 100 + i : 360 - i);
+    const indDates: string[] = [];
+    for (let i = 0; i < 260; i++) {
+      const d = new Date(Date.UTC(2025, 8, 1) + i * 86_400_000);
+      indDates.push(d.toISOString().slice(0, 10));
+    }
+    const ind = await prisma.instrument.create({ data: { symbol: "INDX", market: "US", currency: "USD" } });
+    await prisma.bar.createMany({
+      data: indDates.map((date, i) => ({ instrumentId: ind.id, date, open: indCloses[i]!, high: indCloses[i]!, low: indCloses[i]!, close: indCloses[i]!, volume: 1000 })),
+    });
+    seededIndCloses = indCloses;
+    seededIndDates = indDates;
   });
 
   afterAll(async () => {
@@ -255,6 +274,80 @@ describe("ReportsService", () => {
     });
   });
 
+  describe("priceHistory indicators (phase 3c)", () => {
+    // Independent hand-computations of the quant-core definitions over the
+    // seeded series (adjusted == raw: no corporate actions on INDX).
+    const handSma = (upto: number, n: number) => {
+      let sum = 0;
+      for (let i = upto - n + 1; i <= upto; i++) sum += seededIndCloses[i]!;
+      return sum / n;
+    };
+    const handMom = (upto: number, n: number) => seededIndCloses[upto]! / seededIndCloses[upto - n]! - 1;
+    const handMdd = (upto: number, n: number) => {
+      let peak = seededIndCloses[upto - n + 1]!;
+      let mdd = 0;
+      for (let i = upto - n + 1; i <= upto; i++) {
+        const c = seededIndCloses[i]!;
+        if (c > peak) peak = c;
+        if (c / peak - 1 < mdd) mdd = c / peak - 1;
+      }
+      return mdd;
+    };
+    const handVol = (upto: number, n: number) => {
+      const rets: number[] = [];
+      for (let i = upto - n + 2; i <= upto; i++) rets.push(seededIndCloses[i]! / seededIndCloses[i - 1]! - 1);
+      const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+      const v = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (rets.length - 1);
+      return Math.sqrt(v) * Math.sqrt(252);
+    };
+
+    it("rolls sma50/sma200/mom20/mom60/mdd252/vol60 over the full adjusted series", async () => {
+      const out = await service.priceHistory("INDX", 260);
+      const last = 259;
+      expect(out.indicators.sma50.at(-1)).toEqual({ date: seededIndDates[last]!, value: handSma(last, 50) });
+      expect(out.indicators.sma200.at(-1)!.value).toBeCloseTo(handSma(last, 200), 10);
+      expect(out.indicators.mom20.at(-1)!.value).toBeCloseTo(handMom(last, 20), 10);
+      expect(out.indicators.mom60.at(-1)!.value).toBeCloseTo(handMom(last, 60), 10);
+      expect(out.indicators.mdd252.at(-1)!.value).toBeCloseTo(handMdd(last, 252), 10);
+      expect(out.indicators.vol60.at(-1)!.value).toBeCloseTo(handVol(last, 60), 10);
+      // Interior point (index 100, rising leg): sma50 = mean of closes 51..100.
+      expect(out.indicators.sma50[100 - 49]).toEqual({ date: seededIndDates[100]!, value: handSma(100, 50) });
+      expect(out.indicators.mom20[100 - 20]!.value).toBeCloseTo(handMom(100, 20), 10);
+    });
+
+    it("omits null-lookback points (never zeroed)", async () => {
+      const out = await service.priceHistory("INDX", 260);
+      expect(out.bars).toHaveLength(260);
+      expect(out.indicators.sma50).toHaveLength(260 - 50 + 1);
+      expect(out.indicators.sma50[0]!.date).toBe(seededIndDates[49]!);
+      expect(out.indicators.sma200).toHaveLength(260 - 200 + 1);
+      expect(out.indicators.mom20).toHaveLength(260 - 20);
+      expect(out.indicators.mom60).toHaveLength(260 - 60);
+      expect(out.indicators.mdd252).toHaveLength(260 - 252 + 1);
+      expect(out.indicators.vol60).toHaveLength(260 - 60 + 1);
+    });
+
+    it("slices indicators to the same window as the bars", async () => {
+      const out = await service.priceHistory("INDX", 100);
+      expect(out.bars.map((b) => b.date)).toEqual(seededIndDates.slice(-100));
+      // All six windows are ≤ 160 bars of lookback, so every windowed date is covered.
+      expect(out.indicators.sma50.map((p) => p.date)).toEqual(seededIndDates.slice(-100));
+      expect(out.indicators.vol60.map((p) => p.date)).toEqual(seededIndDates.slice(-100));
+      expect(out.indicators.sma50.at(-1)!.value).toBeCloseTo(handSma(259, 50), 10);
+      // mdd252 still rolls over the full series — 9 points, all inside the window.
+      expect(out.indicators.mdd252).toHaveLength(9);
+      expect(out.indicators.mdd252[0]!.date).toBe(seededIndDates[251]!);
+    });
+
+    it("short-history symbols get empty indicator series (all lookbacks null)", async () => {
+      const out = await service.priceHistory("0005.HK", 250);
+      expect(out.indicators).toEqual({ sma50: [], sma200: [], mom20: [], mom60: [], mdd252: [], vol60: [] });
+      // bars/markers contract unchanged.
+      expect(out.bars).toHaveLength(4);
+      expect(out.markers).toHaveLength(2);
+    });
+  });
+
   describe("param parsing", () => {
     it("parseDaysParam: default 250, accepts bounds, rejects bad values", () => {
       expect(parseDaysParam(undefined)).toBe(250);
@@ -269,6 +362,17 @@ describe("ReportsService", () => {
       expect(parseRunIdParam("42")).toBe(42);
       for (const bad of ["abc", "1.5", "0", "-3", ""]) {
         expect(() => parseRunIdParam(bad)).toThrow(BadRequestException);
+      }
+    });
+
+    it("parseRunsLimitParam: default 20, clamps into [1, 50], rejects non-integers", () => {
+      expect(parseRunsLimitParam(undefined)).toBe(20);
+      expect(parseRunsLimitParam("1")).toBe(1);
+      expect(parseRunsLimitParam("50")).toBe(50);
+      expect(parseRunsLimitParam("0")).toBe(1); // clamped
+      expect(parseRunsLimitParam("999")).toBe(50); // clamped
+      for (const bad of ["abc", "1.5", ""]) {
+        expect(() => parseRunsLimitParam(bad)).toThrow(BadRequestException);
       }
     });
 
