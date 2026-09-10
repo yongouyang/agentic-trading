@@ -25,6 +25,9 @@ playwright-report/
 test-results/
 coverage/
 
+# harness task state (background runs)
+.pi/
+
 # Phase 1 daily-screen report artifacts
 apps/api/reports/
 __pycache__/
