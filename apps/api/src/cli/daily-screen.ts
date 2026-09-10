@@ -152,6 +152,35 @@ const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
  *  after ~5 rapid requests ⇒ cap total repair calls per run. */
 const MAX_REPAIR_CALLS_PER_RUN = 5;
 
+/** W3a: share of a lane's universe that must lose one date to null closes
+ *  before the run counts as a whole-universe session gap. Measured 2026-09-10:
+ *  all 555 US symbols lost 2026-09-09 while the run reported degraded=false, so
+ *  the shortlist silently ranked on T-1 data. Scattered drops (61–105 per run
+ *  on 09-06 and 09-09) must NOT trip this. */
+export const WHOLE_UNIVERSE_GAP_SHARE = 0.5;
+
+/**
+ * Lane degraded decision (phase-1-spec §5 + W3a), split out of runLane so the
+ * rule is directly testable — runLane needs a live market-data provider.
+ *
+ * Two independent triggers: FETCH_FAILED > 2% of the lane, or one date
+ * accounting for null-close drops across more than half the lane.
+ */
+export function assessLaneDegraded(input: {
+  nullCloseByDate: ReadonlyMap<string, number>;
+  universeSize: number;
+  fetchFailedCount: number;
+}): { degraded: boolean; wholeUniverseGap: boolean; gapDate: string | null; gapCount: number } {
+  const [gapDate, gapCount] = [...input.nullCloseByDate.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  const wholeUniverseGap = gapCount > WHOLE_UNIVERSE_GAP_SHARE * input.universeSize;
+  return {
+    degraded: input.fetchFailedCount > 0.02 * input.universeSize || wholeUniverseGap,
+    wholeUniverseGap,
+    gapDate: wholeUniverseGap ? gapDate : null,
+    gapCount,
+  };
+}
+
 function loadUniverse(dataDir: string, lane: Lane): UniverseEntry[] {
   const raw = JSON.parse(readFileSync(path.join(dataDir, `universe.${lane}.json`), "utf8"));
   return raw.symbols as UniverseEntry[];
@@ -203,6 +232,9 @@ async function runLane(
   let genuinelyAbsent = 0;
   let clampedBars = 0;
   let nullCloseDropped = 0;
+  /** W3a: null-close drops counted BY DATE, so a single wiped session is
+   *  distinguishable from scattered per-name gaps (docs/ops-hardening-plan.md). */
+  const nullCloseByDate = new Map<string, number>();
   let levelBreakDropped = 0;
   const inputs: ScreenInput[] = [];
   /** HK tickers needing the post-pass rescue (phase-1-hardening-plan §A.2). */
@@ -238,6 +270,7 @@ async function runLane(
     }
     if (result.droppedNullBars.length) {
       nullCloseDropped += result.droppedNullBars.length;
+      for (const d of result.droppedNullBars) nullCloseByDate.set(d, (nullCloseByDate.get(d) ?? 0) + 1);
       warnings.push(`${entry.symbol}: L5 dropped null-close bars: ${result.droppedNullBars.join(",")}`);
     }
     if (result.levelBreakDropped.length) levelBreakDropped += result.levelBreakDropped.length;
@@ -381,7 +414,17 @@ async function runLane(
   const excludedCounts: Record<string, number> = {};
   for (const e of screen.excluded) excludedCounts[e.reason] = (excludedCounts[e.reason] ?? 0) + 1;
 
-  const degraded = fetchFailed.length > 0.02 * entries.length;
+  // Degraded (phase-1-spec §5 + W3a) — see assessLaneDegraded.
+  const { degraded, wholeUniverseGap, gapDate, gapCount } = assessLaneDegraded({
+    nullCloseByDate,
+    universeSize: entries.length,
+    fetchFailedCount: fetchFailed.length,
+  });
+  if (wholeUniverseGap) {
+    warnings.push(
+      `whole-universe session gap: ${gapCount}/${entries.length} symbols dropped ${gapDate} (null close) — shortlist is ranked from stale data`,
+    );
+  }
 
   // Persist (phase-1-spec §5): one ScreenRun per lane + ScreenResult rows.
   const run = await prisma.screenRun.create({

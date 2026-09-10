@@ -164,6 +164,8 @@ describe("ReportsService", () => {
         fetchFailed: 1,
         degraded: true,
         warnings: ["XYZ: fetch failed (http-429)"],
+        // W3b: newest US bar in the store — the INDX fixture's last date.
+        dataThrough: seededIndDates[seededIndDates.length - 1],
       });
       expect(out.rows.map((r) => [r.rank, r.symbol])).toEqual([
         [1, "AAPL"],
@@ -419,6 +421,13 @@ describe("ReportsService", () => {
       const ids = (await service.listRuns("US", 50)).map((r) => r.id);
       expect(ids).toContain(deepDiveRunId);
       expect(ids).not.toContain(runningRunId);
+    });
+  });
+
+  describe("W3b — dataThrough is the market's effective data cutoff", () => {
+    it("returns the newest bar date for the run's market", async () => {
+      const out = await service.daily("US");
+      expect(out.integrity.dataThrough).toBe(seededIndDates[seededIndDates.length - 1]);
     });
   });
 });

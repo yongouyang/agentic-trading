@@ -2,8 +2,13 @@ import type { IntegrityHeader } from "../types";
 
 /**
  * Data-integrity header for a lane (architecture §5 step 5): screened /
- * excluded counts on one line, plus a red banner with warnings when the run
- * was degraded.
+ * excluded counts on one line, the effective data cutoff (W3b), plus a red
+ * banner with warnings when the run was degraded.
+ *
+ * The cutoff renders as a bare date here. Judging it stale needs each lane's
+ * cadence expectation, which lives in the api's health module (W4) — the
+ * dashboard health banner carries that verdict rather than duplicating the
+ * weekday arithmetic in a presentational component.
  */
 export function IntegrityBanner({ integrity }: { integrity: IntegrityHeader }) {
   const excluded = integrity.genuinelyAbsent + integrity.fetchFailed;
@@ -12,6 +17,7 @@ export function IntegrityBanner({ integrity }: { integrity: IntegrityHeader }) {
       <p className="integrity-line">
         screened {integrity.universeSize} · ok {integrity.ok} · excluded {excluded}
         {integrity.fetchFailed > 0 && ` (fetch failed ${integrity.fetchFailed})`}
+        {integrity.dataThrough && ` · data through ${integrity.dataThrough}`}
       </p>
       {integrity.degraded && (
         <div className="banner-degraded" role="alert" data-testid="degraded-banner">

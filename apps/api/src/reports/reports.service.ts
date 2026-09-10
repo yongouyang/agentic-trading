@@ -30,6 +30,11 @@ export interface IntegrityHeader {
   fetchFailed: number;
   degraded: boolean;
   warnings: string[];
+  /** W3b: the newest bar date the store holds for this lane's market, computed
+   *  on read. Null when the market has no bars at all. This is what catches a
+   *  shortlist ranked from stale data — and a chain that never ran — which a
+   *  screen-time value cannot (docs/ops-hardening-plan.md). */
+  dataThrough: string | null;
 }
 
 /** Compact pass-through of ScreenResult.metricsJson (daily-screen.ts writes
@@ -261,9 +266,15 @@ export class ReportsService {
     const screenRun = await this.prisma.screenRun.findUnique({ where: { id: run.screenRunId } });
     if (!screenRun) throw new NotFoundException(`deep-dive run ${run.id} references missing screen run ${run.screenRunId}`);
 
-    const [results, reports] = await Promise.all([
+    const [results, reports, latestBar] = await Promise.all([
       this.prisma.screenResult.findMany({ where: { runId: screenRun.id }, orderBy: { rank: "asc" } }),
       this.prisma.deepDiveReport.findMany({ where: { runId: run.id } }),
+      // W3b: effective data cutoff for this lane, computed on read.
+      this.prisma.bar.findFirst({
+        where: { instrument: { market: run.market } },
+        orderBy: { date: "desc" },
+        select: { date: true },
+      }),
     ]);
     const bySymbol = new Map(reports.map((r) => [r.symbol, r]));
 
@@ -307,6 +318,7 @@ export class ReportsService {
         fetchFailed: screenRun.fetchFailed,
         degraded: screenRun.degraded,
         warnings: parseJsonArray(screenRun.warningsJson),
+        dataThrough: latestBar?.date ?? null,
       },
       rows,
     };

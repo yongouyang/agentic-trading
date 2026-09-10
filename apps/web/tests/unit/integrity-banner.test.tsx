@@ -48,4 +48,19 @@ describe("IntegrityBanner", () => {
     expect(banner).toHaveTextContent(/degraded run/);
     expect(banner.querySelector("ul")).toBeNull();
   });
+
+  // W3b: the effective data cutoff, so a shortlist ranked from stale data is
+  // visible rather than implied.
+  it("renders 'data through <date>' when the api supplies a cutoff", () => {
+    render(<IntegrityBanner integrity={{ ...okIntegrity, dataThrough: "2026-09-08" }} />);
+    expect(screen.getByTestId("integrity-banner")).toHaveTextContent("data through 2026-09-08");
+  });
+
+  it("an absent cutoff renders exactly as before (additive field)", () => {
+    render(<IntegrityBanner integrity={okIntegrity} />);
+    expect(screen.getByTestId("integrity-banner")).toHaveTextContent(
+      "screened 10 · ok 9 · excluded 1",
+    );
+    expect(screen.getByTestId("integrity-banner")).not.toHaveTextContent(/data through/);
+  });
 });

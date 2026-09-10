@@ -13,6 +13,9 @@ export interface IntegrityHeader {
   fetchFailed: number;
   degraded: boolean;
   warnings: string[];
+  /** W3b: newest bar date the store holds for this lane's market (yyyy-mm-dd).
+   *  Optional so an older api response renders exactly as it did before. */
+  dataThrough?: string | null;
 }
 
 export interface DailyRun {
