@@ -43,6 +43,36 @@ same way it slices bars.
 usable replay years (~1000 trading days), spanning 2022 bear / 2023–24
 recovery / 2025–26 regimes.
 
+### Measured facts (2026-09-10, from the store — replaces estimates above)
+
+```
+Bar coverage          HK 2021-09-09 … 2026-09-09  (1227 distinct sessions)
+                      US 2021-09-09 … 2026-09-08  (1254 distinct sessions)
+Screenable names      US 552, HK 131  (>=252 bars)
+Banked warmup         first date a full-history symbol reaches bar 252 = 2022-09-08
+REPLAY WINDOW         2022-09-08 … 2026-09-09  =  1031 sessions (~4.1y, ~21/month)
+```
+
+**Correction to the claim above:** the replay window starts **2022-09-08**, and
+the 2022 bear market bottomed in mid-October 2022 — so the window captures only
+about **one month** of the bear, not a bear regime. Treat fold 1 as
+"late-2022 chop + 2023 recovery" rather than a bear test; the honest regime
+claim is *one* clean stress period (late 2022) plus a long up-market.
+
+**Fold arithmetic (the flagged thinness).** Anchored walk-forward, 3 test blocks
+of ~250 sessions with a 63-session embargo each:
+
+| fold | train (sessions) | ≈ | test block |
+|---|---|---|---|
+| 1 | 218 | 10.5 mo | 2023-09 → 2024-09 |
+| 2 | 531 | 25 mo | 2024-09 → 2025-09 |
+| 3 | 781 | 37 mo | 2025-09 → 2026-09 |
+
+So the whole cost lands on **fold 1's ~218-session train block**, against an
+81-combo grid — 218 daily cross-sections to select from 81 candidates. Two
+blocks of 2y instead would give train1 ≈ 468 sessions (~1.9y) but only 2 OOS
+looks ("majority of folds" becomes 2 of 2). This is the trade to settle.
+
 ## Validation gates, in order
 
 ### Gate 1 — ranking power (is the score informative at all?)

@@ -378,8 +378,10 @@ invisible: `launchctl list` shows it and the plist is valid.
 
 Caveat carried forward: the 2026-09-10 kill was **not** sleep (`pmset -g log`
 shows a true wake at 08:31:22 and no sleep until 21:29:01) and left no crash
-report, so its cause remains unidentified. W1/W2 make that class visible and
-alertable regardless of cause, rather than depending on knowing it.
+report; the user reports powering the machine off mid-run, which fits that. The
+lesson does not depend on the cause: a killed process emits no exit code, so
+detection has to come from the store (W1's post-condition) and the `running` row
+(W2).
 
 Caveat: the deep-dive LLM credential prefers the durable `LLM_API_KEY` from
 `.env` (Moonshot platform key, added 2026-09-09) and falls back to the Kimi CLI's

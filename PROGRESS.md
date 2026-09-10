@@ -58,11 +58,12 @@ the chain": it was 23:21 HKT with the US market **open**, so re-running
 missing 09-09 session, and `dataThrough` still reading 2026-09-08, heal at the
 next scheduled US run (Fri 06:10 HKT, after the US close) — not forced now.
 
-**Still open:** the 08:37 kill cause is **unidentified** — sleep is ruled out
-(`pmset -g log`: true wake 08:31:22, no sleep until 21:29:01) and there is no
-crash report. W1/W2 make the class visible and alertable without knowing the
-cause. W5's on-time-fire verification needs the next slots (Fri 06:10 US / 16:50
-HK). The f10 health alert is expected until Sun 09-13 (first artifact).
+**Resolved (user, 2026-09-10):** the 08:37 kill was almost certainly the user
+powering off the machine mid-run — which explains the absent crash report. Worth
+noting: this is precisely the failure class that cannot be diagnosed from inside
+the process, because no exit code is ever emitted. That is why W1's
+post-condition asks the **store** whether a complete run exists, and why W2's
+`running` row exists to make the corpse visible.
 
 Next: observe one scheduled cycle (Fri) to confirm arming + a clean chain run,
 then Phase-4 plan lock (success bar + fold thinness). Standing: R2 LLM-layer
