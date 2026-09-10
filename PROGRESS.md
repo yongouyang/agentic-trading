@@ -5,6 +5,56 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-10 (R0 spec — LOCKED) — W1–W4 detailed + W5 added; all forks and values decided
+
+Second planning pass, turning `docs/ops-hardening-plan.md` from a draft into the
+locked execution spec (258 lines). All design forks and numeric values are now
+user-decided; execution is fast-tier work.
+
+**New findings this pass (beyond the three in the entry below):**
+4. **`screen:deep-dive` exits 0 on partial failure** — `cli/deep-dive.ts:470`
+   only sets exitCode 1 when `failed === topN`, i.e. a 100 % lane failure. 9 of
+   10 names failing exits 0.
+5. **A degraded screen run exits 0** — `daily-screen.ts` computes `degraded`
+   and drops it at the process boundary.
+
+**Correction to the earlier diagnosis:** the 09-10 08:37 death was **not**
+sleep. `pmset -g log` shows a true Wake at 08:31:22 and **no sleep until
+21:29:01**; no `node`/`tsx` crash report exists in DiagnosticReports. Kill
+reason is now an explicit W5 task rather than an assumption.
+
+**Scheduling lead (W5):** `UserEventAgent` registered `daily-us`'s
+`StartCalendarInterval` entries only at **2026-09-10 08:47:55** — days after the
+09-06 install and after that morning's run — consistent with one scheduled run
+ever firing and HK never running. The machine was also in maintenance DarkWake
+(not full wake) at the 06:10 slot, so the 08:35 run was a catch-up.
+
+**Decided (locked):** W2 = status column only; health surfacing = dashboard
+banner (`osascript` declined); staleness = cadence-aware weekday arithmetic
+(supersedes the earlier age-in-hours choice, which cannot tell a Sat→Tue 72 h
+weekend from a failure); gap action = mark degraded and still publish;
+`screen:deep-dive` any-failure-exits-non-zero; weekly jobs in health scope;
+launchd fix = repair arming only (no `pmset` wakes, no self-heal job); gap bar
+> 50 % of universe; alert at 2 missed expected runs (1 = warn); stale
+`running` = 2 h.
+
+**Shape:** W1 chain exit taxonomy 0/2/3/4/5 + `ops:health` as the post-condition
+(the only check that catches a killed process); W2 additive migration
+`DeepDiveRun.status` default `'complete'` with the four `reports.service.ts`
+read paths filtered; W3a per-date null-close counting → degraded, W3b
+`dataThrough` on read (no migration), W3c banner; W4 shared `computeHealth` +
+`ops:health` CLI + `GET /ops/health` + banner + plist (f10 needs a small
+artifact write — it writes none today); W5 arming diagnosis.
+
+**One value still open:** the health job's fire times (proposed 07:15 + 17:30
+HKT), flagged in the spec.
+
+Next: fast-tier execution in the spec's build order (W2 → W3 → W4 → W1c → W5),
+with the 09-10 state as the acceptance fixture. Still standing: Phase-4 plan
+lock, R2 LLM-layer prospective scoring, Databento R1 baseline, deploy profile.
+
+---
+
 ## 2026-09-10 (Ops hardening — PLANNED, awaiting lock) — "next rounds" review; 3 silent failures found; R0 chosen; 3c committed
 
 Enhancement-review session that turned into a finding session. User reviewed
