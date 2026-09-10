@@ -6,6 +6,8 @@
   --bg-subtle: #f5f6f7;
   --red: #c9372c;
   --red-bg: #ffebe9;
+  --amber: #b8860b;
+  --amber-bg: #fff8e1;
   --green: #1a7f37;
   --blue: #0969da;
 }
@@ -97,6 +99,43 @@ a:hover {
 .banner-degraded ul {
   margin: 4px 0 0;
   padding-left: 18px;
+}
+
+/* Ops health banner (W4d). Alert reuses the degraded red; warn is amber so a
+   catch-up-on-wake lane does not read as a failure. */
+.banner-health {
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.banner-health ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.banner-health-alert {
+  background: var(--red-bg);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.banner-health-warn {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+}
+
+.banner-health .health-reason {
+  opacity: 0.85;
+  font-size: 12px;
+}
+
+.health-line {
+  color: var(--fg-muted);
+  font-size: 12px;
+  margin: 0 0 8px;
 }
 
 table.watchlist {

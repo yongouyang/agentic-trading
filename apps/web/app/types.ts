@@ -211,3 +211,35 @@ export interface CompareSymbolRow {
   screen: { runId: number; runAt: string; rank: number; score: number; metrics: RowMetrics } | null;
   verdict: RowVerdict | null;
 }
+
+// ---------------------------------------------------------------------------
+// Ops health (W4d, docs/ops-hardening-plan.md) — mirrors the api's HealthReport.
+// ---------------------------------------------------------------------------
+
+export type HealthLevel = "healthy" | "warn" | "alert";
+
+export interface LaneHealth {
+  market: "HK" | "US";
+  level: HealthLevel;
+  reasons: string[];
+  lastCompleteRunId: number | null;
+  lastCompleteRunAt: string | null;
+  lastScreenRunId: number | null;
+  dataThrough: string | null;
+  expectedRunsMissed: number;
+  staleRunning: { id: number; runAt: string } | null;
+}
+
+export interface JobHealth {
+  job: string;
+  level: HealthLevel;
+  reasons: string[];
+  lastArtifactDate: string | null;
+}
+
+export interface HealthReport {
+  asOf: string;
+  level: HealthLevel;
+  lanes: LaneHealth[];
+  jobs: JobHealth[];
+}

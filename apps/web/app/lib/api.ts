@@ -1,4 +1,4 @@
-import type { DailyReport, DeepDiveReport, PriceHistory, RunSummary } from "../types";
+import type { DailyReport, DeepDiveReport, HealthReport, PriceHistory, RunSummary } from "../types";
 
 /**
  * Server-side fetch helpers for the read API. Every helper never throws:
@@ -12,6 +12,7 @@ export type DailyResult = { kind: "ok"; report: DailyReport } | Exclude<FetchFai
 export type DeepDiveResult = { kind: "ok"; report: DeepDiveReport } | Exclude<FetchFailure, { kind: "no-run" }>;
 export type PriceHistoryResult = { kind: "ok"; history: PriceHistory } | Exclude<FetchFailure, { kind: "no-run" }>;
 export type RunsResult = { kind: "ok"; runs: RunSummary[] } | { kind: "unreachable" };
+export type HealthResult = { kind: "ok"; health: HealthReport } | { kind: "unreachable" };
 
 async function get(path: string): Promise<Response | null> {
   const base = process.env.API_INTERNAL_URL;
@@ -51,6 +52,28 @@ export async function fetchDeepDive(runId: number, symbol: string): Promise<Deep
   if (res.status === 404) return { kind: "not-found" };
   if (!res.ok) return { kind: "unreachable" };
   return { kind: "ok", report: (await res.json()) as DeepDiveReport };
+}
+
+/** W4d: GET /ops/health — unlike the report fetchers this succeeds even when
+ *  no run exists (an unhealthy pipeline is the expected answer, not a 404), so
+ *  "unreachable" here means the api itself is down.
+ *
+ *  The payload is shape-checked before use: the banner is rendered inside the
+ *  dashboard's server component, so a malformed 200 (or a non-JSON body) would
+ *  otherwise take the whole page down. Malformed degrades to "unreachable". */
+export async function fetchHealth(): Promise<HealthResult> {
+  const res = await get("/ops/health");
+  if (!res || !res.ok) return { kind: "unreachable" };
+  const data: unknown = await res.json().catch(() => null);
+  if (!isHealthReport(data)) return { kind: "unreachable" };
+  return { kind: "ok", health: data };
+}
+
+function isHealthReport(v: unknown): v is HealthReport {
+  const r = v as Partial<HealthReport> | null;
+  return Boolean(
+    r && typeof r === "object" && typeof r.asOf === "string" && typeof r.level === "string" && Array.isArray(r.lanes) && Array.isArray(r.jobs),
+  );
 }
 
 export async function fetchPriceHistory(symbol: string, days = 250): Promise<PriceHistoryResult> {

@@ -30,7 +30,7 @@
  * run continues; the final JSON report carries everything. Exit 0 unless
  * EVERY name failed.
  */
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { EastmoneyF10Provider, parseF10Plan, type F10DividendRow, type F10Provider } from "../market-data/eastmoney-f10.provider.js";
@@ -289,10 +289,24 @@ async function main(): Promise<void> {
   try {
     const report = await runF10Refresh({ prisma, provider: new EastmoneyF10Provider(), ...args });
     ok = report.ok;
+    // W4a (docs/ops-hardening-plan.md): a dated artifact so ops:health can tell
+    // whether the weekly refresh actually ran. Previously this job left no
+    // trace on disk, so "did it fire?" was unanswerable.
+    const dir = path.join(PKG_ROOT, "reports");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path.join(dir, `f10-refresh-${todayHkt()}.json`),
+      JSON.stringify({ ...report, runAt: new Date().toISOString() }, null, 2),
+    );
   } finally {
     await prisma.$disconnect();
   }
   if (!ok) process.exitCode = 1;
+}
+
+/** HKT calendar date (the machine's lane timezone) as yyyy-mm-dd. */
+function todayHkt(): string {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
 const invokedAsScript = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]!).href;

@@ -14,6 +14,7 @@
     "screen:daily": "tsx src/cli/daily-screen.ts",
     "screen:deep-dive": "tsx src/cli/deep-dive.ts",
     "screen:sentinel": "tsx src/cli/sentinel.ts",
+    "ops:health": "tsx src/cli/ops-health.ts",
     "import:databento": "tsx src/cli/import-databento.ts",
     "import:databento:xnys": "tsx src/cli/import-databento-xnys.ts",
     "segment:databento": "tsx src/cli/segment-vendor-bars.ts",

@@ -93,6 +93,39 @@ describe("dashboard page", () => {
     expect(screen.getByTestId("run-picker-US")).toHaveTextContent("runs:9,7");
   });
 
+  it("shows the health banner on the dashboard when the api reports an alert (W4d)", async () => {
+    stubFetch((url) =>
+      url.includes("/ops/health")
+        ? ok({
+            asOf: "2026-09-10T15:00:00.000Z",
+            level: "alert",
+            lanes: [
+              {
+                market: "US",
+                level: "alert",
+                reasons: ["3 scheduled runs missed since the last complete run"],
+                lastCompleteRunId: 3,
+                lastCompleteRunAt: "2026-09-06T13:16:11.989Z",
+                lastScreenRunId: 15,
+                dataThrough: "2026-09-08",
+                expectedRunsMissed: 3,
+                staleRunning: null,
+              },
+            ],
+            jobs: [],
+          })
+        : url.includes("/reports/runs")
+          ? ok(runsFixture)
+          : ok({ ...dailyReportFixture, market: url.includes("US") ? "US" : "HK" }),
+    );
+    render(await Page(noSearch));
+    const banner = screen.getByTestId("health-banner");
+    expect(banner).toHaveTextContent("pipeline alert");
+    expect(banner).toHaveTextContent("data through 2026-09-08");
+    // The lanes still render — a health problem must not hide the report.
+    expect(screen.getByTestId("lane-HK")).toBeInTheDocument();
+  });
+
   it("passes ?hkRun/?usRun through to the daily fetch and reflects them in the pickers", async () => {
     stubFetch((url) =>
       url.includes("/reports/runs")

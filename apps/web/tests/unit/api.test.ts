@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchDailyReport, fetchDeepDive, fetchPriceHistory, fetchRuns } from "@/app/lib/api";
+import { fetchDailyReport, fetchDeepDive, fetchHealth, fetchPriceHistory, fetchRuns } from "@/app/lib/api";
 import { dailyReportFixture } from "./fixtures";
 
 describe("lib/api fetch helpers", () => {
@@ -107,5 +107,24 @@ describe("lib/api fetch helpers", () => {
       vi.fn().mockResolvedValue({ status: 200, ok: true, json: async () => ({ not: "an array" }) }),
     );
     expect(await fetchRuns("US")).toEqual({ kind: "ok", runs: [] });
+  });
+
+  // W4d: /ops/health succeeds even when no run exists, so "unreachable" here
+  // genuinely means the api is down (not "nothing ran").
+  it("fetchHealth maps 200 to ok and every failure to unreachable", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ status: 200, ok: true, json: async () => ({ asOf: "x", level: "alert", lanes: [], jobs: [] }) }),
+    );
+    expect(await fetchHealth()).toEqual({ kind: "ok", health: { asOf: "x", level: "alert", lanes: [], jobs: [] } });
+    expect(fetch).toHaveBeenCalledWith("http://api.test/ops/health", { cache: "no-store" });
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 500, ok: false }));
+    expect((await fetchHealth()).kind).toBe("unreachable");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
+    expect((await fetchHealth()).kind).toBe("unreachable");
+    vi.stubEnv("API_INTERNAL_URL", "");
+    expect((await fetchHealth()).kind).toBe("unreachable");
   });
 });
