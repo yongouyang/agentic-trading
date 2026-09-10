@@ -5,6 +5,121 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-10 (Phase 4 plan — DRAFTED, awaiting lock) — backtest spec written; 4 forks user-locked
+
+Deep-tier planning session for backtesting the screen (H1). Spec written to
+`docs/phase-4-plan.md` — **not yet user-locked** (user will review the
+pre-registered success bar and the 3-fold walk-forward structure next
+session; both flagged for scrutiny in the plan's presentation).
+
+Forks locked by the user (all four recommended options):
+
+1. **Screen only** — the LLM deep-dive layer is not backtestable; verdicts
+   get validated prospectively from persisted AgentDecision rows, later, free.
+2. **Rank-hysteresis hold** — buy on top-N entry, hold until rank > buffer
+   or gate failure; mirrors real manual use.
+3. **Walk-forward folds** (3 anchored, purged boundaries) + Day-23
+   plateau-seeking; CPCV+PBO deferred as audit-only tool.
+4. **Survivorship accepted & labeled** — results are upper bounds, all
+   claims relative to same-universe benchmark + index.
+
+Key design spine (in the spec): replay = `runScreen` on PIT-truncated series
+(CAs sliced to ex-date ≤ T) so signal logic stays single-source; two ordered
+gates (ranking power IC first, tradability sim second); tuning restricted to
+weights/topN/buffer-rank on an 81-combo coarse grid, gates fixed; success bar
+pre-registered before any run. Build order: quant-core `backtest` module →
+`backtest:screen` CLI → grid run + verdict.
+
+**Next session**: user reviews/locks `docs/phase-4-plan.md` (esp. the
+success-bar thresholds and fold thinness), then execution = fast tier
+(switch back to k3-256k).
+
+---
+
+## 2026-09-09 (Phase 3c SHIPPED) — historical-run browsing + indicator overlays
+
+All three build steps of `docs/phase-3c-plan.md` landed (api → web → e2e +
+docs). Read-only SQL + derivation only; no new LLM surface, no new
+dependencies.
+
+- **API** (`apps/api/src/reports/`): `GET /reports/runs?market=&limit=&symbol=`
+  exposes `listRuns` — market validated (400), limit default 20 clamped to
+  [1,50] (400 only on non-integer), `symbol` filter = only runs with a
+  DeepDiveReport for that name (powers the symbol-page picker; symbol with
+  no reports → empty list, never 404/500). `GET
+  /instruments/:symbol/price-history` gains an additive `indicators` field —
+  `{ sma50, sma200, mom20, mom60, mdd252, vol60 }`, each `[{ date, value }]`
+  — rolled via the quant-core point functions (`sma` / `momentum` /
+  `maxDrawdown` / `annualizedVol`) over the FULL `deriveAdjustedBars` series,
+  then sliced to the requested window; null-lookback points omitted, never
+  zeroed. The 3a `bars`/`markers` contract is byte-unchanged; chat's
+  `getPriceHistory` tool inherits the field for free.
+- **Web** (`apps/web`): `price-chart.tsx` upgraded to lightweight-charts v5
+  panes — pane 0 unchanged content + SMA50/SMA200 line overlays, sub-panes
+  for momentum (mom20/mom60), drawdown (mdd252 area, ≤ 0), volatility
+  (vol60), all rendered as %, plus a static CSS legend row; the `indicators`
+  prop is optional and absent → renders exactly as before. One component
+  serves both `/symbol/[symbol]` and the chat `getPriceHistory` tool card
+  (locked decision 4 — passthrough added in `tool-cards.tsx`). New
+  `run-picker.tsx` client component: newest-first dropdown, label `run {id} ·
+  {runAt local} · topN {n}`, selection rewrites the URL param (shareable) and
+  preserves sibling params. Dashboard `/`: per-lane picker in each lane
+  header, selection as `?hkRun=<id>&usRun=<id>` (absent = latest);
+  `fetchDailyReport` gained a runId passthrough and `fetchRuns` was added to
+  `lib/api.ts` on the never-throw idiom. Symbol page: picker lists only runs
+  containing THAT symbol (the api `symbol` filter), rewrites the existing
+  `?run=`; the `?run=` hard requirement stays; picker also offered on the
+  "no deep-dive found" notice.
+- **Decisions taken on spec gaps** (flagged during build): `limit` is clamped
+  into [1,50] rather than 400ing on out-of-range integers (the spec said
+  "clamp"; 400 reserved for non-integer input — the service-level listRuns
+  guard used by chat is unchanged); picker rendered inside the
+  `LaneSection` lane-header slot rather than literally above the section;
+  picker has a "latest run" empty option that deletes the param so a
+  selection is reversible; chart height grows 320→560px when indicators are
+  present.
+- **Tests**: api 404 passed / 1 skipped (network-gated yahoo-live) — hand-
+  computed SMA/momentum/drawdown/vol over a seeded 260-bar series,
+  null-lookback omission, window slicing == bars slicing, listRuns ordering /
+  market / clamp / symbol filter, HTTP-level route wiring + 400s. Web 92
+  passed (chart pane plumbing with exact `addSeries` pane indices + %
+  scaling, run-picker rendering + navigation, dashboard per-lane wiring from
+  fixture runs, symbol-page picker + passthrough, chat tool card
+  passthrough; coverage 98.4% lines / 95% branches, gate green). e2e 6/6
+  (dashboard pickers with the api up, selection → `?hkRun=` in URL, api-down
+  picker degrades with the lane — never a 500). All builds clean. Note:
+  `pnpm test:coverage` on apps/api was already red at HEAD on the `src/**`
+  90% lines threshold (77.7% baseline; 77.97% with 3c) — pre-existing, not a
+  regression; reports module itself sits at 96% lines.
+
+Next: Phase 4 — backtesting design (deep-tier session; screen rules are a
+hypothesis per Days 15/23, out-of-sample discipline per Days 11/23).
+Standing loose ends: weekly sentinel, Databento archive as the R1 baseline
+candidate, the phase-3a deferred items.
+
+---
+
+## 2026-09-09 (durable LLM key — DONE) — Moonshot platform key in .env; rotating-token dependency gone for local profile
+
+Executed follow-up #2 from this morning's chat ops notes:
+
+- **`.env`**: user added `LLM_API_KEY` (Kimi platform key, works against the
+  existing `LLM_BASE_URL=https://api.kimi.com/coding/v1` — verified live:
+  HTTP 200 with `k3-256k`, `temperature: 1`, `reasoning_effort: "low"`).
+  `LLM_API_KEY_FILE` left in place as inert fallback — both consumers
+  (`chat-config.ts`, `cli/deep-dive.ts`) prefer `LLM_API_KEY` when set.
+- **`scripts/daily-chain.sh` preflight** now reads `LLM_API_KEY` + the `.env`
+  base URL first (it previously only knew the Kimi OAuth token and would have
+  kept probing the wrong credential); OAuth token path retained as fallback.
+- **Verified**: raw probe 200 → `screen:deep-dive -- --market hk --top 1`
+  smoke, 2269.HK ok, 7/7 calls, 0 failures (run=6).
+- **Ops note**: the API server reads chat config once at process start —
+  restart it to pick up the key for the chat path. With a static key the
+  401-after-an-hour failure mode is gone; the per-request key re-read
+  follow-up was dropped as no longer required.
+
+---
+
 ## 2026-09-09 (chat ops notes) — cache replay observed in the wild; 401 root-caused; 2 follow-ups recorded
 
 First real user session on the shipped 3b chat. Two observations:
@@ -19,12 +134,11 @@ First real user session on the shipped 3b chat. Two observations:
   401 on its next live call. The deep-dive CLI never hits this (short-lived
   process). Workaround: restart the API (the CLI keeps the token fresh).
 
-**Follow-ups recorded (tomorrow, fast tier):**
-1. **401 self-heal** — re-read `LLM_API_KEY_FILE` per request (or re-read +
-   retry once on 401) in the chat LLM path, so the local profile survives
-   token rotation without a restart.
-2. **Durable fix** — Moonshot platform key in `.env` (previously deferred to
-   the deploy profile; would fix local permanently too).
+**Follow-up recorded (fast tier):**
+1. **Durable fix** — Moonshot platform key in `.env` (previously deferred to
+   the deploy profile; would fix local permanently too). **Done same day —
+   see the entry above.** (The originally-listed 401 self-heal / per-request
+   key re-read was dropped: with a static key there is no rotation to heal.)
 
 Also noted (not scheduled): chat has no options data — put-selling questions
 get verdicts + price history only. A data-source addition if the use case
