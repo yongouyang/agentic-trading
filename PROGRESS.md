@@ -5,6 +5,57 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-10 (Phase 4 design LOCKED) — no-tuning full-window test; power analysis reshaped the bar
+
+Deep-tier planning session on the two items flagged when the plan was drafted
+(the success bar and the 3-fold thinness). Four forks locked; the plan was
+rewritten (`docs/phase-4-plan.md`).
+
+**Four locked decisions:**
+1. **No tuning** — test the shipped `SCREEN_PARAMS` as-is over the full 1031
+   sessions. No split, no folds, no grid.
+2. **Asymmetric bar** — Gate 1 (cross-sectional IC) decides; Gate 2 (portfolio,
+   Sharpe, costs) is falsification-only and never cited as confirmation.
+3. **Gate 1** — mean 20d rank IC ≥ 0.02 AND Newey-West t ≥ 2 (lag = horizon).
+4. **Separate per-lane verdicts** — no conjunction; HK cannot veto US.
+
+**What the analysis changed.** Two structural findings, both of which the draft
+had wrong:
+
+- **Fold thinness was mis-diagnosed.** For anchored walk-forward,
+  `train_1 = 1031 − Σ(test) − embargo` — it depends on the **total** test budget,
+  *not* the fold count. 3×165 and 2×250 spend identical data (train_1 ≈ 470);
+  3 folds simply buy three independent tune→test cycles. (Also corrected a
+  committed arithmetic error: the earlier table gave fold 2/3 trains of 531/781
+  by adding test sizes instead of recomputing boundaries; the values are
+  468/718.)
+- **The bar was testing the gate with no power.** Per-day rank IC SE ≈ 1/√(N−1)
+  gives ≈0.043 (US, 552 names) and ≈0.088 (HK, 131); with NW lag = 20 the
+  effective N is ~50, so the full window detects IC ≥ 0.012 (US) / 0.025 (HK).
+  But portfolio-level alpha over 4.12y needs **IR ≥ 0.985** for t = 2, where a
+  realistic screen IR is 0.3–0.7 (IR 0.5 would need ~16 years, IR 0.3 ~44).
+  Conditions 2–3 of the draft bar were therefore coin flips, not tests.
+
+**Consequence flagged at lock time:** because the t-stat binds for HK, HK's
+*effective* Gate 1 requirement is IC ≥ 0.025, not 0.02 — at IC = 0.02 HK's
+t = 1.62. Pre-registered explicitly so a HK failure reads as *insufficient
+evidence*, not as evidence of no edge.
+
+**Also corrected:** the draft claimed the window spans "2022 bear". The warmup
+pushes the start to 2022-09-08 and the bear bottomed mid-October 2022 — ~one
+month of bear, not a regime.
+
+Deferred, not cancelled: grid tuning. Its geometry is worked out in the plan
+(3×165 is the best option) and its heatmap survives as an explicitly
+**descriptive** output with a rule that it may not be used to change
+`SCREEN_PARAMS` without a new pre-registered test on new data.
+
+Next: fast-tier execution of the plan's build order (quant-core `backtest`
+module → `backtest:screen` CLI → run + verdict). Also pending: observe the Fri
+scheduled cycle to close W5's on-time-fire verification.
+
+---
+
 ## 2026-09-10 (R0 EXECUTED) — W1–W5 landed; chain fails loudly; health banner live; jobs re-armed
 
 Executed `docs/ops-hardening-plan.md` end to end (fast tier, all forks locked).

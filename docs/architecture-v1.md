@@ -502,6 +502,19 @@ guarded LLM path (see status note above).*
 Once the picker has run for a while, backtest the screen itself and iterate —
 the backtest module from Days 21–23 gets built there.
 
+*Status 2026-09-10: **design LOCKED, not yet built.** `docs/phase-4-plan.md`.
+The screen is tested **as shipped** on the full 1031-session replay window
+(2022-09-08…2026-09-09) with **no tuning** — the parameters *are* the
+hypothesis, so there is no selection bias to control and no reason to spend 60 %
+of the evidence on a train/test split. Gate 1 (mean 20d rank IC ≥ 0.02 with
+Newey-West t ≥ 2, per lane) **decides**; Gate 2 (portfolio vs benchmark,
+Sharpe, cost sweep) only **falsifies** and is never cited as confirmation,
+because portfolio-level alpha needs IR ≥ 0.985 to reach t = 2 over 4.1 years.
+Lanes get separate verdicts. Pre-registered limitations: HK's effective bar is
+IC ≥ 0.025 (a 131-name universe cannot do better); survivorship upper bounds;
+and `SCREEN_PARAMS` were designed with knowledge of this period, so this is not
+a clean prospective test. Grid tuning is explicitly deferred, not cancelled.*
+
 ## 10. Build order
 
 - **Phase 0** — monorepo scaffold; data ingestion + quality report.
