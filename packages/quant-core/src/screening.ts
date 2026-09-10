@@ -42,9 +42,25 @@ export interface ScreenInput {
   caDegraded: boolean;
 }
 
+/** Options for `runScreen`. */
+export interface ScreenOptions {
+  /** Override the top-N truncation.
+   *
+   *  Phase 4 passes a large value to obtain the FULL eligible ranking, because
+   *  the IC gate needs every eligible name's score. This is exactly equivalent
+   *  for the first N: z-scores are computed over the whole eligible set and the
+   *  ranking is sorted before truncation, so scores and ranks are unchanged —
+   *  only how many rows come back differs. Asserted by test. */
+  topN?: number;
+}
+
 export interface ScreenPick {
   rank: number;
   symbol: string;
+  /** Market this pick was ranked in. Additive (2026-09-10) so a pick is
+   *  self-describing — the Phase-4 backtest and portfolio books are per-market
+   *  and cannot otherwise recover provenance from the ranked output. */
+  market: Market;
   score: number;
   close: number;
   sma50: number;
@@ -104,7 +120,8 @@ interface Candidate {
 
 /** Run the deterministic §4 screen over one day's inputs (both markets may
  *  be mixed; ranking is per market). Pure function — no I/O. */
-export function runScreen(inputs: ScreenInput[]): ScreenOutput {
+export function runScreen(inputs: ScreenInput[], opts: ScreenOptions = {}): ScreenOutput {
+  const topN = opts.topN ?? SCREEN_PARAMS.topN;
   const excluded: ScreenExclusion[] = [];
   const eligible: Candidate[] = [];
 
@@ -171,10 +188,11 @@ export function runScreen(inputs: ScreenInput[]): ScreenOutput {
         SCREEN_PARAMS.weights.sharpe252 * zSharpe[i]!,
     }));
     scored.sort((a, b) => b.score - a.score || b.adv20 - a.adv20);
-    scored.slice(0, SCREEN_PARAMS.topN).forEach((c, i) => {
+    scored.slice(0, topN).forEach((c, i) => {
       ranked.push({
         rank: i + 1,
         symbol: c.symbol,
+        market: c.market,
         score: c.score,
         close: c.close,
         sma50: c.sma50,

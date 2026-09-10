@@ -502,18 +502,48 @@ guarded LLM path (see status note above).*
 Once the picker has run for a while, backtest the screen itself and iterate —
 the backtest module from Days 21–23 gets built there.
 
-*Status 2026-09-10: **design LOCKED, not yet built.** `docs/phase-4-plan.md`.
-The screen is tested **as shipped** on the full 1031-session replay window
-(2022-09-08…2026-09-09) with **no tuning** — the parameters *are* the
-hypothesis, so there is no selection bias to control and no reason to spend 60 %
-of the evidence on a train/test split. Gate 1 (mean 20d rank IC ≥ 0.02 with
-Newey-West t ≥ 2, per lane) **decides**; Gate 2 (portfolio vs benchmark,
-Sharpe, cost sweep) only **falsifies** and is never cited as confirmation,
-because portfolio-level alpha needs IR ≥ 0.985 to reach t = 2 over 4.1 years.
-Lanes get separate verdicts. Pre-registered limitations: HK's effective bar is
-IC ≥ 0.025 (a 131-name universe cannot do better); survivorship upper bounds;
-and `SCREEN_PARAMS` were designed with knowledge of this period, so this is not
-a clean prospective test. Grid tuning is explicitly deferred, not cancelled.*
+*Status 2026-09-10: **built and run.** Result: **H1 NOT SUPPORTED** — `h1_revised`
+on both lanes. `docs/phase-4-plan.md`; runner `pnpm -C apps/api
+backtest:screen` (`packages/quant-core/src/{replay,ic,portfolio,backtest}.ts`).*
+
+*Design: the screen is tested **as shipped** (no tuning, no split) over
+2022-09-08…2026-09-08 (US, 1003 sessions) and 2022-09-19…2026-09-09 (HK, 976),
+replaying production `runScreen` point-in-time. Gate 1 (mean 20d rank IC ≥ 0.02
+with Newey–West t ≥ 2) **decides**; Gate 2 (portfolio vs equal-weight benchmark,
+cost sweep) only **falsifies**.*
+
+*Measured:*
+
+| lane | mean 20d IC | NW t | days | breadth | power floor | Gate 1 | Gate 2 |
+|---|---|---|---|---|---|---|---|
+| US | **+0.0145** | 0.97 | 983 | 180 | 0.0298 | FAIL | not falsified |
+| HK | **−0.0192** | −0.78 | 898 | 25 | 0.0493 | FAIL | falsified |
+
+*US portfolio +88.95 % vs equal-weight eligible benchmark +50.92 % (not
+falsified; survives 2× costs at +24.98 %), but SPY returned +101.82 % — the
+screen beat its like-for-like baseline and lost to simply holding the index.
+HK portfolio +12.65 % vs benchmark +40.10 %, and −9.98 % at 2× costs, with
+26.1× annual turnover against a 46 bp round trip — a ~12 %/yr cost drag that is
+fatal on its own.*
+
+***The pre-registered bar is unpassable in both lanes.*** Its power floor
+(US 0.0298, HK 0.0493) *exceeds* its own 0.02 magnitude requirement, because the
+power analysis was calibrated against universe size (552/131) instead of the
+actual **eligible breadth** after the gates (180/25). A true IC of exactly 0.02
+gives US t = 1.34. So the FAIL is a statement about the *bar*, not about H1 — the
+informative numbers are the measured IC and t. Correcting the calibration and
+re-testing is a **new** pre-registration, not an edit to this one.*
+
+*Reported, not gated:* US IC was +0.0185 / +0.0316 / +0.0343 in 2023/24/25 and
+−0.0469 / −0.0208 in 2022/26 — regime-dependent, positive in the middle years.
+US top-N-vs-rest spread was +0.83 % at 20d (60 % of days positive) and +2.19 % at
+60d, which is economically meaningful while rank IC is weak — consistent with a
+signal concentrated at the extremes rather than monotone across the ranking.
+The descriptive 9-combo weight sweep is monotone in both lanes: IC *falls* as the
+mom60 weight rises (US 0.40 → 0.0199/0.0203/0.0190 vs 0.60 → 0.0103/0.0096/0.0078),
+shipped ranks 5/9 (US) and 6/9 (HK), and the surface is a smooth plateau with no
+isolated spike. **It may not be used to change `SCREEN_PARAMS`** without a new
+pre-registered test on data excluding this window.*
 
 ## 10. Build order
 

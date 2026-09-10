@@ -5,6 +5,70 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-10 (Phase 4 EXECUTED) — H1 NOT SUPPORTED; the pre-registered bar is unpassable as specified
+
+Built and ran the Phase-4 backtest (`packages/quant-core/src/{replay,ic,portfolio,backtest}.ts`
++ `pnpm -C apps/api backtest:screen`, 1m50s end-to-end).
+
+**Result: `h1_revised` on both lanes — H1 is not supported.**
+
+| lane | mean 20d IC | NW t | days | breadth | power floor | Gate 1 | Gate 2 |
+|---|---|---|---|---|---|---|---|
+| US | **+0.0145** | 0.97 | 983 | 180 | 0.0298 | FAIL | not falsified |
+| HK | **−0.0192** | −0.78 | 898 | 25 | 0.0493 | FAIL | falsified |
+
+- Window: US 2022-09-08…2026-09-08 (1003 sessions), HK 2022-09-19…2026-09-09
+  (976). HK's window starts 11 days later than the plan's single estimate
+  because the start is now computed per lane from real bar counts.
+- **US Gate 2 not falsified**: portfolio +88.95 % vs equal-weight eligible
+  benchmark +50.92 % (differential +38.03 %), survives 2× costs at +24.98 %.
+  But **SPY returned +101.82 %** — the screen beat its like-for-like baseline and
+  lost to holding the index. Sharpe 0.83, MDD −18.5 %, 941 trades, 15-day
+  average hold, turnover 30.8×.
+- **HK Gate 2 falsified at both cost levels**: +12.65 % vs +40.10 % at base, and
+  −9.98 % at 2× costs. 776 trades and 26.1× annual turnover against a 46 bp
+  round trip is a ~12 %/yr cost drag that kills it on its own.
+
+**The important finding is about the bar, not about the screen.** The
+pre-registered Gate 1 conjunction (IC ≥ 0.02 AND t ≥ 2) **cannot be passed in
+either lane**: its power floor (US 0.0298, HK 0.0493) exceeds its own magnitude
+requirement. The cause is a calibration error in my earlier analysis — I
+computed power from *universe* size (552/131) instead of the actual **eligible
+breadth after the gates** (180/25), so the standard error was understated. A true
+IC of exactly 0.02 yields US t = 1.34, not 2. The honest reading: the FAIL says
+the bar was mis-specified, and the informative quantities are the measured IC
+and t themselves — *not* evidence that H1 is false. Fixing the calibration and
+re-testing is a **new pre-registration**, never an edit to this one.
+
+**Reported but not gated:**
+- US IC by year: 2022 −0.0469, 2023 +0.0185, 2024 +0.0316, 2025 +0.0343,
+  2026 −0.0208 — regime-dependent, above 0.02 in two of the middle three years.
+- US top-N-vs-rest spread: +0.83 % at 20d (60 % of days positive), +2.19 % at
+  60d. Economically meaningful while rank IC is weak — consistent with a signal
+  concentrated at the extremes rather than monotone across the ranking, which is
+  a *different hypothesis* worth its own pre-registration (a rank IC cannot see
+  a top-decile effect).
+- Descriptive 9-combo weight sweep: monotone in both lanes, IC **falls** as the
+  mom60 weight rises (US 0.40 → 0.0199/0.0203/0.0190; 0.60 →
+  0.0103/0.0096/0.0078). Shipped ranks 5/9 (US), 6/9 (HK); smooth plateau, no
+  isolated spike. **Explicitly barred from changing `SCREEN_PARAMS`.**
+
+**Engine invariants proven by test** (these are what make the numbers
+believable): truncation to the 252-bar trailing window is *exactly* equivalent to
+the full series; mutating a future bar or adding a future dividend cannot change
+future day-T output; forward returns are anchor-invariant; and Newey–West
+materially shrinks t versus the naive statistic on autocorrelated IC series.
+One real bug was caught by test: position sizing computed shares as
+`notional / px` and then added the cost, pushing the outlay above the target so
+the cash guard silently rejected every entry when `topN == 1`.
+
+**Not done / next:** the low-power lane question (HK's 25-name breadth makes any
+rank-IC bar nearly unreachable — the *screen's gates* may be the binding
+constraint, not the signal); a corrected pre-registration; the top-decile framing.
+No changes to production parameters were made or recommended.
+
+---
+
 ## 2026-09-10 (Phase 4 design LOCKED) — no-tuning full-window test; power analysis reshaped the bar
 
 Deep-tier planning session on the two items flagged when the plan was drafted
