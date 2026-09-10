@@ -10,6 +10,14 @@
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+
+# launchd runs with a bare PATH — make pnpm and node (nvm) visible
+# (same fix as daily-chain.sh, failed run 2026-09-10).
+export PATH="$HOME/Library/pnpm/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+if ! command -v node >/dev/null 2>&1; then
+  NODE_BIN=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -t. -k1.2n -k2n -k3n | tail -1)
+  [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+fi
 echo "== weekly-maintenance ${1:?usage: weekly-maintenance.sh sentinel|f10} $(date '+%Y-%m-%d %H:%M:%S %Z') =="
 
 case "$1" in
