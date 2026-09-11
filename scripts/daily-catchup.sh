@@ -27,8 +27,18 @@ cd "$ROOT" || exit 1
 # failure a68f687 fixed for the chains, and this script reintroduced it by calling
 # pnpm without the export.
 export PATH="$HOME/Library/pnpm/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-NODE_BIN="$(dirname "$(command -v node 2>/dev/null || echo /usr/bin/node)")"
-[ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+# node is NOT in any of those on this machine — it lives at ~/.local/bin/node
+# (a symlink into ~/.hermes) and under nvm. Verified against launchd's REAL
+# environment, which is `PATH => /usr/bin:/bin:/usr/sbin:/sbin` (not /usr/bin:/bin
+# as I first assumed, and not a login shell's PATH): with only the line above,
+# `command -v node` finds nothing and this script dies with `node: not found`
+# while the other chains work. So use the SAME nvm fallback as daily-chain.sh,
+# ops-health.sh and weekly-maintenance.sh rather than a bespoke one — a second
+# resolver is a second thing to get wrong, which is exactly what happened.
+if ! command -v node >/dev/null 2>&1; then
+  NODE_BIN=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -t. -k1.2n -k2n -k3n | tail -1)
+  [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+fi
 
 for lane in hk us; do
   pnpm -C apps/api ops:catchup --lane "$lane"

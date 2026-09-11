@@ -379,6 +379,40 @@ late **screen** is PIT-clean because it is a deterministic function of data date
 or before the session it screens, so the Phase-4c accrual is robust to late runs.
 Only the layer that reads *news* has this failure mode.
 
+## 2026-09-11 (item 1: the scheduled layer verified against launchd's REAL environment) — and an over-claim corrected
+
+**The discipline that mattered:** I first tested with `env -i PATH=/usr/bin:/bin`
+and concluded the whole pipeline was broken. It is not. The authoritative check is
+to *run an installed job*: `launchctl kickstart` on `ops-health` → **exit 0**, so
+launchd resolves node for these jobs. `launchctl print` then gave the real answer —
+launchd's default environment is **`PATH => /usr/bin:/bin:/usr/sbin:/sbin`** — and
+`launchctl getenv PATH` is empty, so nothing richer is configured. Lesson repeated:
+simulate last, run the real thing first.
+
+**What is actually true, and it was still a real bug — mine.** `node` on this
+machine lives at `~/.local/bin/node` (a symlink into `~/.hermes`) and under nvm
+(`~/.nvm/versions/node/v24.14.0/bin`). It is **not** in `~/Library/pnpm/bin`,
+`/opt/homebrew/bin` or `/usr/local/bin` — all three of which the shared PATH export
+lists and two of which are entirely absent. So the established scripts resolve node
+through an **nvm glob fallback**, and `ops-health.sh` / `daily-chain.sh` work for
+that reason. My new `daily-catchup.sh` had substituted a bespoke
+`dirname $(command -v node)` fallback, which under launchd's real PATH yields
+`/usr/bin` and resolves nothing: **the 20:30 catch-up would have died with
+`node: not found`** while the other chains worked — a second resolver being a
+second thing to get wrong, which is exactly what happened. Fixed by copying the
+established nvm fallback verbatim, and verified for all four scripts under
+launchd's *real* PATH (not my imagined one): each resolves both node and pnpm.
+
+**Also done:** the corrected plists are installed (the earlier fix landed in the
+repo *after* install, so the installed copy was stale), all **6** jobs verify ARMED,
+and the installed and repo plists are now byte-identical.
+
+**The free end-to-end test is tomorrow.** If the 06:10 daily-us run fires it writes
+the first `sessionDate`-bearing US row, so the 20:30 catch-up should log "up to
+date" for both lanes and exit without running a chain — proving the whole path for
+nothing. If 06:10 does *not* fire, the catch-up runs the US chain instead, which is
+the correct behaviour and not a duplicate.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
