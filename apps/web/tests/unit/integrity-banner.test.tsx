@@ -63,4 +63,20 @@ describe("IntegrityBanner", () => {
     );
     expect(screen.getByTestId("integrity-banner")).not.toHaveTextContent(/data through/);
   });
+
+  // Phase 4b item 6: the header vouches for the DATA; this line is the only place
+  // that says the RULES behind the ranking are unvalidated. Without it the list
+  // reads as more authoritative than the evidence supports.
+  it("renders the rule-provenance caveat when the api supplies one", () => {
+    const caveat = "ranking rules are an unvalidated hypothesis — see docs/phase-4b-plan.md";
+    render(<IntegrityBanner integrity={{ ...okIntegrity, caveat }} />);
+    const el = screen.getByTestId("integrity-caveat");
+    expect(el).toHaveTextContent(caveat);
+    expect(el).toHaveClass("integrity-caveat");
+  });
+
+  it("an absent caveat renders exactly as before (additive field)", () => {
+    render(<IntegrityBanner integrity={okIntegrity} />);
+    expect(screen.queryByTestId("integrity-caveat")).not.toBeInTheDocument();
+  });
 });

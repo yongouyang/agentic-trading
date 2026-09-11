@@ -138,7 +138,18 @@ claims to correct. All six done; artifact regenerated; committed and pushed.
   wrong sign. That prices D6's HK option and says plainly that the real Phase-4c
   path is a **fresh cross-section** (the Databento/XNYS data project), not patience.
 - **§7's model pin fixed**: `deepseek-v4-flash` → `deepseek-flash`.
-- **Picker consequence**: outstanding — a decision, asked below.
+- **Picker consequence — decided (user): one line in the integrity header.** The
+  header vouched only for the *data* (how much was screened, how fresh the cutoff)
+  while the ranked conviction came from rules nobody has validated; the dashboard
+  is the surface a human actually acts on, so the caveat goes where it is read.
+  `IntegrityHeader.caveat` (api) + `.integrity-caveat` (web) render a qualitative
+  line pointing at this document. **Kept qualitative on purpose** — the measured
+  floors (0.0298/0.0493) are window-specific and would silently rot in a
+  presentational component, and a number that rotates without anyone noticing is
+  worse than no number. It is quieter than the degraded banner by design: a
+  degraded run means *this* list may be wrong, whereas an unvalidated hypothesis
+  is a standing property of every list. An older api response omits the field and
+  renders exactly as before (tested both ways).
 
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the

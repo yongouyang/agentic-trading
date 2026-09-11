@@ -23,6 +23,19 @@ export const DEFAULT_PRICE_HISTORY_DAYS = 250;
 // Response contracts (the web UI is built against these — keep stable).
 // ---------------------------------------------------------------------------
 
+/** Phase 4b item 6. The ranking rules are a hypothesis the pre-registered test
+ *  could not decide: Gate 1's bar (mean 20d rank IC ≥ 0.02) was unreachable at
+ *  both lanes' post-gate breadth, so its FAIL is *insufficient evidence*, not
+ *  evidence of no edge (docs/phase-4b-plan.md, Finding 1).
+ *
+ * Kept qualitative on purpose: the measured detection floors are window-specific
+ * and would be wrong here after the next backtest, and a number that rotates
+ * silently is worse than no number. The wording says what is stable — nobody has
+ * validated these rules — and points at the document that quantifies it. */
+export const SCREEN_RULES_CAVEAT =
+  "ranking rules are an unvalidated hypothesis — the pre-registered power bar was out of reach at this lane's " +
+  "breadth, and the modelled book trailed buy-and-hold (docs/phase-4b-plan.md)";
+
 export interface IntegrityHeader {
   universeSize: number;
   ok: number;
@@ -35,6 +48,13 @@ export interface IntegrityHeader {
    *  shortlist ranked from stale data — and a chain that never ran — which a
    *  screen-time value cannot (docs/ops-hardening-plan.md). */
   dataThrough: string | null;
+  /** Phase 4b item 6: the provenance of the *rules* that produced this list.
+   *
+   * The rest of this header describes the *data* — how much was screened, how
+   * fresh the cutoff is — and says nothing about whether the ranking rules
+   * themselves have been validated. They have not. A user acting on this list
+   * should learn that without reading a research document. */
+  caveat: string;
 }
 
 /** Compact pass-through of ScreenResult.metricsJson (daily-screen.ts writes
@@ -319,6 +339,7 @@ export class ReportsService {
         degraded: screenRun.degraded,
         warnings: parseJsonArray(screenRun.warningsJson),
         dataThrough: latestBar?.date ?? null,
+        caveat: SCREEN_RULES_CAVEAT,
       },
       rows,
     };

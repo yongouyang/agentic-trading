@@ -101,6 +101,18 @@ a:hover {
   padding-left: 18px;
 }
 
+/* Phase 4b item 6 — rule provenance. Quieter than .banner-degraded on purpose:
+   a degraded run means *this* list may be wrong, whereas an unvalidated
+   hypothesis is a standing property of every list. Amber for the same reason a
+   catch-up lane is amber: visible, not alarming. */
+.integrity-caveat {
+  border-left: 2px solid var(--amber, #b8860b);
+  color: var(--fg-muted);
+  font-size: 12px;
+  margin: 0 0 8px;
+  padding-left: 8px;
+}
+
 /* Ops health banner (W4d). Alert reuses the degraded red; warn is amber so a
    catch-up-on-wake lane does not read as a failure. */
 .banner-health {

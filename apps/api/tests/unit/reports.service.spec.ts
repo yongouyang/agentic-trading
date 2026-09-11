@@ -10,7 +10,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { deriveAdjustedBars } from "@agentic-trading/quant-core";
 import { createTestDatabase, destroyTestDatabase, type TestDatabase } from "../helpers/test-db.js";
 import { PrismaService } from "../../src/prisma.service.js";
-import { parseDaysParam, parseRunsLimitParam, parseRunIdParam, ReportsService, summarizeMetrics } from "../../src/reports/reports.service.js";
+import {
+  parseDaysParam,
+  parseRunsLimitParam,
+  parseRunIdParam,
+  ReportsService,
+  SCREEN_RULES_CAVEAT,
+  summarizeMetrics,
+} from "../../src/reports/reports.service.js";
 
 const VERDICT_AAPL = {
   instrumentId: "AAPL",
@@ -166,7 +173,13 @@ describe("ReportsService", () => {
         warnings: ["XYZ: fetch failed (http-429)"],
         // W3b: newest US bar in the store — the INDX fixture's last date.
         dataThrough: seededIndDates[seededIndDates.length - 1],
+        // Phase 4b item 6: rule provenance, alongside the data provenance.
+        caveat: SCREEN_RULES_CAVEAT,
       });
+      // The caveat must not quantify the floors: they are window-specific and
+      // would silently rot here after the next backtest.
+      expect(out.integrity.caveat).toMatch(/unvalidated hypothesis/);
+      expect(out.integrity.caveat).not.toMatch(/0\.0\d\d/);
       expect(out.rows.map((r) => [r.rank, r.symbol])).toEqual([
         [1, "AAPL"],
         [2, "MSFT"],

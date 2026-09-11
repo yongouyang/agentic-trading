@@ -31,6 +31,16 @@ export function IntegrityBanner({ integrity }: { integrity: IntegrityHeader }) {
           )}
         </div>
       )}
+      {/* Phase 4b item 6. This header otherwise vouches only for the DATA — how
+          much was screened and how fresh it is. The rules that turned it into a
+          ranking have not been validated, and a reader acting on the list is
+          entitled to know that without opening a research document. Absent on
+          an older api response, which then renders exactly as before. */}
+      {integrity.caveat && (
+        <p className="integrity-caveat" data-testid="integrity-caveat">
+          {integrity.caveat}
+        </p>
+      )}
     </div>
   );
 }

@@ -16,6 +16,9 @@ export interface IntegrityHeader {
   /** W3b: newest bar date the store holds for this lane's market (yyyy-mm-dd).
    *  Optional so an older api response renders exactly as it did before. */
   dataThrough?: string | null;
+  /** Phase 4b item 6: provenance of the ranking rules. Optional for the same
+   *  reason — an older api response renders exactly as it did before. */
+  caveat?: string | null;
 }
 
 export interface DailyRun {

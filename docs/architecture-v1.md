@@ -315,6 +315,15 @@ same-provider for both lanes when it runs on US names).
   5. Persist report → chat UI / daily report view, led by a
      data-integrity header (screened/excluded/degraded counts plus the
      **effective data cutoff** — the newest bar date the lane holds)
+
+     *Added 2026-09-11 (Phase 4b item 6): the header also carries a **rule
+     provenance** line.* It previously vouched only for the *data* — how much was
+     screened and how fresh it was — while the list's ranked conviction came from
+     ranking rules nobody has validated (Gate 1's pre-registered power bar was
+     unreachable at both lanes' breadth, so its FAIL is insufficient evidence
+     rather than evidence of no edge). The line is deliberately qualitative plus a
+     dated pointer to `docs/phase-4b-plan.md`: the measured detection floors are
+     window-specific and would silently rot in the UI after the next backtest.
 ```
 
 Cost estimate: 20–30 deep-dives/day × 6–8 calls ≈ pennies/day at Moonshot
