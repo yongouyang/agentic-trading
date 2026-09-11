@@ -57,6 +57,28 @@ export const DEFAULT_TARGET_IC = 0.1;
  */
 export const MAX_PROMPT_LAG_DAYS = 1;
 
+/**
+ * The sample must be ONE treatment. A verdict is only an observation of the
+ * shipped prompt, so anything carrying a different `promptVersion` is excluded
+ * and counted.
+ *
+ * Same failure class as the promptness gate: shipping a v2 prompt would otherwise
+ * pool two treatments into one IC, silently and attractively — a change made
+ * *because* you saw bad outputs would be measured as an improvement. The
+ * consequence is deliberate and worth knowing: **shipping a new prompt version
+ * resets this clock**, because the accrued verdicts stop counting. Better to see
+ * that as a jump in the excluded count than to have a sample describing two
+ * different systems.
+ *
+ * MUST equal PROMPT_VERSION in packages/agents/src/prompts.ts. It is a local
+ * constant, mirroring CHAT_PROMPT_VERSION in src/chat/chat-prompts.ts, because a
+ * cross-package value import resolves to undefined under this package's vitest —
+ * and an undefined sample version would silently exclude every verdict. The
+ * pairing is pinned from the other side by a test in packages/agents, so bumping
+ * the prompt fails loudly rather than quietly emptying the sample.
+ */
+export const SAMPLE_PROMPT_VERSION = "v1";
+
 /** Calendar-day difference between two ISO dates (b − a). */
 export function daysBetweenIso(a: string, b: string): number {
   const [ay, am, ad] = a.split("-").map(Number) as [number, number, number];
@@ -132,6 +154,9 @@ export interface LaneValidation {
    *  formed with information the entry bar did not have. Reported, never silently
    *  dropped. */
   lateExcluded: number;
+  /** Verdicts EXCLUDED for carrying a different `promptVersion` — a second
+   *  treatment, not more data. Reported for the same reason as `lateExcluded`. */
+  otherVersionExcluded: number;
   abstains: number;
   days: number;
   /** Raw conviction IC — "does conviction order outcomes?" (confounded). */
@@ -161,22 +186,38 @@ export interface ValidationReport {
   note: string;
 }
 
-/** Parse a stored verdict's conviction; null for abstain or unparseable rows. */
-export function convictionOf(verdictJson: string | null): { conviction: number | null; abstain: boolean } {
-  if (!verdictJson) return { conviction: null, abstain: false };
+/**
+ * Parse a stored verdict: its conviction, whether it abstained, and the prompt
+ * version that produced it.
+ *
+ * The version comes from the JSON blob, NOT a column — `DeepDiveReport` stores
+ * only `verdictJson`, and `Verdict` carries `promptVersion` inside it. Reading it
+ * from a non-existent column would have excluded *everything* silently, which is
+ * why this is asserted by test rather than assumed.
+ *
+ * A verdict with no readable version cannot be attributed to a treatment, so it
+ * is excluded from the sample and counted, never defaulted to "current".
+ */
+export function convictionOf(verdictJson: string | null): {
+  conviction: number | null;
+  abstain: boolean;
+  promptVersion: string | null;
+} {
+  if (!verdictJson) return { conviction: null, abstain: false, promptVersion: null };
   try {
-    const v = JSON.parse(verdictJson) as { conviction?: number; abstain?: boolean };
-    if (v.abstain) return { conviction: null, abstain: true };
-    return { conviction: typeof v.conviction === "number" ? v.conviction : null, abstain: false };
+    const v = JSON.parse(verdictJson) as { conviction?: number; abstain?: boolean; promptVersion?: string };
+    const promptVersion = typeof v.promptVersion === "string" ? v.promptVersion : null;
+    if (v.abstain) return { conviction: null, abstain: true, promptVersion };
+    return { conviction: typeof v.conviction === "number" ? v.conviction : null, abstain: false, promptVersion };
   } catch {
-    return { conviction: null, abstain: false };
+    return { conviction: null, abstain: false, promptVersion: null };
   }
 }
 
 async function loadMarket(
   prisma: PrismaService,
   market: Market,
-): Promise<{ obs: VerdictObservation[]; runs: number; abstains: number; pending: number; late: number }> {
+): Promise<{ obs: VerdictObservation[]; runs: number; abstains: number; pending: number; late: number; otherVersion: number }> {
   const instruments = await prisma.instrument.findMany({ where: { market } });
   const idToSymbol = new Map(instruments.map((i) => [i.id, i.symbol]));
   const ids = instruments.map((i) => i.id);
@@ -237,6 +278,7 @@ async function loadMarket(
   let abstains = 0;
   let pending = 0;
   let late = 0;
+  let otherVersion = 0;
   for (const run of runs) {
     const runDate = hktDate(run.runAt);
     const entry = entryDate(laneDates, runDate);
@@ -247,7 +289,14 @@ async function loadMarket(
       continue;
     }
     for (const rep of run.reports) {
-      const { conviction, abstain } = convictionOf(rep.verdictJson);
+      const { conviction, abstain, promptVersion } = convictionOf(rep.verdictJson);
+      // One treatment per sample: another prompt version is a different system,
+      // not another observation of this one. An unattributable version is
+      // excluded rather than assumed to be current.
+      if (promptVersion !== SAMPLE_PROMPT_VERSION) {
+        otherVersion++;
+        continue;
+      }
       if (abstain) {
         abstains++;
         continue;
@@ -262,7 +311,7 @@ async function loadMarket(
       obs.push({ date: entry, market, symbol: rep.symbol, conviction, rank, forwardReturn: r });
     }
   }
-  return { obs, runs: runs.length, abstains, pending, late };
+  return { obs, runs: runs.length, abstains, pending, late, otherVersion };
 }
 
 function laneValidation(
@@ -272,6 +321,7 @@ function laneValidation(
   abstains: number,
   pending: number,
   late: number,
+  otherVersion: number,
   targetIc: number,
   assumedBreadth = ASSUMED_BREADTH,
 ): LaneValidation {
@@ -289,6 +339,7 @@ function laneValidation(
     labelled: obs.filter((o) => o.forwardReturn != null).length,
     pendingLabel: pending,
     lateExcluded: late,
+    otherVersionExcluded: otherVersion,
     abstains,
     days: points.length,
     meanIc: stats?.mean ?? null,
@@ -326,7 +377,8 @@ export function renderValidation(r: ValidationReport): string {
   const row = (l: LaneValidation) => {
     lines.push(
       `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs` +
-        `${l.lateExcluded > 0 ? ` · ${l.lateExcluded} EXCLUDED as late (look-ahead)` : ""}`,
+        `${l.lateExcluded > 0 ? ` · ${l.lateExcluded} EXCLUDED as late (look-ahead)` : ""}` +
+        `${l.otherVersionExcluded > 0 ? ` · ${l.otherVersionExcluded} EXCLUDED (different prompt version)` : ""}`,
     );
     lines.push(
       `    raw IC ${l.meanIc == null ? "—" : l.meanIc.toFixed(4)} · ICIR ${l.icir == null ? "—" : l.icir.toFixed(3)} · NW t ${l.nwT == null ? "—" : l.nwT.toFixed(2)}` +
@@ -355,9 +407,9 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
   const lanes: LaneValidation[] = [];
   const allObs: VerdictObservation[] = [];
   for (const market of args.markets) {
-    const { obs, runs, abstains, pending, late } = await loadMarket(prisma, market);
+    const { obs, runs, abstains, pending, late, otherVersion } = await loadMarket(prisma, market);
     allObs.push(...obs);
-    lanes.push(laneValidation(market, obs, runs, abstains, pending, late, args.targetIc, SCREEN_PARAMS.topN[market]));
+    lanes.push(laneValidation(market, obs, runs, abstains, pending, late, otherVersion, args.targetIc, SCREEN_PARAMS.topN[market]));
   }
   const pooled = laneValidation(
     "POOLED",
@@ -366,6 +418,7 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
     lanes.reduce((a, l) => a + l.abstains, 0),
     lanes.reduce((a, l) => a + l.pendingLabel, 0),
     lanes.reduce((a, l) => a + l.lateExcluded, 0),
+    lanes.reduce((a, l) => a + l.otherVersionExcluded, 0),
     args.targetIc,
     ASSUMED_BREADTH * Math.max(1, args.markets.length),
   );

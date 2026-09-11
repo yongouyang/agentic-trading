@@ -11,7 +11,10 @@
 
      scripts/daily-catchup.sh runs a lane only when ops:catchup reports it is one
      session behind, so a healthy day is a no-op rather than a duplicate run.
-     Install: scripts/launchd/install.sh -->
+     PATH is exported by the script itself (see its header), as in daily-chain.sh —
+     every other plist here relies on the script, and a plist PATH is easy to get
+     wrong silently: the first version of this one named ~/.local/share/pnpm, which
+     does not exist on this machine. Install: scripts/launchd/install.sh -->
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.agentic-trading.daily-catchup</string>
@@ -25,9 +28,5 @@
   </array>
   <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-catchup.log</string>
   <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-catchup.err.log</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PATH</key><string>/Users/yongouyang/.local/share/pnpm:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-  </dict>
 </dict>
 </plist>

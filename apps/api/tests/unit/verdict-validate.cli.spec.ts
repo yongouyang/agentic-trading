@@ -8,6 +8,7 @@ import {
   convictionOf,
   daysBetweenIso,
   MAX_PROMPT_LAG_DAYS,
+  SAMPLE_PROMPT_VERSION,
   entryDate,
   hktDate,
   parseValidateArgs,
@@ -41,9 +42,9 @@ describe("verdict:validate — surfaces", () => {
 
   it("reads conviction, and treats an abstain as a non-opinion rather than a 0", () => {
     expect(convictionOf('{"conviction":0.45}').conviction).toBe(0.45);
-    expect(convictionOf('{"abstain":true,"conviction":0}')).toEqual({ conviction: null, abstain: true });
-    expect(convictionOf("not json")).toEqual({ conviction: null, abstain: false });
-    expect(convictionOf(null)).toEqual({ conviction: null, abstain: false });
+    expect(convictionOf('{"abstain":true,"conviction":0}')).toEqual({ conviction: null, abstain: true, promptVersion: null });
+    expect(convictionOf("not json")).toEqual({ conviction: null, abstain: false, promptVersion: null });
+    expect(convictionOf(null)).toEqual({ conviction: null, abstain: false, promptVersion: null });
   });
 
   it("reports both lanes and a pooled row against a stub store", async () => {
@@ -89,5 +90,52 @@ describe("promptness gate — a late run is look-ahead, not an observation", () 
     expect(lag("2026-09-10", "2026-09-11") <= MAX_PROMPT_LAG_DAYS).toBe(true);  // US normal slot
     expect(lag("2026-09-11", "2026-09-12") <= MAX_PROMPT_LAG_DAYS).toBe(true);  // Sat catch-up of Friday HK
     expect(lag("2026-09-04", "2026-09-06") <= MAX_PROMPT_LAG_DAYS).toBe(false); // Sunday run, Friday session
+  });
+});
+
+describe("treatment gate — one prompt version per sample", () => {
+  it("reads the version from the verdict blob, because the table has no such column", () => {
+    // DeepDiveReport stores only verdictJson. Reading a promptVersion column
+    // (which does not exist) would exclude EVERY verdict, emptying the sample
+    // without an error — so this is pinned rather than assumed.
+    const v = convictionOf(JSON.stringify({ conviction: 0.4, abstain: false, promptVersion: "v1" }));
+    expect(v).toEqual({ conviction: 0.4, abstain: false, promptVersion: "v1" });
+    expect(convictionOf(JSON.stringify({ conviction: 0.4, abstain: false })).promptVersion).toBeNull();
+  });
+
+  it("keeps the abstain signal alongside the version", () => {
+    const v = convictionOf(JSON.stringify({ abstain: true, conviction: 0, promptVersion: "v1" }));
+    expect(v.abstain).toBe(true);
+    expect(v.conviction).toBeNull();
+    expect(v.promptVersion).toBe("v1");
+  });
+
+  it("samples the SHIPPED version", () => {
+    expect(SAMPLE_PROMPT_VERSION).toBe("v1");
+  });
+
+  it("reports a different version as excluded rather than pooling two treatments", async () => {
+    const prisma = {
+      instrument: { findMany: async () => [{ id: 1, symbol: "AAA" }] },
+      bar: { findMany: async () => [{ instrumentId: 1, date: "2026-09-10", open: 1, high: 1, low: 1, close: 1, volume: 1 }] },
+      corporateAction: { findMany: async () => [] },
+      screenResult: { findMany: async () => [{ symbol: "AAA", rank: 1 }] },
+      deepDiveRun: {
+        findMany: async () => [
+          {
+            id: 1,
+            market: "US",
+            runAt: new Date("2026-09-10T22:10:00Z"),
+            reports: [
+              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }) },
+              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v2" }) },
+            ],
+          },
+        ],
+      },
+    } as any;
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.otherVersionExcluded).toBe(1);
+    expect(r.lanes[0]!.pendingLabel).toBe(1); // only the v1 verdict is even a candidate
   });
 });

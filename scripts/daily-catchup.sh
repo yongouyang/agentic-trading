@@ -20,6 +20,16 @@ set -uo pipefail
 ROOT="/Users/yongouyang/projects/agentic-trading"
 cd "$ROOT" || exit 1
 
+# launchd runs with a bare PATH (/usr/bin:/bin:...). Same export as
+# daily-chain.sh — and the reason is a measured one: without it this script dies
+# on `pnpm: command not found`, the guard never runs, and the job still looks
+# installed and ARMED (runs=0 in `launchctl list`). That is precisely the silent
+# failure a68f687 fixed for the chains, and this script reintroduced it by calling
+# pnpm without the export.
+export PATH="$HOME/Library/pnpm/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+NODE_BIN="$(dirname "$(command -v node 2>/dev/null || echo /usr/bin/node)")"
+[ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+
 for lane in hk us; do
   pnpm -C apps/api ops:catchup --lane "$lane"
   rc=$?

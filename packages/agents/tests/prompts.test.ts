@@ -115,6 +115,13 @@ describe("role builders", () => {
   });
 
   it("PROMPT_VERSION is a pinned constant", () => {
+    // Pinned for a reason beyond prompt hygiene: apps/api's verdict:validate
+    // samples exactly this version (SAMPLE_PROMPT_VERSION, a local constant
+    // because a cross-package value import resolves to undefined under that
+    // package's vitest). The Phase 5 sample is accrued against ONE treatment, so
+    // bumping this resets a ~7.5-month clock and discards the verdicts accrued
+    // under v1. If this assertion fails, that is a real decision — update
+    // SAMPLE_PROMPT_VERSION deliberately rather than reflexively.
     expect(PROMPT_VERSION).toBe("v1");
   });
 });

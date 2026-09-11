@@ -331,11 +331,12 @@ collected session or skip a missed one. Legacy rows carry `''` and the guard tre
 unknown as "run it", since a duplicate costs minutes and a lost observation is
 unrecoverable.
 
-Two bugs found and fixed while building it:
-- **The accrual double-counted sessions.** It counted `ScreenRun` rows as
-  observations, so a manual run plus a catch-up on one session would have inflated
-  the sample this clock exists to measure. Now deduped by `sessionDate`.
-- The `expectedSessions` counter (added earlier today) had the same exposure.
+One bug found and fixed while building it: **the accrual double-counted
+sessions.** It counted `ScreenRun` rows as observations, so a manual run plus a
+catch-up on one session would have inflated the sample this clock exists to
+measure. Now deduped by `sessionDate`. (`expectedSessions` was *not* exposed —
+it counts scheduled slots from the calendar, never rows; an earlier version of
+this entry claimed otherwise and that was wrong.)
 
 Verified live, not just in unit tests: `screen:daily --market hk` wrote run 18 with
 `sessionDate = 2026-09-11` **and 27 HK candidates** (the widened breadth working —
