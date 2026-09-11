@@ -26,7 +26,8 @@
     "split:add": "tsx src/cli/add-split-event.ts",
     "ca:f10-refresh": "tsx src/cli/refresh-f10-ca.ts",
     "phase4c:accrual": "tsx src/cli/accrual.ts",
-    "verdict:validate": "tsx src/cli/verdict-validate.ts"
+    "verdict:validate": "tsx src/cli/verdict-validate.ts",
+    "ops:catchup": "tsx src/cli/ops-catchup.ts"
   },
   "dependencies": {
     "@agentic-trading/agents": "workspace:*",

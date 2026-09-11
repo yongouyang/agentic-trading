@@ -298,7 +298,7 @@ design. Note the scheduled run is now ~4× longer (~24 min/lane at the current p
 so a mid-run sleep is a real possibility — which W2's `running` row exists to make
 visible.
 
-**Item 3 — the missed-slot decision re-priced, and it is worse than assumed.**
+**Item 3 — the missed-slot decision re-priced, and then acted on.**
 Realized supply from the store: **5 of 9 expected slots per lane since 2026-09-01 =
 56 %**, a 44 % miss rate (not the ~30 % I estimated when raising it). Priced against
 the measured clocks:
@@ -312,6 +312,35 @@ That is a materially different decision from the one taken on 2026-09-11 morning
 when the cost of a missed slot was "a stale report" and the only consumer was the
 dashboard. Now it is a **lost observation from two validation samples**, and it
 roughly doubles the longer one.
+
+**Item 3 (decided: guarded evening catch-up, shipped).** Real supply from the store
+is **5 of 9 expected slots per lane since 2026-09-01 = 56 %**, a 44 % miss rate —
+not the ~30 % assumed when the decision was taken, and it costs ~5.9 months on
+Phase 5's clock and ~3.7 **years** on Phase 4c's. So a second, *guarded* slot now
+runs at **20:30 HKT**: `ops:catchup` decides per lane whether the store holds a
+session newer than the newest run's `sessionDate`, and the script runs
+`daily-chain.sh` only on "behind", skips on "up to date", and **refuses to run on a
+guard error** (a blind run would duplicate a session and inflate the very accrual
+this protects). 20:30 is deliberate: after the HK close and before the US open, so
+the US lane's newest bar is always a completed session.
+
+Mechanism: `ScreenRun.sessionDate` (additive migration) records the session
+actually *screened*, because `runAt` cannot — the 09-11 19:52 HKT US run screened
+the 09-10 session, so comparing bar dates against `runAt` would either re-run a
+collected session or skip a missed one. Legacy rows carry `''` and the guard treats
+unknown as "run it", since a duplicate costs minutes and a lost observation is
+unrecoverable.
+
+Two bugs found and fixed while building it:
+- **The accrual double-counted sessions.** It counted `ScreenRun` rows as
+  observations, so a manual run plus a catch-up on one session would have inflated
+  the sample this clock exists to measure. Now deduped by `sessionDate`.
+- The `expectedSessions` counter (added earlier today) had the same exposure.
+
+Verified live, not just in unit tests: `screen:daily --market hk` wrote run 18 with
+`sessionDate = 2026-09-11` **and 27 HK candidates** (the widened breadth working —
+legacy runs 15/16/17 hold 15), after which the guard reports "up to date" and exits
+0. All **6** jobs verify ARMED.
 
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the

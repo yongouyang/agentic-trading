@@ -198,7 +198,13 @@ export async function runAccrual(prisma: PrismaService): Promise<AccrualReport> 
   for (const market of ["US", "HK"] as const) {
     const sessions = await laneSessions(prisma, market);
     const runs = await prisma.screenRun.findMany({ where: { market }, orderBy: { runAt: "asc" } });
-    const prospective = runs.map((r) => hktDate(r.runAt)).filter((d) => d >= PROSPECTIVE_FROM);
+    // Dedupe by SESSION, not by row: two runs on one session (a manual run plus an
+    // evening catch-up, say) are one observation, and counting rows would silently
+    // inflate the sample this clock exists to measure. `sessionDate` is the
+    // screened session; pre-column rows fall back to their HKT run date.
+    const prospective = [...new Set(runs.map((r) => (r as { sessionDate?: string }).sessionDate || hktDate(r.runAt)))].filter(
+      (d) => d >= PROSPECTIVE_FROM,
+    );
     // Supply vs expectation: the same cadence the health check uses, so a missed
     // slot is counted once and means the same thing in both places.
     const today = hktDate(new Date());

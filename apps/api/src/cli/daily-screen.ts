@@ -409,6 +409,15 @@ async function runLane(
     }
   }
 
+  // The session actually screened = the newest bar date any name contributed.
+  // Recorded because the run's timestamp cannot identify it (the US lane runs at
+  // 06:10 HKT on the previous night's close), and the catch-up guard needs to
+  // know whether the store holds a session nobody has screened yet.
+  const screenedThrough = inputs.reduce((acc, i) => {
+    const d = i.rawBars[i.rawBars.length - 1]?.date;
+    return d && d > acc ? d : acc;
+  }, "");
+
   // Deterministic screen (phase-1-spec §4) over this lane's eligible set.
   const screen = runScreen(inputs);
   const excludedCounts: Record<string, number> = {};
@@ -438,6 +447,7 @@ async function runLane(
       warningsJson: JSON.stringify(warnings),
       // First-failure census (Phase 4b item 3): was computed and discarded.
       excludedJson: JSON.stringify(excludedCounts),
+      sessionDate: screenedThrough,
     },
   });
   await prisma.screenResult.createMany({

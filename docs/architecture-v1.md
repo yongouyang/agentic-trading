@@ -350,12 +350,25 @@ The per-job notes live in the plist headers (`scripts/launchd/`); note that the
 installed copies under `~/Library/LaunchAgents` only pick up comment changes on
 the next `install.sh`.
 
+**A guarded catch-up slot was added on 2026-09-11** once the cost of the gaps
+changed from "a stale report" to "a lost observation". Measured supply was **56 %**
+(5 of 9 expected slots per lane since 2026-09-01), which against the measured
+validation clocks meant ~13.3 months instead of 7.5 for Phase 5's verdict IC and
+~8.4 years instead of 4.7 for Phase 4c's screen rank IC. `daily-catchup` runs at
+**20:30 HKT** — after the HK close and deliberately *before* the US open, so the US
+lane's newest bar is always a completed session (screening a partially formed bar
+would poison the sample it protects) — and does nothing unless `ops:catchup` finds
+a session newer than the newest `ScreenRun.sessionDate`. Exit 10 from the guard
+means "behind"; any other non-zero means the guard failed and the script **does not
+run**, because a blind run duplicates a session and inflates the accrual.
+
 | Label | Runs | Schedule (HKT) |
 |---|---|---|
 | `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive` (candidate breadth from `SCREEN_PARAMS.topN`) | Mon–Fri 16:50 |
 | `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
 | `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
 | `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
+| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`) | **20:30 daily** |
 | `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 07:15, 17:30 daily |
 
 ### 5.2 Failure visibility (R0, 2026-09-10)

@@ -1,0 +1,13 @@
+-- The session a run actually screened, as distinct from when it ran.
+--
+-- Needed because a guarded evening catch-up slot has to answer "is there new
+-- data nobody has screened?" without re-deriving two market calendars, and the
+-- run's own timestamp cannot answer it: the 2026-09-11 19:52 HKT US run screened
+-- the 2026-09-10 session, so comparing bar dates against `runAt` would either
+-- re-run an already-collected session (inflating the Phase 5 accrual, which
+-- counts sessions as observations) or skip one that was genuinely missed.
+--
+-- Empty string = unknown, for rows written before this column existed. The
+-- catch-up guard treats an unknown session as "run it": a duplicate is cheap,
+-- a permanently lost observation is not.
+ALTER TABLE "ScreenRun" ADD COLUMN "sessionDate" TEXT NOT NULL DEFAULT '';

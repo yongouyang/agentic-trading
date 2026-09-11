@@ -83,6 +83,11 @@ model ScreenRun {
   // production run can be compared against the backtest replay's census for the
   // same date. '{}' on rows written before 2026-09-11 = "not recorded".
   excludedJson    String   @default("{}")
+  // The session actually screened (newest bar date seen), NOT when it ran.
+  // '' = unknown (pre-2026-09-11 rows). See the migration for why the run's own
+  // timestamp cannot serve: runAt and the session date differ by a day for the
+  // US lane, which runs at 06:10 HKT on the previous night's close.
+  sessionDate     String   @default("")
 
   results ScreenResult[]
 }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Evening catch-up (2026-09-11): a GUARDED second slot that recovers a day
+     launchd could not replay. launchd has no memory of calendar slots that
+     elapsed while the machine was off (architecture §5.1), and measured supply is
+     56% — which now costs a lost observation from two validation samples.
+
+     20:30 HKT, not 21:30: after the HK close and BEFORE the US open, so the US
+     lane's newest bar is always a completed session. Screening a partially
+     formed bar would poison the sample instead of protecting it.
+
+     scripts/daily-catchup.sh runs a lane only when ops:catchup reports it is one
+     session behind, so a healthy day is a no-op rather than a duplicate run.
+     Install: scripts/launchd/install.sh -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agentic-trading.daily-catchup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/yongouyang/projects/agentic-trading/scripts/daily-catchup.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>30</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-catchup.log</string>
+  <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/daily-catchup.err.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/Users/yongouyang/.local/share/pnpm:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
