@@ -212,6 +212,57 @@ actions dated at or before the session it screens — so the Phase-4c accrual is
 robust to late runs and needs no such gate. Only the layer that reads *news* has
 this failure mode.
 
+## Locked: the treatment must freeze (decision 2026-09-11)
+
+Fork A's breadth question was about power. This one is about **validity**, and it
+was decided the same day: the sample is accrued against **one** treatment, so
+`PROMPT_VERSION` stays **v1** until the read. The harness enforces it
+(`verdict:validate` excludes any other version and counts it), which means the
+cost of a prompt change is visible rather than silent: the excluded count jumps.
+
+That is a real cost, not a formality — a bump **resets a ~7.5-month clock** and
+discards the verdicts accrued under v1. So the decision also specifies how prompt
+work coexists with measurement.
+
+### The excluded experiment track
+
+Prompt improvements do **not** have to wait, but they must not touch the sample.
+The mechanism needs no new code, because both halves already exist: the version
+tag travels inside `verdictJson`, and the harness excludes anything that is not
+v1.
+
+```bash
+# from the production tree — the sample keeps accruing on v1
+git worktree add ../at-prompt-exp -b prompt-exp
+cd ../at-prompt-exp
+# edit packages/agents/src/prompts.ts, bump PROMPT_VERSION to v2 there
+pnpm -C apps/api screen:deep-dive -- --market us --symbol AAPL,MSFT,NVDA
+pnpm -C apps/api verdict:validate        # the v2 verdicts appear as EXCLUDED
+```
+
+Three properties make this honest rather than convenient:
+
+1. **The tag cannot lie.** The rule in `prompts.ts` is that the version changes
+   when *any* prompt text changes, so a v2 run genuinely is a different treatment.
+   An override that retagged the same text would be a false label, which is why
+   the mechanism is a worktree rather than a `--prompt-version` flag.
+2. **Production is untouched.** The launchd jobs run from the production tree, so
+   a separate worktree is what stops an experiment from silently *becoming* the
+   sample. This is the only real hazard of the workflow.
+3. **Both versions can be run on the same names** (v1 from the production tree,
+   v2 from the worktree, `--symbol` for each), which is what makes the comparison
+   a comparison rather than an impression.
+
+**Known footgun, pre-existing and now more likely to be hit:** an ad-hoc
+`--symbol` run still creates a `DeepDiveRun`, and the dashboard shows the latest
+complete run per lane — so an experiment can become what the dashboard displays.
+The run picker goes back, and the verdicts are excluded from the sample, but this
+is worth knowing before it happens.
+
+**When v2 ships**, production moves to v2, the sample restarts deliberately, and
+the Phase-5 clock resets from that date. That is the cost of having a better
+prompt, and it is the right trade — but it should be made on purpose.
+
 ## What this round will not do
 
 - **No prompt or pipeline changes.** `PROMPT_VERSION` stays v1; changing the
