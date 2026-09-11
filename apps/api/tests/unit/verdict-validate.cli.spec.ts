@@ -6,6 +6,8 @@
 import { describe, expect, it } from "vitest";
 import {
   convictionOf,
+  daysBetweenIso,
+  MAX_PROMPT_LAG_DAYS,
   entryDate,
   hktDate,
   parseValidateArgs,
@@ -63,5 +65,29 @@ describe("verdict:validate — surfaces", () => {
     const text = renderValidation(r);
     expect(text).toMatch(/insufficient_evidence/);
     expect(text).toMatch(/not evidence of no edge/);
+  });
+});
+
+describe("promptness gate — a late run is look-ahead, not an observation", () => {
+  it("treats the US lane's own next-morning convention as prompt", () => {
+    // daily-us runs 06:10 HKT on the morning after the US close, so runDate is
+    // entry + 1 by construction. Anything stricter would discard every US verdict.
+    expect(MAX_PROMPT_LAG_DAYS).toBe(1);
+    expect(daysBetweenIso("2026-09-10", "2026-09-11")).toBe(1);
+  });
+
+  it("counts calendar days, including the weekend gap", () => {
+    // The real case: the 2026-09-06 Sunday smoke runs screened Friday 09-04.
+    expect(daysBetweenIso("2026-09-04", "2026-09-06")).toBe(2);
+    expect(daysBetweenIso("2026-09-04", "2026-09-04")).toBe(0);
+    expect(daysBetweenIso("2026-09-11", "2026-09-04")).toBe(-7);
+  });
+
+  it("rejects a Sunday catch-up of a Friday session but accepts a same-day or next-day run", () => {
+    const lag = (screened: string, ran: string) => daysBetweenIso(screened, ran);
+    expect(lag("2026-09-11", "2026-09-11") <= MAX_PROMPT_LAG_DAYS).toBe(true);  // HK normal slot
+    expect(lag("2026-09-10", "2026-09-11") <= MAX_PROMPT_LAG_DAYS).toBe(true);  // US normal slot
+    expect(lag("2026-09-11", "2026-09-12") <= MAX_PROMPT_LAG_DAYS).toBe(true);  // Sat catch-up of Friday HK
+    expect(lag("2026-09-04", "2026-09-06") <= MAX_PROMPT_LAG_DAYS).toBe(false); // Sunday run, Friday session
   });
 });

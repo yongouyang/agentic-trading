@@ -177,6 +177,41 @@ while `IC | rank` stays under 0.25**; add genuine conviction-carried information
 the controlled IC rises above 0.3. Without this the layer could be credited with
 information it does not have.
 
+## Pre-registration amendment 2 (2026-09-11) — the promptness gate
+
+Found while answering an operational question about the weekend schedule, and
+fixed the same day. **There are no forward labels yet**, so as with amendment 1
+this cannot have been selected against an outcome.
+
+**Finding.** Nothing in the harness cared *when* a run happened relative to the
+session it screened. That matters because the two differ legitimately for one lane
+and illegitimately for any other: `daily-us` runs at 06:10 HKT on the morning
+after the US close, so `runDate = entry + 1` is its normal convention — while the
+evening catch-up slot (20:30 daily, weekends included) can run a session **two or
+more days late**. A verdict formed in a Sunday catch-up about Friday's session used
+**weekend news**: information the Friday close did not have. That is look-ahead in
+the X variable, which is the one thing the prospective design exists to avoid.
+
+**Measured on the existing rows:** the harness now reports **24 of 45 verdicts
+(53 %) excluded as late** — every run from Sunday **2026-09-06**, which screened
+Friday **2026-09-04** and ran two days later. They were flagged before any label
+existed, so nothing downstream was ever computed from them.
+
+**Amendment.** A verdict counts as a prospective observation only if the run
+happened within `MAX_PROMPT_LAG_DAYS = 1` calendar day of the session it screened.
+The threshold is the pipeline's own convention, not a taste: 1 is what the US lane
+requires by construction, and it also admits a Saturday catch-up of a missed Friday
+HK session (the same tolerance the US lane already lives with). Anything later is a
+different information set. Excluded verdicts are **counted and reported**, never
+silently dropped — a silent drop would be indistinguishable from data that never
+arrived.
+
+**An asymmetry worth recording:** this applies to the **verdict** sample only. A
+late *screen* is PIT-clean, because it is a deterministic function of bars and
+actions dated at or before the session it screens — so the Phase-4c accrual is
+robust to late runs and needs no such gate. Only the layer that reads *news* has
+this failure mode.
+
 ## What this round will not do
 
 - **No prompt or pipeline changes.** `PROMPT_VERSION` stays v1; changing the

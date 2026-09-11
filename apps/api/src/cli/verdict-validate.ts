@@ -42,6 +42,28 @@ const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
 export const PRIMARY_HORIZON = 20;
 /** Target effect the readiness rule is set to detect. Fork B of the Phase-5 plan. */
 export const DEFAULT_TARGET_IC = 0.1;
+/**
+ * How many calendar days late a run may be and still count as a prospective
+ * observation. 1 accommodates the US lane's own convention — it runs at 06:10 HKT
+ * on the morning after the US close, so `runDate = entry + 1` is *prompt* — while
+ * rejecting anything later.
+ *
+ * This exists because the evening catch-up slot (20:30 daily, including weekends)
+ * can legitimately run a session two or more days behind: a Sunday catch-up of
+ * Friday's HK session produces verdicts formed with **weekend news**, i.e.
+ * information unavailable at Friday's close. That is look-ahead in the X variable,
+ * which is precisely what the design avoids, and without this rule such verdicts
+ * would enter the sample indistinguishable from prompt ones.
+ */
+export const MAX_PROMPT_LAG_DAYS = 1;
+
+/** Calendar-day difference between two ISO dates (b − a). */
+export function daysBetweenIso(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number) as [number, number, number];
+  const [by, bm, bd] = b.split("-").map(Number) as [number, number, number];
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000);
+}
+
 /** Breadth assumed before the series can measure its own sd. Derived from the
  *  configured candidate limit so a change to deep-dive breadth cannot leave the
  *  readiness projection pointing at a world that no longer exists (Phase 5
@@ -105,6 +127,11 @@ export interface LaneValidation {
   labelled: number;
   /** Verdicts seen but not yet scorable (horizon has not elapsed). */
   pendingLabel: number;
+  /** Verdicts EXCLUDED as temporally contaminated: the run happened more than
+   *  `MAX_PROMPT_LAG_DAYS` after the session it screened, so its conviction was
+   *  formed with information the entry bar did not have. Reported, never silently
+   *  dropped. */
+  lateExcluded: number;
   abstains: number;
   days: number;
   /** Raw conviction IC — "does conviction order outcomes?" (confounded). */
@@ -146,7 +173,10 @@ export function convictionOf(verdictJson: string | null): { conviction: number |
   }
 }
 
-async function loadMarket(prisma: PrismaService, market: Market): Promise<{ obs: VerdictObservation[]; runs: number; abstains: number; pending: number }> {
+async function loadMarket(
+  prisma: PrismaService,
+  market: Market,
+): Promise<{ obs: VerdictObservation[]; runs: number; abstains: number; pending: number; late: number }> {
   const instruments = await prisma.instrument.findMany({ where: { market } });
   const idToSymbol = new Map(instruments.map((i) => [i.id, i.symbol]));
   const ids = instruments.map((i) => i.id);
@@ -206,9 +236,16 @@ async function loadMarket(prisma: PrismaService, market: Market): Promise<{ obs:
   const obs: VerdictObservation[] = [];
   let abstains = 0;
   let pending = 0;
+  let late = 0;
   for (const run of runs) {
-    const entry = entryDate(laneDates, hktDate(run.runAt));
+    const runDate = hktDate(run.runAt);
+    const entry = entryDate(laneDates, runDate);
     if (!entry) continue;
+    // Promptness gate: a late run's verdicts are look-ahead, not observations.
+    if (daysBetweenIso(entry, runDate) > MAX_PROMPT_LAG_DAYS) {
+      late += run.reports.length;
+      continue;
+    }
     for (const rep of run.reports) {
       const { conviction, abstain } = convictionOf(rep.verdictJson);
       if (abstain) {
@@ -225,7 +262,7 @@ async function loadMarket(prisma: PrismaService, market: Market): Promise<{ obs:
       obs.push({ date: entry, market, symbol: rep.symbol, conviction, rank, forwardReturn: r });
     }
   }
-  return { obs, runs: runs.length, abstains, pending };
+  return { obs, runs: runs.length, abstains, pending, late };
 }
 
 function laneValidation(
@@ -234,6 +271,7 @@ function laneValidation(
   runs: number,
   abstains: number,
   pending: number,
+  late: number,
   targetIc: number,
   assumedBreadth = ASSUMED_BREADTH,
 ): LaneValidation {
@@ -250,6 +288,7 @@ function laneValidation(
     runs,
     labelled: obs.filter((o) => o.forwardReturn != null).length,
     pendingLabel: pending,
+    lateExcluded: late,
     abstains,
     days: points.length,
     meanIc: stats?.mean ?? null,
@@ -286,7 +325,8 @@ export function renderValidation(r: ValidationReport): string {
   );
   const row = (l: LaneValidation) => {
     lines.push(
-      `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs`,
+      `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs` +
+        `${l.lateExcluded > 0 ? ` · ${l.lateExcluded} EXCLUDED as late (look-ahead)` : ""}`,
     );
     lines.push(
       `    raw IC ${l.meanIc == null ? "—" : l.meanIc.toFixed(4)} · ICIR ${l.icir == null ? "—" : l.icir.toFixed(3)} · NW t ${l.nwT == null ? "—" : l.nwT.toFixed(2)}` +
@@ -315,9 +355,9 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
   const lanes: LaneValidation[] = [];
   const allObs: VerdictObservation[] = [];
   for (const market of args.markets) {
-    const { obs, runs, abstains, pending } = await loadMarket(prisma, market);
+    const { obs, runs, abstains, pending, late } = await loadMarket(prisma, market);
     allObs.push(...obs);
-    lanes.push(laneValidation(market, obs, runs, abstains, pending, args.targetIc, SCREEN_PARAMS.topN[market]));
+    lanes.push(laneValidation(market, obs, runs, abstains, pending, late, args.targetIc, SCREEN_PARAMS.topN[market]));
   }
   const pooled = laneValidation(
     "POOLED",
@@ -325,6 +365,7 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
     lanes.reduce((a, l) => a + l.runs, 0),
     lanes.reduce((a, l) => a + l.abstains, 0),
     lanes.reduce((a, l) => a + l.pendingLabel, 0),
+    lanes.reduce((a, l) => a + l.lateExcluded, 0),
     args.targetIc,
     ASSUMED_BREADTH * Math.max(1, args.markets.length),
   );

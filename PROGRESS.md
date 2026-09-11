@@ -342,6 +342,42 @@ Verified live, not just in unit tests: `screen:daily --market hk` wrote run 18 w
 legacy runs 15/16/17 hold 15), after which the guard reports "up to date" and exits
 0. All **6** jobs verify ARMED.
 
+## 2026-09-11 (weekend-schedule question → the promptness gate) — 24 of 45 verdicts were look-ahead
+
+**The question:** is there a weekend run that pulls missing US/HK data? **The
+answer:** yes, as of tonight — `daily-catchup` fires **20:30 every day including
+Sat/Sun** (no `Weekday` key) and runs a lane's whole chain only when `ops:catchup`
+finds an unscreened session. The two Sunday jobs are *not* data pulls: sentinel is a
+read-only quality probe, F10 refreshes corporate actions.
+
+Recovery differs by kind, and that is the useful part:
+- **Bars** backfill fully — the Yahoo provider fetches a 5-year window on every run
+  and upserts it, so any gap heals on the next successful run of any kind.
+- **Screen observations** recover for the **newest session only**; a three-day
+  outage heals the bars but writes one `ScreenRun`, so the other two sessions'
+  observations are lost. Recovering those needs a PIT re-screen of historical
+  dates — buildable (`replayScreen` is PIT-correct) but a new capability.
+- **Verdicts** recover but are **contaminated**, which turned into the finding.
+
+**The finding.** Nothing checked *when* a run happened relative to the session it
+screened. A verdict formed in a Sunday catch-up about Friday's session used
+**weekend news** — look-ahead in the X variable, the one thing the prospective
+design exists to avoid. Measured on the existing rows: **24 of 45 verdicts (53 %)
+are late**, all from **Sunday 2026-09-06** screening Friday **2026-09-04**. They
+would have entered the Phase-5 sample indistinguishable from prompt ones.
+
+**Fixed** as pre-registration amendment 2 (no labels exist, so as with amendment 1
+it cannot have been selected against an outcome): a verdict counts only if the run
+is within `MAX_PROMPT_LAG_DAYS = 1` calendar day of the session it screened. The
+threshold is the pipeline's own convention — 1 is what the US lane requires by
+construction — and it also admits a Saturday catch-up of a missed Friday HK
+session. Excluded verdicts are **counted and reported**, never silently dropped.
+
+**An asymmetry worth keeping:** the gate is needed for the *verdict* sample only. A
+late **screen** is PIT-clean because it is a deterministic function of data dated at
+or before the session it screens, so the Phase-4c accrual is robust to late runs.
+Only the layer that reads *news* has this failure mode.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
