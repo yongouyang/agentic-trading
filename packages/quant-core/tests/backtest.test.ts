@@ -596,6 +596,29 @@ describe("Phase 4b D2 — the differential interval", () => {
     expect(g.nwT).not.toBeCloseTo(g.differential / g.trackingError, 6);
   });
 
+  it("discloses the IR-vs-HAC-t gap instead of hiding it (amendment R13)", () => {
+    // `ir` uses the i.i.d. tracking error; `nwT` uses the Newey-West SE of the
+    // MEAN. They legitimately differ, so reporting one without the other invites
+    // reading the gap as an arithmetic error. Both are exposed.
+    const lanes = mkBook();
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(250), markets: ["US"] });
+    const g = out.lanes[0]!.gate2Base;
+    expect(g.years).toBeCloseTo((out.lanes[0]!.gate2Base.portfolio.sessions ?? g.years) / 252, 6);
+    expect(g.tFromIr).toBeCloseTo(g.ir * Math.sqrt(g.years), 10);
+    // The whole point: the two t's are NOT the same number.
+    expect(Math.abs(g.tFromIr - g.nwT)).toBeGreaterThan(1e-9);
+  });
+
+  it("reports the index benchmark alongside the equal-weight one (amendment R14)", () => {
+    // phase-4-plan.md pre-registered TWO benchmarks; only the equal-weight one
+    // was ever reported, and it shares the screen's own selection.
+    const lanes = mkBook();
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(250), markets: ["US"], indexSymbol: { US: "B0" } });
+    const lane = out.lanes[0]!;
+    expect(lane.indexReturn).not.toBeNull();
+    expect(lane.indexDifferential).toBeCloseTo(lane.gate2Base.portfolio.totalReturn - lane.indexReturn!, 10);
+  });
+
   it("carries the pre-registered lag 20 and descriptive 5/60 sensitivity", () => {
     const lanes = mkBook();
     const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(250), markets: ["US"] });
@@ -634,5 +657,14 @@ describe("Phase 4b D5 — the verdict vocabulary", () => {
     const hk = out.lanes.find((l) => l.market === "HK")!;
     expect(hk.gate1.days).toBe(0);
     expect(hk.verdict).toBe("h1_revised");
+  });
+});
+
+describe("Phase 4b review amendments — the census says what it is", () => {
+  it("is typed first_failure, because runScreen records ONE reason per name", () => {
+    // Without this the census reads as marginal bindingness and licenses
+    // "relax gate X -> breadth +Y", which first-failure evidence cannot support.
+    const d: ReplayDay = { date: "2023-05-02", ranked: [] as unknown as ReplayDay["ranked"], excludedCount: 0, excludedByReason: { US: { BEARISH_ALIGNMENT: 3 }, HK: {} } };
+    expect(exclusionCensus([d], "US").basis).toBe("first_failure");
   });
 });

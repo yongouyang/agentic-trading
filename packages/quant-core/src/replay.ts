@@ -72,6 +72,11 @@ export interface ReplayDay {
  * be used to choose a gate to relax and then re-test IC on the same window.
  */
 export interface ExclusionCensus {
+  /** Always "first_failure": `runScreen` records ONE reason per rejected name
+   *  (an if/else-if chain), so this is "which gate rejects first", NOT which
+   *  gate binds. It cannot support "relax gate X ⇒ breadth rises by Y", because
+   *  a name rejected first for one gate may simply fail the next one. */
+  basis: "first_failure";
   /** reason → total rejections across the window. */
   byReason: Record<string, number>;
   byYear: { year: string; byReason: Record<string, number> }[];
@@ -99,6 +104,7 @@ export function exclusionCensus(days: ReplayDay[], market: Market): ExclusionCen
     }
   }
   return {
+    basis: "first_failure",
     byReason,
     byYear: [...years.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([year, r]) => ({ year, byReason: r })),
     total,

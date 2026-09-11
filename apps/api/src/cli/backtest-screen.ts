@@ -211,8 +211,19 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
   // tests the mean of the daily arithmetic difference.
   const gb = lane.gate2Base;
   out.push(
-    `  differential interval (D2) daily arithmetic mean ${pct(gb.differentialDailyMean)} · TE ${pct(gb.trackingError)}/yr · IR ${num(gb.ir, 2)} · NW t ${num(gb.nwT, 2)} (lag 20)`,
+    `  differential interval (D2) daily arithmetic mean ${pct(gb.differentialDailyMean)} · TE(iid) ${pct(gb.trackingError)}/yr · IR ${num(gb.ir, 2)} · NW t ${num(gb.nwT, 2)} (lag 20)`,
   );
+  // The two t's legitimately differ: the HAC factor adjusts the SE of the MEAN,
+  // not a per-period quantity, so ir*sqrt(years) != nwT. Printed so the gap is
+  // visible rather than looking like an arithmetic error.
+  out.push(
+    `     ${num(gb.years, 2)}y · implied t from IR ${num(gb.tFromIr, 2)} · HAC NW t ${num(gb.nwT, 2)} · the gap is the HAC factor (ir*sqrt(y) != nw t)`,
+  );
+  if (lane.indexDifferential != null && lane.indexReturn != null) {
+    out.push(
+      `     vs INDEX (pre-registered 2nd benchmark): portfolio − index = ${pct(lane.indexDifferential)} (index ${pct(lane.indexReturn)})`,
+    );
+  }
   out.push(
     `     lag sensitivity: t(5) ${num(gb.nwT5, 2)} · t(20) ${num(gb.nwT, 2)} · t(60) ${num(gb.nwT60, 2)} — descriptive; if these disagree, report that rather than pick a lag`,
   );
@@ -225,9 +236,13 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
   const reasons = Object.entries(X.byReason).sort((a, b) => b[1] - a[1]);
   const denom = X.total + X.eligible;
   out.push(
-    `  exclusion census (D3, descriptive): ${num(X.total, 0)} rejected vs ${num(X.eligible, 0)} eligible observations` +
+    `  exclusion census (D3, descriptive): ${num(X.total, 0)} first-failures vs ${num(X.eligible, 0)} eligible observations` +
       ` → ${num((X.total / Math.max(1, denom)) * 100, 1)}% of screenable observations rejected`,
   );
+  out.push(
+    `    basis=${X.basis}: runScreen records ONE reason per name, so this is which gate rejects FIRST, not which gate binds —`,
+  );
+  out.push(`    it cannot support "relaxing a gate raises breadth by Y".`);
   for (const [reason, n] of reasons) {
     out.push(`    ${reason.padEnd(22)} ${num(n, 0).padStart(7)}  (${num((n / Math.max(1, X.total)) * 100, 1)}% of rejections, ${num(n / Math.max(1, X.days), 0)}/day)`);
   }

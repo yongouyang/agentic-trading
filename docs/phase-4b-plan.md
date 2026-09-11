@@ -39,11 +39,49 @@ a locked document is legitimate — but *visibly*, by the same rule that made
 | 10 | non-goals | production behaviour stated to be unchanged | a reader could otherwise infer the shipped picker is being altered |
 | 11 | Finding 3 | the product implication of `topN = 15` (8 % of US breadth, 60 % of HK's) stated | it is a product fact, not only a reporting artefact |
 
+## Amendments round 2 (2026-09-11, post-execution) — corrections found by review
+
+The executed round was then reviewed adversarially by an independent
+multi-model pass. It confirmed the SE/interval arithmetic and the implemented
+code, and found **fifteen further defects** — several of them wrong numbers in
+*this document*, in the paragraphs written to correct wrong numbers. They are
+recorded here rather than silently patched; the superseded text of the earlier
+round-2 edits is recoverable from commit `d6e558f`, and the pre-review locked
+text from `25aa8cd`.
+
+The three that mattered most:
+
+| # | What it said | What is true |
+|---:|---|---|
+| R1 | *"would clear t = 2 with a tracking error ≤ 4.6 %/yr"* | **Dropped √years.** `t = (μ/TE)·√y`, so `TE ≤ μ·√y/2` — ≈ **9.2 %/yr** for the simple-annualized compounded differential, against a per-lane horizon of **3.98 y (US) / 3.87 y (HK)**, not the 4.12 y pre-run estimate. My 4.6 %/yr silently re-imposed `IR ≥ 2` — the exact confusion this phase exists to remove, inside the paragraph that removes it. |
+| R7 | *"≈ 10 %, not 5 %"*, correct to *"t ≈ 2.24"* | **Both wrong, and the answer inverts.** Gate 1 requires `IC ≥ 0.02 AND t ≥ 2`, so the rejection region is one-sided: p = 0.0228 per lane → FWER = **4.5 %**, already below 5 %. "10 %" assumed α = 0.05; "2.24" is the two-sided value. **No correction is needed, and Phase 4c must not raise the bar on these grounds.** |
+| R9 | *"the project has never known which gate does the cutting"* | **False of production.** `cli/daily-screen.ts` already tallies and persists `excludedCounts[reason]`. D3 restores a field the *replay* dropped — and, worse, it reports **first-failure**, not marginal bindingness (see R10), so it cannot support "relaxing a gate raises breadth". |
+
+The rest:
+
+| # | Amendment |
+|---:|---|
+| R2 | Finding 2's `+38.03 %` is a difference of **compounded** returns while D2's t tests the mean **arithmetic** daily difference — the draft used one estimand's magnitude to motivate another's threshold, contradicting its own amendment 3. |
+| R3 | Finding 1's mechanism corrected by exact decomposition: the per-day factor is 2.16× (US) / 1.31× (HK) and the overlap factor 0.65× / 0.62× — the sampling formula fails **worse in the US**, the opposite of the "correlated HK names" story. |
+| R4 | "Cannot be predicted" narrowed: the **time-series** factor is stable across lanes (2.90 vs 2.77, within 5 %) and predictable; only the cross-sectional factor is not. Motivated the SE-stability guard in D6. |
+| R5 | D1's `2·nwSe` is a **detection floor at 50 % power**, not a power curve. Added the curve: true IC 0.02 → power 0.26 (US) / 0.12 (HK); 0.05 → 0.91 / 0.51. |
+| R6 | "The bar is unpassable" is **false** (IC = 0.05 → US t = 3.36, HK t = 2.03, both pass). The correct statement is that the magnitude requirement is **vacuous**, so Gate 1 is a pure significance test. |
+| R8 | "≈ 150 statistics" did not sum; the census is **≈ 84** — in the one sentence claiming "spent is measurable". |
+| R10 | D3's first-failure limitation stated (it cannot support a gate-relaxation inference). |
+| R11 | D4's `f = 0.10` is **post hoc**; and its "a decile wherever the lane is wide enough" is **false for HK**, where the floor binds every day and the contrast is the top **20 %**, not a decile. HK's D4 is pre-declared uninformative (±4 % at 20d). |
+| R12 | D5's predicate pinned before reading results (it was chosen during implementation, i.e. post hoc). |
+| R13 | The Gate-2 headline (`+38.03 %`) and the D2 `t` are **different statistics** and are now printed side by side; and the reported `IR` (i.i.d. TE) is distinguished from the HAC `t`, since `IR·√y ≠ nwT`. |
+| R14 | The **index** differential was missing — `phase-4-plan.md` pre-registered SPY / 2800.HK alongside the equal-weight universe. Added. |
+| R15 | Fork A's second clause had **no deliverable** (every D-item was diagnostic). Added **D6**, the Phase-4c pre-registration skeleton. |
+| R16 | The **central premise was overstated**: "the run's verdict rested on two power numbers". The mechanical verdict is `meanIc >= 0.02 && nwT >= 2` and `detectableIc` fed only prose — no power number was a decision input, and both lanes fail on *magnitude* under any N. Reframed as an **interpretation** repair, not the repair of a broken verdict. |
+
+One correction in the other direction: the review called the locked text unrecoverable. It is not — the pre-review version is commit `25aa8cd` and the round-1-amended version is `d6e558f`, so the audit trail survives in git even though the working file was edited in place.
+
 ## Why this round exists
 
 Phase 4 returned `h1_revised` on both lanes and reached the correct *surface*
 conclusion (the pre-registered Gate 1 bar cannot be passed). But the run's
-verdict rested on **two power numbers, and neither is sound**:
+**published reading** rested on two power numbers, and neither is sound:
 
 | | how Phase 4 obtained it | status |
 |---|---|---|
@@ -53,16 +91,23 @@ verdict rested on **two power numbers, and neither is sound**:
 The first is the calibration error already recorded in PROGRESS. The second is
 the same error class and has not been noticed: the plan argues Gate 2 can never
 confirm anything because portfolio alpha needs IR ≥ 0.985 — but that is a
-statement about a *hypothetical* IR, while the realized differential is
-**+38.03 % over 4.12 y** (≈ 9.2 %/yr simple), which would clear t = 2 with a tracking
-error ≤ 4.6 %/yr. Whether the realized TE is that small **has never been
-computed**: `simulatePortfolio` returns the daily return series, and
+statement about a *hypothetical* IR, while nothing anywhere measures the realized
+one. **Whether the realized TE is that small has never been computed**: `simulatePortfolio` returns the daily return series, and
 `neweyWestT` already exists, but nothing in the codebase puts a standard error
 on the differential. Gate 2 is a point estimate with no interval, and the claim
 that built the whole asymmetric gate design was an assumption.
 
 So this round does **not** re-test the screen. It repairs the two numbers the
-verdict was built on, and states what the window can actually answer.
+*reading* was built on, and states what the window can actually answer.
+
+**Scope, stated precisely, because it is easy to overstate.** The mechanical
+verdict was `meanIc >= 0.02 && nwT >= 2`; `detectableIc` fed only the prose note and
+one report line, and both lanes failed the *magnitude* requirement under any N
+(US 0.0145, HK −0.0192). So **no power number was a decision input**, and this
+round is an **interpretation and Gate-2-justification repair** — not the repair of
+a broken verdict. The precise defect is: one asserted magnitude bar, one asserted
+power claim, and a mis-calibrated power table. The remedy is D1's own rule (a bar
+must be *derived*), not "fix N".
 
 ## Finding 1 — Gate 1's bar cannot be fixed by re-thresholding
 
@@ -77,20 +122,52 @@ Three different estimates of the same quantity, all from published numbers:
 realized SE = mean / nwT; the NW inflation is 2.91× US and 2.76× HK versus the
 4.47× = √20 the heuristic assumes.)
 
-The heuristic's **two error sources have opposite signs**, which is why its net
-error is not predictable *in advance*: per-day SE is understated when names are
-correlated (HK's 25 names are nowhere near independent), while the overlap
-penalty is overstated (2.8× realized vs 4.5× assumed). In these two lanes the net
-went **both ways** — US landed 1.40× worse than the heuristic, HK 0.81×
-*better* — which is why the plan's own arithmetic said HK's floor was 0.0247 and
-the realized floor is 0.0493. Two lanes are two observations, not a law: the
-operational conclusion is *measure the realized SE*, not that it is
-unpredictable in principle.
+The heuristic's two error sources can be separated exactly,
+`realized/heuristic = [sd_ic / (1/√(N−1))] × [NW inflation / √h]`:
+
+| lane | per-day factor | overlap factor | product |
+|---|---|---|---|
+| US | 0.16116 / 0.07474 = **2.16×** | 2.897 / 4.472 = **0.65×** | 1.40× |
+| HK | 0.26771 / 0.20412 = **1.31×** | 2.762 / 4.472 = **0.62×** | 0.81× |
+
+**The per-day approximation fails in both lanes — and it fails *worse* in the US,
+which is the opposite of the intuitive story** (one would expect HK's correlated
+25 names to break `1/√(N−1)` hardest; they break it least). Meanwhile the √h
+overlap penalty is overstated in both, by a similar factor. So the two error
+sources are on opposite sides of 1 *within each lane*, but their sign is
+consistent *across* lanes, and the net sign (US 1.40× worse, HK 0.81× better) is
+driven by which factor dominates — not by any mechanism this document can name.
+
+The consequence for the methodology rule is sharper than "measure it": the
+time-series factor is **stable across lanes (2.90 vs 2.77, within 5 %) and therefore
+predictable**, while only the cross-sectional factor is not. The deeper reason
+`sd_ic` (0.1611) is 2.16× the sampling-only per-day SE (0.0747) is that most of
+the daily IC variance is **regime instability, not cross-sectional noise** — which
+is exactly the quantity that can shift between a design half and a test half.
+That is why D1's rule needs an SE-stability guard (§ D6), not merely a design-half
+measurement.
+
+Two lanes are still two observations: the operational conclusion is *measure the
+realized SE on a design half*, not that it is unpredictable in principle.
 
 **Consequence for the bar.** With the realized SE, `IC = 0.02` gives US t = 1.34
-and HK t = 0.81. There is no threshold that rescues this: to be reachable at
-t = 2 the bar must be ≥ 0.0298 (US) / 0.0493 (HK), and at that size the test only
-speaks about large effects.
+and HK t = 0.81.
+
+**Two things this does and does not say.** It does not say the bar was "unpassable"
+— IC = 0.05 would give US t = 3.36 and HK t = 2.03, and both lanes would pass.
+What it says is that the **magnitude requirement is vacuous**: because
+`2·nwSe` exceeds 0.02 in both lanes, any IC large enough to clear t = 2 has
+already cleared the 0.02, so Gate 1 degenerates into a pure significance test
+with no effect-size content. The remedied form of the bar is "passable only for
+mean 20d IC ≥ 0.0298 / 0.0493, i.e. saturated by the significance requirement".
+
+**And `detectableIc` is a *detection floor*, not a power calculation.** At an IC
+equal to the floor the test has **50 % power** by construction. Reported properly
+it is a power *curve*: against a true IC of 0.02 the power is ≈ **0.26 (US) / 0.12
+(HK)**; against 0.05 it is ≈ **0.91 / 0.51** (normal approximation, SE fixed).
+Calling D1 "the power statement" overstates it; it is the significance constraint
+restated as an IC magnitude, and the 50 %-power point is the one that matters for
+reading a FAIL.
 
 **Measured intervals (what the window actually established):**
 
@@ -162,10 +239,19 @@ spread (+0.09 % @20d) is indistinguishable from zero.
 ## Finding 4 — breadth is the binding constraint and its cause has never been measured
 
 552 → 180 (US, 33 %) and 131 → 25 (HK, 19 %) after the eligibility gates.
-`replayScreen` keeps only `excludedCount` (`replay.ts`), discarding the
-per-reason breakdown that `runScreen` already computes. So the project has never
-known *which* gate does the cutting — and breadth is the entire reason the
-power is where it is.
+`replayScreen` keeps only `excludedCount`, discarding the per-reason breakdown
+that `runScreen` already computes. **Production does not have this blind spot** —
+`cli/daily-screen.ts` already tallies `excludedCounts[e.reason]` and persists it in
+`ScreenResult`. It is the *replay path* that drops it, so D3 restores a field the
+backtest threw away rather than inventing a capability.
+
+**One limitation must be stated up front, because it bounds what D3 can support.**
+`runScreen` records only the **first** failing reason per name (an `if/else if`
+chain), so the census answers *"which gate rejects first"* — not *"which gate
+binds"*. It therefore **cannot** support "relaxing gate X raises breadth by Y": a
+name rejected first for `BEARISH_ALIGNMENT` would simply be rejected next for
+whatever it also fails. A marginal (order-independent) count is a different,
+larger change and is not in this round.
 
 This matters because the census is **clean**: it describes the screen's inputs,
 not returns, so it consumes no return-information and cannot contaminate a
@@ -173,16 +259,26 @@ return-based hypothesis. (It could still *select*: using the census to choose
 which gate to relax and then re-testing IC on this window would be a selection
 step. Fork C locks it to description for exactly that reason.)
 
-## Finding 5 — two lanes, two tests, no correction
+## Finding 5 — two lanes, and a multiplicity correction that is NOT needed
 
-Both lanes were tested against t = 2, reported separately, with no conjunction
-and no multiplicity correction — a locked Phase-4 decision. The unrecorded
-consequence: the chance of at least one spurious "pass" across the pair is
-**≈ 10 %, not 5 %**. With both lanes failing this is moot for Phase 4, but it is
-not moot going forward: Phase 4c should either correct for multiplicity
-(two lanes at Bonferroni → t ≈ 2.24) or nominate one **primary** lane and treat
-the other as descriptive. Recorded so that choice is made deliberately instead of
-inherited.
+Both lanes were tested against t = 2, reported separately, with no conjunction —
+a locked Phase-4 decision. The first draft of this finding claimed the pair's
+family-wise error was "≈ 10 %, not 5 %" and that Phase 4c should correct to
+Bonferroni t ≈ 2.24. **Both figures were wrong**, and in a way worth leaving on
+the record, because the corrected answer is the opposite of the draft's:
+
+- Gate 1's rule requires `IC ≥ 0.02 AND t ≥ 2`. Because the magnitude is positive,
+the rejection region is **one-sided**: p = 0.0228 per lane at t = 2, giving
+FWER = 1 − (1 − 0.0228)² = **4.5 %** for the pair — already *below* 5 %.
+- "≈ 10 %" is the nominal α = 0.05 figure (t = 1.645 one-sided); "2.24" is the
+two-sided 0.025 value. The draft mixed two conventions and matched neither.
+
+So **no multiplicity correction is required, and Phase 4c must not raise the bar
+on these grounds** — a 2.24 threshold would be strictly stricter than the current
+rule with no power calculation behind it, which is the original sin re-committed.
+What Phase 4c *should* do is state the family explicitly (which lanes and which
+statistics are in it) and nominate a primary lane, so the choice is deliberate
+rather than inherited.
 
 ## Forks — options considered, decided 2026-09-11
 
@@ -230,23 +326,43 @@ confirming gate was pre-registered as Gate 1, and Gate 1 failed.
   compounded differential side by side and labels the interval as belonging to
   the former. Otherwise the artifact's headline and D2's t read as one number
   when they are two.
-- **D3 — the eligibility census.** Retain `excluded` reasons in `ReplayDay` as
-  an additive tally; report rejections by gate, lane, and year, plus the
-  reject-share of the 552/131 screenable universe. Explains breadth 180/25.
+- **D3 — the first-failure census.** Retain `excluded` reasons in `ReplayDay` as
+  an additive, **per-market** tally; report rejections by gate, lane, and year,
+  with an exact denominator (Σ ranked observations) rather than a static universe
+  size — names invisible at T are skipped before counting, so a share against
+  552/131 is not well defined over time. It reports *which gate rejects first*
+  (see Finding 4) and may not be read as marginal bindingness.
 - **D4 — the proportional spread.** Report the top-vs-rest spread with a
   **proportional** cutoff instead of the fixed `topN = 15`, at all three
   horizons, with a NW t on the daily spread series.
 
-  **The cutoff is specified here, not deferred.** In HK a decile is 2–3 names,
-  so the rule *is* the statistic, and an unspecified rule pre-registers nothing:
-  `cutoff = max(ceil(0.10 × breadth), 5)` per lane per day — a decile wherever
-  the lane is wide enough, floored at 5 names on thin days. **Descriptive only**
-  for this window (it is spent for this statistic too — Finding 1); it becomes a
-  gate only under a Phase-4c pre-registration, which may revise the rule provided
-  it does so *before* spending new data.
+  `cutoff = max(ceil(0.10 × breadth), 5)` per lane per day, computed on the count
+  of names with a computable forward return. Two things must be said plainly
+  rather than buried:
+
+  1. **`f = 0.10` is post hoc.** It was chosen *after* Finding 3 observed that a
+     fixed 15 is 8.3 % of US breadth but 60 % of HK's — and it leaves US almost
+     unchanged while moving only the lane the finding objects to. The whole of D4
+     is therefore **descriptive for this window**; `f` becomes pre-registered only
+     when Phase 4c fixes it before seeing data.
+  2. **In HK the floor *is* the rule, so HK's contrast is the top 20 %, not a
+     decile.** HK breadth is ~25, so the decile is 2–3 names and `max(3, 5) = 5`
+     — top 5 of 25. The floor binds on every HK day, so the earlier draft's claim
+     that the rule is "a decile wherever the lane is wide enough" is false for the
+     lane it was written for. HK's D4 number is **not comparable** to US's, and
+     the report prints the mean realized cutoff and the floor-bind share so this
+     is visible rather than inferable.
+
+  Per the same arithmetic, HK's D4 precision is roughly ±4 % at 20d (k ≈ 5 vs
+  rest, single-name 20d SD ~20–30 %), so HK's D4 result is pre-declared
+  **uninformative**, not a null to be explained.
 - **D5 — verdict vocabulary.** `insufficient_evidence` added as an explicit
   outcome class alongside `h1_holds` / `ranking_power_but_not_tradable` /
-  `h1_revised`; the 2026-09-10 artifact is annotated, not rewritten.
+  `h1_revised`, with the **predicate pinned before the run**: it fires per lane
+  when `gate1 failed AND GATE1_MIN_IC < detectableIc`, i.e. when the lane's own
+  detection floor sits above the bar it failed. `h1_revised` is reserved for a
+  FAIL on a bar the lane could have detected. The 2026-09-10 artifact is
+  annotated, never rewritten.
 
 ## Build order (fast tier once locked)
 
@@ -305,7 +421,7 @@ pre-registration:
    computed on the window that produced Phase 4's numbers, so that window is
    spent for these quantities — including the proportional spread (D4) and the
    differential interval (D2). *Spent* is measurable, not rhetorical: the
-   2026-09-10 artifact published roughly **150 statistics** (2 lanes × 3 horizons
+   2026-09-10 artifact published roughly **84 statistics** (2 lanes × 3 horizons
    × 5 metrics, plus 9 weight combos × 2 lanes, plus yearly IC and yearly
    portfolio differentials, plus both cost levels). That is the size of the
    garden whose paths have already been walked.
@@ -362,10 +478,33 @@ exactly the case that needed it.
 
 ## D2 — the Gate-2 interval: the assumption, now measured
 
-| lane | daily arithmetic mean | tracking error | IR | NW t (lag 20) | t(5) / t(60) |
-|---|---|---|---|---|---|
-| US | +0.03 % | 15.85 %/yr | **0.49** | **1.19** | 1.06 / 1.25 |
-| HK | −0.02 % | 9.28 %/yr | −0.59 | −1.20 | −1.11 / −1.16 |
+| lane | daily arithmetic mean | TE (i.i.d.) | IR | NW t (lag 20) | implied t from IR | years |
+|---|---|---|---|---|---|---|
+| US | +0.03 % | 15.85 %/yr | **0.49** | **1.19** | 0.99 | 3.98 |
+| HK | −0.02 % | 9.28 %/yr | −0.59 | −1.20 | −1.16 | 3.87 |
+
+The **implied t from the IR (0.99) and the HAC t (1.19) legitimately differ**, and both
+are printed: the HAC factor adjusts the standard error of the *mean*, not a
+per-period quantity, so `ir·√years ≠ nwT`. Printing one without the other invites
+reading the gap as an error.
+
+The **index** comparison the Phase-4 plan also pre-registered now prints too, and
+it is the less flattering one: **US portfolio − SPY = −5.36 pp** (portfolio
++89.17 %, SPY +94.53 %) and **HK portfolio − 2800.HK = −42.80 pp** (+11.28 % vs
++54.08 %). The equal-weight benchmark is the *screen's own eligible set*, so the
+Gate-2 differential is mostly a statement about portfolio construction
+(concentration, hysteresis, T+1 fills, costs) rather than about the screen's
+selection. That is why a non-falsification there could never have been a
+confirmation of H1 — an argument that survives any interval D2 produces.
+
+**Cost drag explains most of HK's differential.** Turnover is already defined
+both-sides, so the drag is turnover × per-side rate: US 30.9 × 5 bp ≈ **1.5 %/yr**,
+HK 26.1 × 23 bp ≈ **6.0 %/yr** — against a −27.14 pp differential. (The “~12 %/yr”
+figure in `architecture-v1.md` and the Phase-4 PROGRESS entry double-counts the
+round trip and is corrected.) HK's Gate-2 falsification therefore falsifies the
+*portfolio rule and cost model*, which routes to `phase-4-plan.md`'s “iterate on
+the portfolio rule / costs / liquidity, not on the score” — not to a score
+revision.
 
 **Neither reaches t = 2, and the lag sensitivity agrees.** So Fork B's
 conditional never fired: there is no adequately-powered evidence to promote, and
@@ -382,29 +521,38 @@ Also confirmed: the artifact's `+41.11 %` differential and the `t = 1.19` are
 **different statistics** — a difference of compounded returns versus the mean of
 the daily arithmetic difference (amendment 3). They are printed side by side.
 
-## D3 — the census: the trend filter, not liquidity, sets breadth
+## D3 — the census: the trend filter rejects first, but this is not marginal bindingness
 
-| lane | rejections | reject share | dominant gate | its share |
+| lane | first-failures | reject share | gate that rejects first | its share |
 |---|---|---|---|---|
 | US | 371,941 | **67.3 %** | `BEARISH_ALIGNMENT` | **81.2 %** (301 names/day) |
 | HK | 100,954 | **81.1 %** | `BEARISH_ALIGNMENT` | 43.9 % (45/day) |
 
-US `LOW_LIQUIDITY` rejects **0.5 %** — the $20 M adv floor is effectively not
-binding, and US breadth 180/552 is almost entirely the `close > sma50 > sma200`
-trend filter. HK is closer to split: `BEARISH_ALIGNMENT` 43.9 %,
-`LOW_LIQUIDITY` 29.4 %. `BEARISH_ALIGNMENT` is the dominant reason in **every
-calendar year** in both lanes.
+`BEARISH_ALIGNMENT` (`close > sma50 > sma200`) is the gate that rejects first in
+**every calendar year** in both lanes, and US `LOW_LIQUIDITY` accounts for just
+**0.5 %** — the $20 M adv floor is effectively not binding. HK is closer to split
+(`BEARISH_ALIGNMENT` 43.9 %, `LOW_LIQUIDITY` 29.4 %).
 
-This is the fact that explains both lanes' power, and it is a *screen-design*
-fact, not a statistical one. Per Fork C it is **documentation only** — no gate was
-relaxed and `SCREEN_PARAMS` is untouched.
+**The limitation is load-bearing and is printed in the report:** `runScreen`
+records only the *first* failing reason, so this census answers “which gate
+rejects first” — **not** “which gate binds”. It therefore cannot support
+“relaxing `BEARISH_ALIGNMENT` would raise US breadth from 180 toward 552”: a name
+rejected first for that would simply be rejected next for `HIGH_VOLATILITY`,
+`NEGATIVE_MOMENTUM`, or `NON_POSITIVE_SHARPE`, which together reject another 16 %.
+An order-independent marginal count is the change that would answer it, and it is
+not in this round. The field is typed `basis="first_failure"` so the limitation
+travels with the data rather than with this paragraph.
+
+What the census *does* establish is narrower and still useful: the trend filter is
+the gate that stands between the universe and the shortlist. Per Fork C it is
+**documentation only** — no gate was relaxed and `SCREEN_PARAMS` is untouched.
 
 ## D4 — the proportional spread
 
 | lane | cutoff | 5d | 20d | 60d |
 |---|---|---|---|---|
-| US | 18 of 180 | +0.16 % (t 1.47) | +0.64 % (t **1.66**) | +1.47 % (t 1.14) |
-| HK | 5 of 25 | +0.09 % (t 0.50) | **+0.76 %** (t 1.34) | +2.45 % (t 1.56) |
+| US | 18 of 180 (decile binds) | +0.16 % (t 1.47) | +0.64 % (t **1.66**) | +1.47 % (t 1.14) |
+| HK | **5 of 25 (floor binds — top 20 %, not a decile)** | +0.09 % (t 0.50) | **+0.76 %** (t 1.34) | +2.45 % (t 1.56) |
 
 Finding 3 is confirmed materially rather than cosmetically. HK's 20d spread goes
 from **+0.07 %** (fixed top-15 = 60 % of its universe) to **+0.76 %** (top 5 of
@@ -415,6 +563,54 @@ than 15, so the extra three names are weaker.
 US 20d `t = 1.66` is the **largest statistic the project has produced**, and it is
 still below 2. That is the honest state of the top-decile hypothesis: the best
 available framing, on a spent window, is not significant.
+
+**Two caveats that must travel with HK's row.** (1) The floor binds on every HK
+day, so HK's contrast is the top **20 %**, not a decile — HK and US are still not
+comparable, just less incomparably so. (2) HK's precision here is roughly
+**±4 %** at 20d (k ≈ 5 vs rest, single-name 20d SD ~20–30 %), so HK's D4 result is
+pre-declared **uninformative** rather than a null to be explained. And `f = 0.10`
+was chosen *after* Finding 3, which is why D4 is descriptive for this window and
+`f` becomes pre-registered only when Phase 4c fixes it before seeing data.
+
+## D6 — Phase-4c pre-registration skeleton (Fork A's second clause)
+
+Fork A locked "pre-register a replacement statistic for **future data only**", and
+D1–D5 did not implement it — every one of them was diagnostic. This is that
+skeleton, written **before any Phase-4c data exists**, so Phase 4c cannot be
+designed after reading its own numbers. Nothing below may be informed by this
+window's D2/D4 values.
+
+- **Deciding statistic:** the differential test of Finding 2 — a Newey–West t on
+  the daily arithmetic difference — **not** rank IC. Finding 1 established that
+  rank IC cannot carry an effect-size bar at this breadth, and Finding 2 that the
+  differential is the only statistic whose power can be computed *before* spending
+  data. Gate 1 (rank IC) demotes to descriptive.
+- **Data:** prospective sessions accumulated from the already-emitted daily picker
+  output. The alternative fresh cross-section (Databento/XNYS — 16,777 symbols in
+  `VendorBar`) needs an as-of adjustment and CA-degrade layer first, so it stays a
+  **data project**, not a prerequisite.
+- **Bar derivation (the D1 rule):** split history into a design half and a test
+  half; measure breadth, `nwSe` and the power curve on the **design** half; choose
+  the bar at a stated **target power (0.8 by default — not the 50 %-power detection
+  floor)**; lock it; spend the test half **once**.
+- **SE-stability guard** (new, from amendment R4): the time-series SE factor is
+  stable across lanes (2.90 / 2.77) but the cross-sectional one is not, and about
+  two-thirds of daily IC variance is regime instability rather than sampling noise.
+  So: *if the test-half realized SE exceeds the design-half's by more than a
+  pre-stated factor, declare the lane **inconclusive** rather than failed.* Without
+  this, the design-half rule can fail a lane for a regime it never saw.
+- **Family and lanes:** state the family explicitly (which lanes, which statistics)
+  and nominate a **primary** lane. Per Finding 5 the one-sided t ≥ 2 rule already
+  sits at ≈ 4.5 % family-wise for two lanes, so **no Bonferroni inflation is
+  warranted** — the choice is about pre-committing the family, not a stricter bar.
+- **HK's options, priced now:** a design-half power calculation returns a floor
+  near 0.05 IC for a 25-name lane, so the realistic choices are *drop HK from the
+  deciding test* (keep it as a reported lane) or *pool the lanes*. Decide this
+  **before** the design-half measurement, because the measured number will make the
+  choice for anyone who has not.
+- **Firewall:** this window's D2 and D4 values (US t 1.19 / 1.66, HK 1.34) may not
+  enter Phase 4c's bar derivation. That 1.66 is the project's largest statistic is
+  not evidence, and must not be used to justify a looser bar.
 
 ## What changed in the code
 

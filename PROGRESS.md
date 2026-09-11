@@ -42,21 +42,44 @@ confirmed the artifact's `+41.11 %` differential and the `t = 1.19` are **two
 different statistics** (difference of compounded returns vs mean daily arithmetic
 difference), now printed side by side.
 
-**D3 — the finding with the most consequence.** The census shows
-`BEARISH_ALIGNMENT` (`close > sma50 > sma200`) accounts for **81.2 % of US
-rejections** (301 names/day) and 43.9 % of HK's — dominant in **every calendar
-year** in both lanes. US `LOW_LIQUIDITY` rejects just **0.5 %**: the $20 M adv
-floor is effectively not binding, and post-gate breadth 180/552 is almost
-entirely the trend filter. HK is closer to split (BEARISH_ALIGNMENT 43.9 %,
-LOW_LIQUIDITY 29.4 %). Reject share: **67.3 % (US) / 81.1 % (HK)** of screenable
-observations. Per Fork C this is documentation only — no gate was relaxed.
+**D3 — the finding with the most consequence, and a limitation to match.** The
+census shows `BEARISH_ALIGNMENT` (`close > sma50 > sma200`) is the gate that
+**rejects first** for **81.2 % of US rejections** (301 names/day) and 43.9 % of
+HK's — first in **every calendar year** in both lanes. US `LOW_LIQUIDITY` accounts
+for just **0.5 %**: the $20 M adv floor is effectively not binding. HK is closer to
+split (BEARISH_ALIGNMENT 43.9 %, LOW_LIQUIDITY 29.4 %). Reject share: **67.3 %
+(US) / 81.1 % (HK)** of screenable observations.
+
+**The census cannot price a gate relaxation, and the report now says so.**
+`runScreen` records only the *first* failing reason, so this is "which gate rejects
+first", not "which gate binds" — the three other signal gates reject a further
+16 %, and a name that clears the trend filter would simply be rejected next. An
+order-independent marginal count is the change that would answer "relax gate X →
+breadth +Y", and it is **not** in this round. Per Fork C the census is
+documentation only; no gate was relaxed. (Also corrected: production already
+tallies this — `cli/daily-screen.ts` persists `excludedCounts`; it was the
+*replay* path that dropped it.)
 
 **D4 — Finding 3 confirmed materially.** With the proportional cutoff
-(`max(ceil(0.10 × breadth), 5)`): HK 20d spread **+0.07 % → +0.76 %** (5 of 25,
-t 1.34) — the fixed top-15 was 60 % of HK's universe and diluted the contrast
-into nothing. US moves the other way (+0.82 % → +0.64 %, 18 of 180). **US 20d
-t = 1.66 is the largest statistic the project has produced, and it is still below
-2** — the honest state of the top-decile hypothesis on a spent window.
+(`max(ceil(0.10 × breadth), 5)`): HK 20d spread **+0.07 % → +0.76 %** (t 1.34) — the
+fixed top-15 was 60 % of HK's universe and diluted the contrast into nothing. But
+the **floor binds on every HK day**, so HK's test is the top **20 %**, not a decile
+— HK and US are still not comparable, and HK's precision here is ±4 %, so its D4
+result is pre-declared **uninformative** rather than a null. US moves the other way
+(+0.82 % → +0.64 %, 18 of 180 where the decile binds). **US 20d t = 1.66 is the
+largest statistic the project has produced, and it is still below 2.**
+
+**D2 — an extra benchmark, and a disclosure.** The index comparison the Phase-4
+plan also pre-registered now prints, and it is the less flattering one: US
+portfolio − SPY = **−5.36 pp** (+89.17 % vs +94.53 %), HK portfolio − 2800.HK =
+**−42.80 pp** (+11.28 % vs +54.08 %). The equal-weight benchmark is the screen's
+*own eligible set*, so the Gate-2 differential is mostly about portfolio
+construction, not the screen's selection — which is why its non-falsification
+could never have confirmed H1, an argument that survives any interval. The gap
+between the IR-implied t (US 0.99) and the HAC t (US 1.19) is now printed rather
+than left to look like an error. HK's −27 pp is mostly **cost drag**
+(26.1 × 23 bp ≈ 6.0 %/yr; US 1.5 %/yr — the earlier "~12 %/yr" double-counted the
+round trip), which routes to the portfolio rule and cost model, not the score.
 
 **D1** now prints the naive / heuristic / realized SE triple and the CI on every
 run, pass or fail — it was previously emitted *only when Gate 1 passed*, i.e.
@@ -73,11 +96,19 @@ clean. New coverage: the SE triple, the cutoff rule at HK-scale breadth,
 per-market census attribution, NW wiring on the differential, the verdict class,
 and the unconditional power note.
 
-Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: Phase 4c
-(a pre-registration on data this window does not contain — the powered
-differential test as the deciding gate, per Finding 2, plus a multiplicity rule
-per Finding 5); the XNYS/Databento universe as a **data project**; Databento R1
+Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
+Phase-4c pre-registration skeleton** (now written — powered differential as the
+deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
+lane, firewall); the XNYS/Databento universe as a **data project**; Databento R1
 baseline; the §7 `deepseek-v4-flash` doc correction.
+
+*Post-execution review note: an independent multi-model adversarial pass found 15
+further defects, three of them wrong numbers written into the paragraphs of
+`docs/phase-4b-plan.md` that existed to correct wrong numbers (a dropped √years in
+Gate 2's t=2 threshold; a multiplicity figure that should have been 4.5 % and
+needed no correction at all; and a "unpassable bar" claim that is false). All 15
+are recorded in that doc's "Amendments round 2". The lesson repeats at one order
+of magnitude smaller: the numbers that looked derivable were not.*
 
 ---
 
@@ -180,7 +211,9 @@ Built and ran the Phase-4 backtest (`packages/quant-core/src/{replay,ic,portfoli
   average hold, turnover 30.8×.
 - **HK Gate 2 falsified at both cost levels**: +12.65 % vs +40.10 % at base, and
   −9.98 % at 2× costs. 776 trades and 26.1× annual turnover against a 46 bp
-  round trip is a ~12 %/yr cost drag that kills it on its own.
+  round trip is a ~6 %/yr cost drag — most of the differential on its own.
+  *(Corrected 2026-09-11: this said ~12 %/yr, double-counting the round trip;
+  `turnover` is already both-sides. US drag is ≈ 1.5 %/yr.)*
 
 **The important finding is about the bar, not about the screen.** The
 pre-registered Gate 1 conjunction (IC ≥ 0.02 AND t ≥ 2) **cannot be passed in

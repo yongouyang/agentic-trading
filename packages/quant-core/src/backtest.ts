@@ -135,10 +135,16 @@ export interface Gate2Result {
   differential: number;
   /** Phase 4b D2: mean of the daily *arithmetic* difference p_t − b_t. */
   differentialDailyMean: number;
-  /** Annualised stdev of that daily difference. */
+  /** Annualised stdev of that daily difference (i.i.d.; descriptive). */
   trackingError: number;
-  /** (dailyMean × 252) / trackingError. */
+  /** (dailyMean × 252) / trackingError — the CONVENTIONAL IR, i.i.d. TE. */
   ir: number;
+  /** Portfolio sessions ÷ 252 — needed because `ir·√years != nwT`: the HAC
+   *  factor adjusts the SE of the *mean*, not a per-period quantity. Printed so
+   *  the gap is visible instead of looking like an error. */
+  years: number;
+  /** ir · √years — what the IR alone would imply for t. */
+  tFromIr: number;
   /** Pre-registered Newey-West t on the daily differential (lag 20). */
   nwT: number;
   /** Descriptive lag sensitivity — if these disagree with `nwT`, report that
@@ -167,6 +173,13 @@ export interface LaneResult {
   /** Phase 4b D3: which eligibility gate produced this lane's breadth.
    *  Descriptive only (Fork C) — it may not select a gate to relax. */
   exclusions: ExclusionCensus;
+  /** Buy-and-hold total return of the index ETF, when present in the data.
+   *  phase-4-plan.md pre-registered TWO benchmarks: the equal-weight
+   *  same-universe book (which shares the screen's own selection, so the
+   *  differential is mostly about portfolio construction) and the index. */
+  indexReturn: number | null;
+  /** portfolio total return − index total return. */
+  indexDifferential: number | null;
   yearly: { year: string; portfolio: number; benchmark: number; differential: number }[];
   verdict: LaneVerdict;
   notes: string[];
@@ -376,7 +389,18 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
     const idxRet = idxSym ? buyAndHold(forward.get(idxSym), input.dates) : null;
     if (idxRet != null) indexReturns[market] = idxRet;
 
-    lanes.push({ market, gate1, gate2Base: base.gate, gate2Double: doubled.gate, exclusions: exclusionCensus(days, market), yearly, verdict, notes });
+    lanes.push({
+      market,
+      gate1,
+      gate2Base: base.gate,
+      gate2Double: doubled.gate,
+      exclusions: exclusionCensus(days, market),
+      indexReturn: idxRet,
+      indexDifferential: idxRet == null ? null : base.result.metrics.totalReturn - idxRet,
+      yearly,
+      verdict,
+      notes,
+    });
   }
 
   return { lanes, replayDays: days.length, indexReturns };
@@ -428,6 +452,8 @@ function runPortfolioAndGate(
   const nw = neweyWestT(diffDaily, DIFFERENTIAL_LAG);
   const trackingError = sampleSd(diffDaily) * Math.sqrt(SESSIONS_PER_YEAR);
   const dailyMean = nw?.mean ?? 0;
+  const years = result.metrics.sessions / SESSIONS_PER_YEAR;
+  const ir = trackingError === 0 ? 0 : (dailyMean * SESSIONS_PER_YEAR) / trackingError;
 
   const reasons: string[] = [];
   if (differential <= 0) reasons.push(`[${costDescription}] portfolio ${pct(result.metrics.totalReturn)} vs benchmark ${pct(bench.totalReturn)} — differential ${pct(differential)}`);
@@ -443,7 +469,9 @@ function runPortfolioAndGate(
       differential,
       differentialDailyMean: dailyMean,
       trackingError,
-      ir: trackingError === 0 ? 0 : (dailyMean * SESSIONS_PER_YEAR) / trackingError,
+      ir,
+      years,
+      tFromIr: ir * Math.sqrt(years),
       nwT: nw?.t ?? 0,
       nwT5: neweyWestT(diffDaily, 5)?.t ?? 0,
       nwT60: neweyWestT(diffDaily, 60)?.t ?? 0,

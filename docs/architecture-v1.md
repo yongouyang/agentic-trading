@@ -542,16 +542,27 @@ cost sweep) only **falsifies**.*
 falsified; survives 2× costs at +24.98 %), but SPY returned +101.82 % — the
 screen beat its like-for-like baseline and lost to simply holding the index.
 HK portfolio +12.65 % vs benchmark +40.10 %, and −9.98 % at 2× costs, with
-26.1× annual turnover against a 46 bp round trip — a ~12 %/yr cost drag that is
-fatal on its own.*
+26.1× annual turnover against a 46 bp round trip — and since `turnover` already
+counts both sides, the drag is turnover × per-side rate ≈ 6.0 %/yr (US 1.5 %/yr),
+most of the differential on its own. (An earlier version said ~12 %/yr, which
+double-counted the round trip.)*
 
-***The pre-registered bar is unpassable in both lanes.*** Its power floor
-(US 0.0298, HK 0.0493) *exceeds* its own 0.02 magnitude requirement, because the
-power analysis was calibrated against universe size (552/131) instead of the
+***The bar's magnitude requirement is vacuous in both lanes, not "unpassable".***
+Its power floor (US 0.0298, HK 0.0493) *exceeds* its own 0.02 requirement, because
+the power analysis was calibrated against universe size (552/131) instead of the
 actual **eligible breadth** after the gates (180/25). A true IC of exactly 0.02
-gives US t = 1.34. So the FAIL is a statement about the *bar*, not about H1 — the
-informative numbers are the measured IC and t. Correcting the calibration and
-re-testing is a **new** pre-registration, not an edit to this one.*
+gives US t = 1.34. The bar is *passable* — IC 0.05 would give US t = 3.36 and
+HK t = 2.03 — but only at sizes that the 0.02 magnitude is irrelevant to, so Gate 1
+degenerates into a pure significance test. (An earlier version of this section
+said "unpassable", which was wrong.) So the FAIL is a statement about the *bar*,
+not about H1 — the informative numbers are the measured IC and t. Correcting the
+calibration and re-testing is a **new** pre-registration, not an edit to this one.*
+
+***Also corrected 2026-09-11:*** *the cost drag quoted below as "~12 %/yr" for HK
+double-counted the round trip. `turnover` is already defined both-sides
+(`portfolio.ts`), so the drag is turnover × per-side rate: US 30.9 × 5 bp ≈ 1.5 %/yr,
+HK 26.1 × 23 bp ≈ 6.0 %/yr. That is still most of HK's −27 pp differential, and it
+routes to the portfolio rule and cost model, not to a score revision.*
 
 *Reported, not gated:* US IC was +0.0185 / +0.0316 / +0.0343 in 2023/24/25 and
 −0.0469 / −0.0208 in 2022/26 — regime-dependent, positive in the middle years.
@@ -584,13 +595,17 @@ survives on evidence rather than assertion. The differential's interval is now
 reported alongside the headline differential, which is a **different statistic**
 (a difference of compounded returns, not the mean daily arithmetic difference).*
 
-***Breadth is set by the trend filter, not by liquidity.*** *The eligibility
-census (D3) shows `BEARISH_ALIGNMENT` (`close > sma50 > sma200`) accounts for
-**81.2 % of US rejections** (301 names/day) and 43.9 % of HK's; the US liquidity
-floor rejects just 0.5 %. Post-gate breadth of 180/552 (US) and 25/131 (HK) is
-therefore overwhelmingly a consequence of the trend filter — the fact that
-determines both lanes' statistical power. `LOW_LIQUIDITY` does bite in HK
-(29.4 %).*
+***Breadth is limited by the trend filter, not by liquidity — but the census
+cannot price a gate relaxation.*** *`BEARISH_ALIGNMENT` (`close > sma50 > sma200`)
+is the gate that **rejects first** for **81.2 % of US rejections** (301 names/day)
+and 43.9 % of HK's; the US liquidity floor accounts for just 0.5 %. Post-gate
+breadth of 180/552 (US) and 25/131 (HK) is therefore overwhelmingly a consequence
+of the trend filter — the fact that determines both lanes' statistical power.
+`LOW_LIQUIDITY` does bite in HK (29.4 %). **Limitation:** `runScreen` records only
+the first failing reason, so this is "which gate rejects first", not "which gate
+binds", and it cannot support "relaxing `BEARISH_ALIGNMENT` would raise US breadth
+toward 552" — three other signal gates reject a further 16 %. The census field is
+typed `basis="first_failure"` so the limit travels with the data.*
 
 *Also re-reported descriptively: the top-N-vs-rest spread with a **proportional**
 cutoff (`max(ceil(0.10 × breadth), 5)`) rather than a fixed top-15, since a fixed
