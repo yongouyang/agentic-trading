@@ -5,8 +5,11 @@ remaining route to validating the screen is a **fresh cross-section** rather tha
 more time (`phase4c:accrual` projects 4.7 y for US and 18.1 y for HK). Read-only
 investigation; nothing was run or changed.
 
-**Verdict: (b) — a bounded data project, gated on a corporate-action layer. It is
-NOT the "same universe plus a tail" collapse (c), and it is NOT ready to build (a).**
+**Verdict: (b) — a bounded data project. NOT the "same universe plus a tail"
+collapse (c), and NOT ready to build (a).** The corporate-action blocker is smaller
+than the first pass claimed — the registry plus existing candidates already explain
+39 % of the liquid universe's jumps, ticker identity is 1.5 % of series and
+quarantinable, and the only money-gated item is **dividends**.
 
 ## 1. The premise is half true, and the half that fails is the important one
 
@@ -90,21 +93,51 @@ F10 is HK-only. Consequences, in order of severity:
    is ~6 % cumulative over four years, against a measured +38 % differential. A
    plausible-looking "alpha" could be manufactured by the adjustment layer alone.
 
-**4b. Splits are neither applied nor recorded for ~97 % of the liquid universe.**
-`VendorBar` is **as-traded**, and R1 means splits are never applied locally (the
-picker's Yahoo bars arrive pre-adjusted). So every split is a phantom jump in a
-vendor series. Measured:
+**4b. Splits: the registry explains 39 % of the liquid universe's jumps — and the
+rest could not be classified by the method I first tried.**
 
-| | value |
-|---|---|
-| liquid vendor series with a split-like jump (≥ +50 % or ≤ −40 % in one session) | **247 of 1,844** |
-| survivor symbols with **any** `SplitEvent` row | **39 of 1,490 (2.6 %)** |
-| reverse-split rows on symbols the *picker* holds | **5** (of 2,666 reverse events on 1,789 symbols) |
+I ran the question this scoping session was for: extract every jump in the 1,844
+liquid series, then ask what the **existing** artifacts explain. A "jump" is a
+one-session move of ≥ +50 % or ≤ −40 % in adjusted-close terms.
 
-That last row is the revealing one: the split registry's mass sits on symbols the
-picker does not hold, so it was swept over a different population and tells us
-nothing about the 939 new names. **~97 % of the liquid vendor universe would carry
-unadjusted discontinuities into the screen.**
+| | events | share |
+|---|---|---|
+| total jumps in the liquid universe | **394** (247 series) | 100 % |
+| explained by the `SplitEvent` registry | **152** | 39 % |
+| explained by an existing detector candidate (`xnys-split-candidates.csv`, 3,119 rows; `detected-split-candidates-v4.csv`, 2,583 rows) | 2 | 1 % |
+| **not explained by anything on disk** | **240** | **61 %** |
+
+So the two detectors plus the registry already cover **39 % of the liquid
+universe's jumps**, and the question is what the other 61 % are.
+
+**I could not answer that with a lattice test, and the attempt is worth recording
+because it produced a confident wrong answer twice.** Classifying each residue
+ratio by the shipped `best_candidate` lattice gave "48 split-like" at the FAR tier
+and "34 same-instrument split-like on 29 names" at the NEAR tier — and both are
+meaningless. The lattice is built from every `n/d` with `n, d ≤ 32`, giving **702
+points whose median log-gap is 0.0057 — four times smaller than its own
+`LOG_TOL_NEAR = 0.025`** (88 % of gaps are below it). **Any** ratio therefore
+matches some lattice point, and "missed splits on 29 names" was an artefact of a
+classifier with no discriminating power. Left here rather than quietly deleted: it
+is the same failure mode as reading a test count instead of a verdict.
+
+The detectors' actual discrimination lives in **P2 (volume persistence) and P3
+(price/plausibility floors)** — the module's own docstring says so — and those were
+**not** run here.
+
+**What the named cases do suggest** (interpretation, not measurement): the residue
+is dominated by one-day repricings in biotech/pharma — ALNY +41 %, AMLX +79 %,
+IMGN +85 % (AbbVie's acquisition), KDNY +65 % (Novartis'), RAPT −73 %, BBIO −57 %
+— i.e. clinical readouts and M&A, which is exactly what a $20 M liquidity floor
+selects for. Plus a small number of unmistakable **ticker-identity** breaks.
+
+**Ticker identity is a real, bounded, measurable problem.** `META` is the clearest
+case: the archive's META series is a **$12.29 shell whose last bar is 2022-01-28**,
+then **Meta Platforms at a $196.00 open on 2022-06-09** (the FB→META rename date) —
+a **132-day gap** and a phantom **+1,494 %** "return". Meta's history also exists
+under `FB` (408 rows), so the archive keys on **ticker, not instrument**. Across the
+liquid universe, **27 of 1,844 series (1.5 %) contain an internal gap > 14 days**
+(24 above 45 days; worst 1,304 days). That is quarantinable rather than fatal.
 
 **4c. `adv20` is venue-distorted.** Neither feed has consolidated volume (XNAS
 carries full consolidated volume only for Nasdaq-listed names; XNYS carries Nasdaq
@@ -116,14 +149,28 @@ MASH/M&A settlement, no terminal flag), and there is a **~18 bp/day convention
 wedge** against the store's series (only 37.8 % of 680,775 cross-validated daily
 returns agreed within 0.1 %), which is not noise for SMA50/SMA200 alignment.
 
-## 5. The risk, stated as one sentence
+## 5. The risk, restated after the measurement
 
-**Every defect above biases a momentum/trend screen in the same direction — up.**
-A missing reverse split prints as a large positive jump and *guarantees* the name
-passes `close > SMA50 > SMA200` and `mom60 > 0`; missing dividends flatter the
-differential; venue-distorted volume distorts the gate that selects the universe.
-So **the failure mode is a confident false positive, not a noisy null** — the exact
-outcome this project has spent a week learning to distrust.
+The first version of this section asserted that a missing reverse split
+"*guarantees*" a name passes the trend gates, on the strength of "247 of 1,844
+liquid series carry a split-like jump". **That framing was wrong twice over**: the
+lattice cannot tell a split from a large move (§4b), and the named residue is
+dominated by genuine biotech repricings, not splits. The corrected risk ranking:
+
+1. **Ticker identity** (measured, bounded): 27 of 1,844 liquid series contain a
+   gap > 14 days, each a phantom return that a trend screen would rank at the top.
+   `META` +1,494 % is the existence proof. Cheap to quarantine once listed.
+2. **Missing dividends** (unmeasured, unbounded): the outcome variable becomes
+   *price* return, and the omission biases the Gate-2 differential **upward**
+   because the benchmark holds the payers and a trend-selected portfolio does not.
+   This remains the **only** blocker that needs money rather than work.
+3. **Venue-distorted `adv20`**: the $20 M floor is not production's filter.
+4. **Delisting returns undefined**: a series simply stops.
+5. **Unclassified jumps**: 240 of 394, which needs P2/P3 run to classify.
+
+**The direction caveat survives, and is still the thing to keep in front:** dividend
+omission and ticker-identity stitches both bias a momentum/trend screen **upward**.
+The failure mode remains a confident false positive rather than a noisy null.
 
 ## 6. What is NOT hard
 
@@ -150,9 +197,12 @@ the survivors**, not writing detection from scratch.
 
 1. ~~Size the breadth~~ — **done here: 1,490 survivors, 939 new. The project is
    worth doing.**
-2. **Run the existing detectors over the 1,844 liquid vendor series and re-measure
-   how many of the 247 jumps they explain.** This is the go/no-go for a screen run:
-   if the residual is large, no vendor IC is interpretable. Cheap — the tools exist.
+2. **Done, and it moved the picture:** the registry + candidates explain **152 of
+   394 jumps (39 %)**, and the unclassifiable 61 % needs the detector's P2/P3 gates
+   rather than the lattice, which is degenerate (§4b). Next concrete step: **run
+   P2/P3 over the 1,844 liquid series from the DB** (~1 session — the existing
+   outputs came from the raw `.zst` archive via a pickle) and classify the residue
+   properly. Also quarantine the 27 gap-bearing series.
 3. **Decide delisting returns.** A design question no document in this repo
    addresses, and it silently determines what happens to the ~20 % of the universe
    that stops trading.

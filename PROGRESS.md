@@ -525,6 +525,59 @@ loader + CLI is ~1 session. The next cheap step is to **run those detectors over
 1,844 liquid series and re-measure how many of the 247 jumps they explain** — that
 is the go/no-go for any vendor screen run.
 
+## 2026-09-11 (ran the detectors over the liquid vendor universe: registry explains 39 % of jumps; my own classifier was degenerate — twice)
+
+The step the XNYS scoping session recommended, executed. Measured on the **1,844
+liquid vendor series** (≥252 bars, adv20 ≥ $20 M), where a "jump" is a one-session
+move of ≥ +50 % or ≤ −40 %:
+
+| | events | share |
+|---|---|---|
+| total jumps | **394** (247 series) | 100 % |
+| explained by the `SplitEvent` registry | **152** | 39 % |
+| explained by an existing detector candidate | 2 | 1 % |
+| **not explained by anything on disk** | **240** | **61 %** |
+
+So the registry plus the two existing candidate files (3,119 XNYS + 2,583 XNAS)
+already cover **39 %** of the liquid universe's jumps.
+
+**Then I tried to classify the 240 and got it wrong twice — worth recording.** The
+shipped `best_candidate` lattice said "48 split-like" at the FAR tier and "34
+same-instrument split-like on 29 names" at the NEAR tier. **Both are meaningless.**
+The lattice is every `n/d` with `n, d ≤ 32`: **702 points whose median log-gap is
+0.0057, four times smaller than its own `LOG_TOL_NEAR = 0.025`** (88 % of gaps are
+below it). Any ratio matches some lattice point, so the test has no discriminating
+power on its own — "0.6154" and "3.7143" are not split ratios. I nearly reported
+"34 missed splits on 29 names" from a classifier that cannot distinguish anything.
+Superseded rather than deleted, because it is the same failure mode as reading a
+test count instead of a verdict. The detector's real discrimination is **P2 (volume
+persistence) and P3 (floors)**, which were not run.
+
+**What the named cases suggest** (interpretation, not measurement): the residue is
+dominated by one-day repricings in biotech/pharma — ALNY +41 %, AMLX +79 %,
+IMGN +85 % (AbbVie), KDNY +65 % (Novartis), RAPT −73 %, BBIO −57 % — clinical
+readouts and M&A, exactly what a $20 M liquidity floor selects for.
+
+**Ticker identity is the real, bounded problem, and it is measurable.** `META` in
+the archive is a **$12.29 shell whose last bar is 2022-01-28**, then **Meta
+Platforms at a $196.00 open on 2022-06-09** (the FB→META rename date): a **132-day
+gap** and a phantom **+1,494 %** return. Meta's history also exists under `FB` (408
+rows), so the archive keys on **ticker, not instrument**. Across the liquid
+universe **27 of 1,844 series (1.5 %) contain an internal gap > 14 days** (24 above
+45 days; worst 1,304) — quarantinable, not fatal.
+
+**Corrected risk ranking**, replacing the earlier "97 % uncovered / missing reverse
+splits guarantee gate passes" framing: (1) ticker identity, measured and bounded;
+(2) **missing dividends** — now the only *money*-gated blocker, and the one that
+biases the differential upward; (3) venue-distorted adv20; (4) undefined delisting
+returns; (5) the 240 unclassified jumps, which need P2/P3. The direction caveat
+survives: the residual biases all point **up**, so the failure mode is a confident
+false positive.
+
+**Next concrete step (small):** run P2/P3 over the 1,844 series *from the DB*
+(the shipped detector reads the raw `.zst` archive via a pickle) and quarantine the
+27 gap-bearing series.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
