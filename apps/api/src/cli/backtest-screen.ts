@@ -26,6 +26,7 @@ import {
   runBacktest,
   sweepWeightCombos,
   type LaneResult,
+  type ReplayDay,
   type WeightSweepRow,
 } from "@agentic-trading/quant-core";
 import { SCREEN_PARAMS } from "@agentic-trading/quant-core";
@@ -98,6 +99,89 @@ export interface LoadedLane {
   dates: string[];
   windowStart: string | null;
   skippedNoBars: number;
+}
+
+/** One production run vs the replay for the same session (Phase 4b item 3).
+ *
+ * This is the only end-to-end check of the property everything else in Phase 4
+ * depends on: that replaying on a trailing 252-bar window reproduces what
+ * production actually screened. The unit tests prove truncation is exact on
+ * synthetic data; this proves it against a real stored run. */
+export interface ReplayAudit {
+  market: Market;
+  screenRunId: number;
+  date: string;
+  status: "match" | "mismatch" | "no-replay-day" | "no-stored-census";
+  /** First-failure census, production vs replay. */
+  stored: Record<string, number>;
+  replayed: Record<string, number>;
+  differences: { reason: string; stored: number; replayed: number }[];
+  /** Names fed to the screen: replay (ranked + rejected) vs production `ok`. */
+  replayedInputs: number;
+  storedOk: number;
+}
+
+/** HKT calendar date of a stored run — the session it screened. */
+export function hktDate(d: Date): string {
+  return new Date(d.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Compare the newest stored production run that has a census against the
+ * replay's census for that same session.
+ *
+ * Rows written before 2026-09-11 carry `{}` and are skipped: `runDailyScreen`
+ * computed the census from the start but persisted it only from this change, so
+ * there is nothing to compare until the next production run.
+ */
+export async function auditAgainstProduction(
+  prisma: PrismaService,
+  market: Market,
+  replayDays: ReplayDay[],
+): Promise<ReplayAudit | null> {
+  const runs = await prisma.screenRun.findMany({ where: { market }, orderBy: { runAt: "desc" }, take: 25 });
+  const candidate = runs.find((r) => (r as { excludedJson?: string }).excludedJson && (r as { excludedJson?: string }).excludedJson !== "{}");
+  if (!candidate) {
+    const newest = runs[0];
+    if (!newest) return null;
+    return {
+      market,
+      screenRunId: newest.id,
+      date: hktDate(newest.runAt),
+      status: "no-stored-census",
+      stored: {},
+      replayed: {},
+      differences: [],
+      replayedInputs: 0,
+      storedOk: newest.ok,
+    };
+  };
+
+  const date = hktDate(candidate.runAt);
+  const day = replayDays.find((d) => d.date === date);
+  const stored = JSON.parse((candidate as { excludedJson: string }).excludedJson) as Record<string, number>;
+  if (!day) {
+    return { market, screenRunId: candidate.id, date, status: "no-replay-day", stored, replayed: {}, differences: [], replayedInputs: 0, storedOk: candidate.ok };
+  }
+
+  const replayed = day.excludedByReason[market] ?? {};
+  const reasons = [...new Set([...Object.keys(stored), ...Object.keys(replayed)])].sort();
+  const differences = reasons
+    .map((reason) => ({ reason, stored: stored[reason] ?? 0, replayed: replayed[reason] ?? 0 }))
+    .filter((d) => d.stored !== d.replayed);
+  const replayedInputs = day.ranked.reduce((a, p) => a + (p.market === market ? 1 : 0), 0) + Object.values(replayed).reduce((a, b) => a + b, 0);
+
+  return {
+    market,
+    screenRunId: candidate.id,
+    date,
+    status: differences.length === 0 ? "match" : "mismatch",
+    stored,
+    replayed,
+    differences,
+    replayedInputs,
+    storedOk: candidate.ok,
+  };
 }
 
 /** The retired grid's weight dimension: mom60 / mom20 grids with
@@ -224,6 +308,18 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
       `     vs INDEX (pre-registered 2nd benchmark): portfolio − index = ${pct(lane.indexDifferential)} (index ${pct(lane.indexReturn)})`,
     );
   }
+  // Variance decomposition (review item 1). Printed so a wide zero-containing
+  // interval is not misread as "a real differential we could not detect": what
+  // matters is whether the MEAN is small next to the noise between a 15-name and
+  // a 180-name basket of the same names.
+  out.push(
+    `     decomposition: sd(portfolio) ${pct(gb.sdPortfolio)}/yr · sd(benchmark) ${pct(gb.sdBenchmark)}/yr · corr ${num(gb.correlation, 3)} ·` +
+      ` sd(diff) ${pct(gb.sdDifferential)}/yr · mean/sd(diff) ${num(gb.sdDifferential === 0 ? 0 : (gb.differentialDailyMean * 252) / gb.sdDifferential, 3)}`,
+  );
+  out.push(
+    `     the benchmark is the screen's OWN eligible set, equal-weighted and cost-free — so this differential mostly measures portfolio construction`,
+  );
+  out.push(`     (concentration, hysteresis, T+1 fills, costs), not the screen's selection.`);
   out.push(
     `     lag sensitivity: t(5) ${num(gb.nwT5, 2)} · t(20) ${num(gb.nwT, 2)} · t(60) ${num(gb.nwT60, 2)} — descriptive; if these disagree, report that rather than pick a lag`,
   );
@@ -260,6 +356,7 @@ export function renderBacktest(
   window: { start: string; end: string; sessions: number },
   indexReturns: Partial<Record<Market, number>>,
   weightSweep: Partial<Record<Market, WeightSweepRow[]>> = {},
+  audits: Partial<Record<Market, ReplayAudit | null>> = {},
 ): string {
   const lines: string[] = [];
   lines.push("== PHASE 4b — SCREEN BACKTEST (H1), CALIBRATION REPAIRED ==");
@@ -285,6 +382,28 @@ export function renderBacktest(
     lines.push(`  shipped combo ranks ${rank}/${rows.length} by mean IC; best is ${num(best.meanIc, 4)} (spread ${num(best.meanIc - (shipped?.meanIc ?? 0), 4)} over shipped)`);
   }
   lines.push("");
+  // Item 3: the only end-to-end check that the replay reproduces production.
+  lines.push("REPLAY vs PRODUCTION (item 3) — the census for one stored session, production vs replay:");
+  for (const market of lanes.map((l) => l.market)) {
+    const a = audits[market];
+    if (!a) {
+      lines.push(`  ${market}: no stored ScreenRun to compare against`);
+      continue;
+    }
+    if (a.status === "no-stored-census") {
+      lines.push(`  ${market}: ${a.status} — ScreenRun ${a.screenRunId} (${a.date}) predates the census column; nothing to compare until the next production run`);
+      continue;
+    }
+    if (a.status === "no-replay-day") {
+      lines.push(`  ${market}: ${a.status} — ScreenRun ${a.screenRunId} screened ${a.date}, which is outside the replay window`);
+      continue;
+    }
+    lines.push(
+      `  ${market}: ${a.status.toUpperCase()} against ScreenRun ${a.screenRunId} (${a.date}) · inputs ${a.replayedInputs} replay vs ${a.storedOk} stored \`ok\``,
+    );
+    for (const d of a.differences) lines.push(`    ${d.reason}: stored ${d.stored} vs replayed ${d.replayed}`);
+  }
+  lines.push("");
   lines.push("Pre-registered limitations:");
   lines.push("  · Gate 2 is falsification-only: passing means 'not falsified', never 'confirmed'.");
   lines.push("    The Phase-4 justification for that ('IR >= 0.985' assumed, not measured) is WITHDRAWN — see the differential interval above.");
@@ -305,6 +424,8 @@ export interface BacktestReport {
   lanes: LaneResult[];
   indexReturns: Partial<Record<Market, number>>;
   skippedNoBars: number;
+  /** Production-vs-replay census check (Phase 4b item 3). */
+  audits: Partial<Record<Market, ReplayAudit | null>>;
   /** DESCRIPTIVE only — see sweepWeightCombos. Must not be used to change
    *  SCREEN_PARAMS without a new pre-registered test. */
   weightSweep: Partial<Record<Market, WeightSweepRow[]>>;
@@ -314,6 +435,7 @@ export async function runBacktestCli(prisma: PrismaService, args: BacktestArgs, 
   const lanes: LaneResult[] = [];
   const indexReturns: Partial<Record<Market, number>> = {};
   const weightSweep: Partial<Record<Market, WeightSweepRow[]>> = {};
+  const audits: Partial<Record<Market, ReplayAudit | null>> = {};
   let start: string | null = null;
   let end: string | null = null;
   let sessions = 0;
@@ -346,6 +468,7 @@ export async function runBacktestCli(prisma: PrismaService, args: BacktestArgs, 
     log(`  ${market}: descriptive weight sweep (9 combos)…`);
     const forward = new Map(lane.series.map((s) => [s.symbol, buildForwardSeries(s.bars, s.dividends)]));
     const replayDays = replayScreen(lane.dates, lane.series);
+    audits[market] = await auditAgainstProduction(prisma, market, replayDays);
     weightSweep[market] = sweepWeightCombos(replayDays, forward, 20, SWEEP_WEIGHT_COMBOS, {
       mom60: SCREEN_PARAMS.weights.mom60,
       mom20: SCREEN_PARAMS.weights.mom20,
@@ -364,6 +487,7 @@ export async function runBacktestCli(prisma: PrismaService, args: BacktestArgs, 
     lanes,
     indexReturns,
     skippedNoBars,
+    audits,
     weightSweep,
   };
 }
@@ -384,7 +508,7 @@ async function main(): Promise<void> {
     await prisma.$disconnect();
   }
 
-  const text = renderBacktest(report.lanes, report.window, report.indexReturns, report.weightSweep);
+  const text = renderBacktest(report.lanes, report.window, report.indexReturns, report.weightSweep, report.audits);
   console.log(text);
 
   const dir = path.join(PKG_ROOT, "reports", "backtest");

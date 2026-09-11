@@ -42,6 +42,7 @@ import {
   icStats,
   icPower,
   neweyWestT,
+  pearson,
   spreadSeries,
   spreadSeriesProportional,
   summarizeSpread,
@@ -151,6 +152,24 @@ export interface Gate2Result {
    *  rather than choosing a lag. */
   nwT5: number;
   nwT60: number;
+
+  /** The two daily series the t above is computed from, persisted so the
+   *  interval is **independently verifiable from the artifact** without a
+   *  re-run. Index-aligned, each with the leading 0 the engine pushes at t=0;
+   *  the differential is `dailyReturns[i] - benchmarkReturns[i]` for i >= 1. */
+  dailyReturns: number[];
+  benchmarkReturns: number[];
+
+  /** Variance decomposition of the differential, annualised (review item 1).
+   *  Without it, a wide zero-containing interval reads as "a real differential
+   *  we could not detect" when the truth may be that the *mean* is small next to
+   *  the noise between a 15-name and a 180-name basket of the SAME names.
+   *  σ_diff² = σ_p² + σ_b² − 2·ρ·σ_p·σ_b, so the correlation is what tells you
+   *  which of those two stories you are looking at. */
+  sdPortfolio: number;
+  sdBenchmark: number;
+  correlation: number;
+  sdDifferential: number;
   falsified: boolean;
   reasons: string[];
 }
@@ -450,10 +469,17 @@ function runPortfolioAndGate(
   // (portfolioMetrics drops it), so align on index 1+.
   const diffDaily = result.dailyReturns.slice(1).map((r, i) => r - (benchReturns[i + 1] ?? 0));
   const nw = neweyWestT(diffDaily, DIFFERENTIAL_LAG);
-  const trackingError = sampleSd(diffDaily) * Math.sqrt(SESSIONS_PER_YEAR);
+  const sdDaily = sampleSd(diffDaily);
+  const trackingError = sdDaily * Math.sqrt(SESSIONS_PER_YEAR);
   const dailyMean = nw?.mean ?? 0;
   const years = result.metrics.sessions / SESSIONS_PER_YEAR;
   const ir = trackingError === 0 ? 0 : (dailyMean * SESSIONS_PER_YEAR) / trackingError;
+  // Variance decomposition: the same aligned pairs, so σ_diff is checkable
+  // against σ_p, σ_b and ρ rather than being an opaque number.
+  const pDaily = result.dailyReturns.slice(1);
+  const bDaily = benchReturns.slice(1);
+  const ann = (xs: number[]) => sampleSd(xs) * Math.sqrt(SESSIONS_PER_YEAR);
+  const correlation = (pearson(pDaily, bDaily) ?? 0);
 
   const reasons: string[] = [];
   if (differential <= 0) reasons.push(`[${costDescription}] portfolio ${pct(result.metrics.totalReturn)} vs benchmark ${pct(bench.totalReturn)} — differential ${pct(differential)}`);
@@ -475,6 +501,12 @@ function runPortfolioAndGate(
       nwT: nw?.t ?? 0,
       nwT5: neweyWestT(diffDaily, 5)?.t ?? 0,
       nwT60: neweyWestT(diffDaily, 60)?.t ?? 0,
+      dailyReturns: result.dailyReturns,
+      benchmarkReturns: benchReturns,
+      sdPortfolio: ann(pDaily),
+      sdBenchmark: ann(bDaily),
+      correlation,
+      sdDifferential: trackingError,
       falsified: reasons.length > 0,
       reasons,
     },

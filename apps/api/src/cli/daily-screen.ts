@@ -436,6 +436,8 @@ async function runLane(
       fetchFailed: fetchFailed.length,
       degraded,
       warningsJson: JSON.stringify(warnings),
+      // First-failure census (Phase 4b item 3): was computed and discarded.
+      excludedJson: JSON.stringify(excludedCounts),
     },
   });
   await prisma.screenResult.createMany({

@@ -240,10 +240,19 @@ spread (+0.09 % @20d) is indistinguishable from zero.
 
 552 → 180 (US, 33 %) and 131 → 25 (HK, 19 %) after the eligibility gates.
 `replayScreen` keeps only `excludedCount`, discarding the per-reason breakdown
-that `runScreen` already computes. **Production does not have this blind spot** —
-`cli/daily-screen.ts` already tallies `excludedCounts[e.reason]` and persists it in
-`ScreenResult`. It is the *replay path* that drops it, so D3 restores a field the
-backtest threw away rather than inventing a capability.
+that `runScreen` already computes. **Production computes the same tally and then
+throws it away too**: `cli/daily-screen.ts` builds `excludedCounts[e.reason]` and
+returns it in `runDailyScreen`'s result, but nothing reads the field and nothing
+persists it — it was dead code, alive for one process and then gone. So the blind
+spot is shared, not just a replay artefact, and D3 restores a capability *neither*
+path kept. (An earlier version of this section said production "persists it in
+`ScreenResult`". It does not — checked 2026-09-11. That claim reached three
+records and is corrected in all of them.)
+
+Restoring it also **enables the check D3 could not otherwise make**: with the
+census persisted, the backtest can compare a real production run against the
+replay's census for the same session — the only end-to-end audit of the
+truncation-equivalence property that every Phase-4 number depends on.
 
 **One limitation must be stated up front, because it bounds what D3 can support.**
 `runScreen` records only the **first** failing reason per name (an `if/else if`
@@ -611,6 +620,58 @@ window's D2/D4 values.
 - **Firewall:** this window's D2 and D4 values (US t 1.19 / 1.66, HK 1.34) may not
   enter Phase 4c's bar derivation. That 1.66 is the project's largest statistic is
   not evidence, and must not be used to justify a looser bar.
+
+## Post-review follow-ups (executed 2026-09-11)
+
+Six items the review raised that were not amendments to existing claims but work
+the round had left undone. All six ran; artifact regenerated.
+
+- **R-a — the variance decomposition (item 1).** The review called this "the single
+  most likely misreading of this round": a wide, zero-containing interval invites
+  "a real differential we simply could not detect", when it might instead be that
+  the mean is tiny next to the noise between two different baskets of the same
+  names. `Gate2Result` now carries it, and the answer settles the question:
+  **sd(portfolio) 22.31 %/yr · sd(benchmark) 12.93 %/yr · ρ 0.717 · sd(diff)
+  15.85 %/yr · mean/sd(diff) 0.495**. ρ = 0.72 is high, so the benchmark is a close
+  proxy and most of the two series cancels; the surviving differential has a
+  mean/sd ratio of ~0.5 per year. It is therefore a **low-IR signal, not basket
+  noise** — and 0.5 is exactly the "IR 0.5" the Phase-4 plan estimated would need
+  ~16 years, so that projection was accurate. (The accrual readout below quotes
+  ~7 years because it scales the HAC *t* rather than IR·√y; both are defensible,
+  and the disagreement is the same HAC-versus-i.i.d. gap R13 discloses.)
+- **R-b — the series are persisted (item 2).** `dailyReturns` and `benchmarkReturns`
+  are now in `Gate2Result`, so `neweyWestT(p − b, 20)` can be recomputed from the
+  artifact without a re-run. Previously the interval was **not independently
+  verifiable** — the same defect class as the IR claim it was repairing. A test
+  now rebuilds the differential from the persisted pair and matches `nwT`.
+- **R-c — the replay is auditable against production (item 3).** `ScreenRun` gained
+  `excludedJson` (additive migration, `{}` default = "not recorded"), and
+  `runDailyScreen` now persists the census it had always computed and discarded.
+  The backtest CLI compares the newest stored census against the replay's census
+  for the same session and prints `MATCH` / `MISMATCH` / `no-stored-census`. **As
+  of today it reports `no-stored-census`** for both lanes, because every existing
+  row predates the column — so this is verified from the next daily cycle onward,
+  not now. It is the only end-to-end audit of the truncation-equivalence property
+  every Phase-4 number depends on, which is why it is worth the migration.
+- **R-d — the prospective clock (item 5).** New `pnpm -C apps/api phase4c:accrual`.
+  Prospective observations already accumulate for free: `ScreenRun`/`ScreenResult`
+  store one row per lane per session with the ranked list as published, so there is
+  nothing to build — only something to *measure*. Projecting the OBSERVED SE by
+  1/√T (D1's rule, not a plausible effect size):
+
+  | lane | 0.02 bar becomes reachable after | the D6 statistic (differential) after |
+  |---|---|---|
+  | US | ~1,194 more sessions ≈ **4.7 y** | ~**7.2 y** |
+  | HK | ~4,571 more sessions ≈ **18.1 y** | ~**6.9 y** (and sign-negative) |
+
+  The honest reading is that **prospective accrual alone does not rescue this**:
+  4.7 years for US rank IC and 18 for HK is not a plan, and HK's differential t is
+  negative, so more years sharpen the wrong sign. That prices D6's HK option
+  (drop or pool) and strengthens the case that the real Phase-4c path is a **fresh
+  cross-section** (the Databento/XNYS data project), not patience.
+- **R-e — §7's model pin.** `deepseek-v4-flash` → `deepseek-flash` ("DeepSeek V4.1
+  Flash"), the catalog's current id. One line, outstanding since 2026-09-10.
+- **R-f — the picker consequence.** A decision, not code: see below.
 
 ## What changed in the code
 

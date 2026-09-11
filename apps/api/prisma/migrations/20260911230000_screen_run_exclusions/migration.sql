@@ -1,0 +1,17 @@
+-- Phase 4b review item 3: persist the eligibility census so the backtest's
+-- replay can be audited against a real production run.
+--
+-- `runDailyScreen` has always computed `excludedCounts` (reason → rejections)
+-- and then thrown it away — nothing ever read the field. So the per-gate
+-- breakdown existed in memory for one process and nowhere else, which is why the
+-- project could not answer "which gate limits breadth" from stored data, and why
+-- the replay's eligibility decisions had no end-to-end check against production.
+--
+-- `excludedJson` is the same shape the replay's `ExclusionCensus.byReason` uses
+-- ({ REASON: count }), and it is FIRST-failure only: `runScreen` records one
+-- reason per rejected name. It is a per-run snapshot for one session, so it
+-- compares 1:1 against the replay's census for that date.
+--
+-- Additive with a '{}' default: existing rows have no census and correctly read
+-- as "not recorded" rather than "zero rejections".
+ALTER TABLE "ScreenRun" ADD COLUMN "excludedJson" TEXT NOT NULL DEFAULT '{}';

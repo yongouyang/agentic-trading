@@ -56,9 +56,12 @@ first", not "which gate binds" — the three other signal gates reject a further
 16 %, and a name that clears the trend filter would simply be rejected next. An
 order-independent marginal count is the change that would answer "relax gate X →
 breadth +Y", and it is **not** in this round. Per Fork C the census is
-documentation only; no gate was relaxed. (Also corrected: production already
-tallies this — `cli/daily-screen.ts` persists `excludedCounts`; it was the
-*replay* path that dropped it.)
+documentation only; no gate was relaxed. (Also corrected, twice: production
+*computes* `excludedCounts` and then discards it — nothing read the field and
+nothing persisted it, so the blind spot was shared rather than a replay artefact.
+An intermediate version of this entry said production "persists `excludedCounts`";
+it does not. The census is now persisted (`ScreenRun.excludedJson`), which makes
+the replay auditable against a real production run from the next daily cycle.)
 
 **D4 — Finding 3 confirmed materially.** With the proportional cutoff
 (`max(ceil(0.10 × breadth), 5)`): HK 20d spread **+0.07 % → +0.76 %** (t 1.34) — the
@@ -95,6 +98,47 @@ case where it matters most. Now an exact table below df 10, expansion above.
 clean. New coverage: the SE triple, the cutoff rule at HK-scale breadth,
 per-market census attribution, NW wiring on the differential, the verdict class,
 and the unconditional power note.
+
+## 2026-09-11 (Phase 4b follow-ups EXECUTED) — the decomposition answers the misreading; the replay is auditable from tomorrow; the accrual clock says 4.7 y (US) / 18.1 y (HK)
+
+Six items the independent review raised that were work left undone rather than
+claims to correct. All six done; artifact regenerated; committed and pushed.
+
+- **Variance decomposition** (`Gate2Result`): sd(portfolio) **22.31 %/yr** ·
+  sd(benchmark) **12.93 %/yr** · **ρ 0.717** · sd(diff) 15.85 %/yr ·
+  **mean/sd(diff) 0.495**. This settles the review's "single most likely
+  misreading": ρ = 0.72 means the equal-weight benchmark is a *close proxy*, so the
+  two baskets mostly cancel and the surviving differential is a genuine **low-IR
+  signal, not basket noise**. 0.495 also lands on the Phase-4 plan's own "IR 0.5
+  needs ~16 years" estimate — that projection was accurate.
+- **The series are persisted** (`dailyReturns`, `benchmarkReturns`), so the interval
+  is recomputable from the artifact. Before this it was **not independently
+  verifiable** — the same defect as the IR claim it was repairing.
+- **The census is persisted** (`ScreenRun.excludedJson`, additive migration) after
+  discovering that production *computes* `excludedCounts` and **discards it** —
+  dead code, nothing read the field. (The review said production persisted it; it
+  does not. That claim had reached three records and is corrected in all three.)
+  The backtest now audits the replay against the newest stored census and prints
+  MATCH/MISMATCH — today `no-stored-census` for both lanes, since every existing
+  row predates the column, so it verifies **from the next daily cycle**. It is the
+  only end-to-end check of the truncation-equivalence property every Phase-4 number
+  rests on.
+- **The prospective clock** — `pnpm -C apps/api phase4c:accrual`. The data already
+  accumulates for free (`ScreenRun`/`ScreenResult` = one row per lane per session
+  with the list as published); what was missing was a measurement. Projecting the
+  **observed** SE by 1/√T:
+
+  | lane | 0.02 bar reachable after | differential significant after |
+  |---|---|---|
+  | US | ~1,194 sessions ≈ **4.7 y** | ~**7.2 y** |
+  | HK | ~4,571 sessions ≈ **18.1 y** | ~**6.9 y** (sign-negative) |
+
+  **Prospective accrual does not rescue this.** 4.7 y for US rank IC and 18 y for
+  HK is not a plan, and HK's differential t is negative so more years sharpen the
+  wrong sign. That prices D6's HK option and says plainly that the real Phase-4c
+  path is a **fresh cross-section** (the Databento/XNYS data project), not patience.
+- **§7's model pin fixed**: `deepseek-v4-flash` → `deepseek-flash`.
+- **Picker consequence**: outstanding — a decision, asked below.
 
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the

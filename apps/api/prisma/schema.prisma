@@ -79,6 +79,10 @@ model ScreenRun {
   // FETCH_FAILED > 2% of the lane's universe ⇒ degraded (phase-1-spec §5).
   degraded        Boolean
   warningsJson    String
+  // Phase 4b item 3: first-failure eligibility census ({ REASON: count }), so a
+  // production run can be compared against the backtest replay's census for the
+  // same date. '{}' on rows written before 2026-09-11 = "not recorded".
+  excludedJson    String   @default("{}")
 
   results ScreenResult[]
 }

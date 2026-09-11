@@ -406,9 +406,10 @@ Caveat: the deep-dive LLM credential prefers the durable `LLM_API_KEY` from
 `.env` (Moonshot platform key, added 2026-09-09) and falls back to the Kimi CLI's
 **rotating OAuth token**. `daily-chain.sh` runs a cheap auth preflight first; on
 failure it **skips the deep-dive leg loudly and exits 3** — never as success
-(see §5.2). The deploy profile in §7 still pins `deepseek-v4-flash`, which the
-model catalog has since superseded (the current DeepSeek model is exposed as
-`deepseek-flash`, "DeepSeek V4.1 Flash") — a deploy-time correction.
+(see §5.2). The deploy profile pinned `deepseek-v4-flash` until 2026-09-11, when it was
+corrected to the catalog's current id `deepseek-flash` ("DeepSeek V4.1 Flash")
+— see §7. The id is a deploy-time value, so it is re-checked at deploy rather
+than assumed to hold.
 
 ## 6. The two market lanes
 
@@ -451,7 +452,7 @@ locked: fundamentals analyst = eastmoney F10 statements, stocks only (ETFs
 skip it); news = Google News RSS both lanes (CN+EN for HK) + Yahoo
 supplement; structured output = prompt + strict validate + 1 repair round,
 never `response_format`-dependent; breadth = top 10/lane + `--symbol`;
-models = Kimi all-roles local, DeepSeek `deepseek-v4-flash` on deploy —
+models = Kimi all-roles local, DeepSeek `deepseek-flash` on deploy —
 `api.moonshot.cn` is measured-blackholed from AWS ap-east-1. Decision log =
 `AgentDecision` table keyed by sha256(agent|model|promptVersion|system|user)
 with byte-deterministic prompt builders as a tested invariant; reports =
