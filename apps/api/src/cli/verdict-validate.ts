@@ -29,6 +29,7 @@ import {
   verdictConvictionSplit,
   verdictFor,
   verdictIcSeries,
+  verdictIcSeriesControlled,
   type Market,
   type VerdictObservation,
 } from "@agentic-trading/quant-core";
@@ -106,9 +107,17 @@ export interface LaneValidation {
   pendingLabel: number;
   abstains: number;
   days: number;
+  /** Raw conviction IC — "does conviction order outcomes?" (confounded). */
   meanIc: number | null;
   icir: number | null;
   nwT: number | null;
+  /** IC controlling for screen rank — the ATTRIBUTION statistic that decides H2
+   *  (Phase 5 amendment). ~0 here with a positive raw IC means the layer echoes
+   *  the ranking rather than adding to it. */
+  meanIcControlled: number | null;
+  nwTControlled: number | null;
+  verdictControlled: string;
+  readinessControlled: { days: number; daysNeeded: number; decidable: boolean; seSource: string; reason: string };
   /** Secondary, benchmark-free: high- minus low-conviction within the day. */
   splitMean: number | null;
   splitNwT: number | null;
@@ -187,6 +196,13 @@ async function loadMarket(prisma: PrismaService, market: Market): Promise<{ obs:
     include: { reports: true },
   });
 
+  // The screen rank each verdict sat at, for the partial-correlation control.
+  const rankByRun = new Map<number, Map<string, number>>();
+  for (const run of runs) {
+    const results = await prisma.screenResult.findMany({ where: { runId: run.screenRunId } });
+    rankByRun.set(run.id, new Map(results.map((r) => [r.symbol, r.rank])));
+  }
+
   const obs: VerdictObservation[] = [];
   let abstains = 0;
   let pending = 0;
@@ -202,9 +218,11 @@ async function loadMarket(prisma: PrismaService, market: Market): Promise<{ obs:
       if (conviction == null) continue;
       const s = seriesBySymbol.get(rep.symbol);
       if (!s) continue;
+      const rank = rankByRun.get(run.id)?.get(rep.symbol);
+      if (rank === undefined) continue; // no rank ⇒ cannot attribute; skip, never guess
       const r = forwardReturn(s, entry, PRIMARY_HORIZON);
       if (r == null) pending++;
-      obs.push({ date: entry, market, symbol: rep.symbol, conviction, forwardReturn: r });
+      obs.push({ date: entry, market, symbol: rep.symbol, conviction, rank, forwardReturn: r });
     }
   }
   return { obs, runs: runs.length, abstains, pending };
@@ -223,6 +241,8 @@ function laneValidation(
   // Pooling two lanes doubles the per-day cross-section for the same calendar
   // time, so the projected horizon halves — the power gain Fork C is about.
   const { readiness, stats, verdict } = verdictFor(points, PRIMARY_HORIZON, targetIc, { assumedBreadth });
+  // The attribution statistic: same gate, one covariate partialled out.
+  const controlled = verdictFor(verdictIcSeriesControlled(obs), PRIMARY_HORIZON, targetIc, { assumedBreadth, controls: 1 });
   const split = verdictConvictionSplit(obs);
   const splitNw = split.length ? neweyWestT(split, PRIMARY_HORIZON) : null;
   return {
@@ -235,6 +255,16 @@ function laneValidation(
     meanIc: stats?.mean ?? null,
     icir: stats?.icir ?? null,
     nwT: stats?.nwT ?? null,
+    meanIcControlled: controlled.stats?.mean ?? null,
+    nwTControlled: controlled.stats?.nwT ?? null,
+    verdictControlled: controlled.verdict,
+    readinessControlled: {
+      days: controlled.readiness.days,
+      daysNeeded: controlled.readiness.daysNeeded,
+      decidable: controlled.readiness.decidable,
+      seSource: controlled.readiness.seSource,
+      reason: controlled.readiness.reason,
+    },
     splitMean: splitNw?.mean ?? null,
     splitNwT: splitNw?.t ?? null,
     readiness: {
@@ -259,11 +289,18 @@ export function renderValidation(r: ValidationReport): string {
       `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs`,
     );
     lines.push(
-      `    mean IC ${l.meanIc == null ? "—" : l.meanIc.toFixed(4)} · ICIR ${l.icir == null ? "—" : l.icir.toFixed(3)} · NW t ${l.nwT == null ? "—" : l.nwT.toFixed(2)}` +
+      `    raw IC ${l.meanIc == null ? "—" : l.meanIc.toFixed(4)} · ICIR ${l.icir == null ? "—" : l.icir.toFixed(3)} · NW t ${l.nwT == null ? "—" : l.nwT.toFixed(2)}` +
         ` · conviction split ${l.splitMean == null ? "—" : (l.splitMean * 100).toFixed(2) + "%"} (t ${l.splitNwT == null ? "—" : l.splitNwT.toFixed(2)})`,
     );
-    lines.push(`    readiness: ${l.readiness.reason}`);
-    lines.push(`    VERDICT ${l.market}: ${l.verdict}`);
+    // The attribution line: what DECIDES H2, printed second so the confounded
+    // number is never read alone.
+    lines.push(
+      `    IC | rank (decides) ${l.meanIcControlled == null ? "—" : l.meanIcControlled.toFixed(4)} · NW t ${l.nwTControlled == null ? "—" : l.nwTControlled.toFixed(2)}` +
+        ` · raw is 0.32 rank-correlated, so read the two together`,
+    );
+    lines.push(`    readiness (raw): ${l.readiness.reason}`);
+    lines.push(`    readiness (|rank): ${l.readinessControlled.reason}`);
+    lines.push(`    VERDICT ${l.market}: ${l.verdictControlled} (attribution) / ${l.verdict} (raw)`);
   };
   for (const l of r.lanes) row(l);
   lines.push("");

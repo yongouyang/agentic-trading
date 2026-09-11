@@ -261,6 +261,58 @@ for the sample, `daily-chain.sh` drops `--top` (single source of truth), and the
 deep-dive's default is the candidate breadth with the call budget raised 200 → 800
 (80 names × ~7.7 calls would otherwise trip the overspend guard).
 
+## 2026-09-11 (Phase-5 amendment + run pre-flight + supply re-priced) — the confound found before any label existed; real supply is 56 %
+
+**Item 1 — the layer is not an echo, but it is correlated, and that had to be fixed now.**
+Measured across the 45 stored verdicts: **Spearman(screen rank, conviction) = 0.319**
+pooled (0.34 / 0.31 / 0.57 / 0.40 per run, 40 non-abstain verdicts). Good news and
+bad news in one number: 0.32 is nowhere near 1, so the deep-dive carries
+**genuinely independent information** and H2 is a distinct hypothesis — but the two
+share ~10 % of variance (0.32²), so a positive **raw** conviction IC could partly be
+the screen's own unvalidated ranking leaking through, and the round as built could
+not have told "the LLM adds information" from "the LLM restates the screen".
+
+Amended in `docs/phase-5-plan.md` and implemented: a second statistic, **`IC | rank`**
+— the per-day Spearman partial correlation of conviction against forward return
+**controlling for screen rank** — which is now **the one that decides H2**. Both are
+reported with their own readiness rules; the pre-registered reading is raw-high +
+controlled-~0 ⇒ *the layer restates the screen and H2 does not hold*.
+
+**Why now is legitimate and later would not have been:** the measurement used **no
+forward returns at all** — only conviction and rank, both known at verdict time. So
+it cannot have been selected against an outcome, and **there was no label yet to
+select against**. The same fix applied after the read lands would be goalpost
+movement. Test evidence that the statistic does its job: a synthetic universe whose
+conviction is a noisy function of rank and nothing else yields **raw IC > 0.4 with
+`IC | rank` < 0.25**, and adding genuine conviction-carried information pushes the
+controlled IC above 0.3.
+
+**Item 2 — tomorrow's run pre-flighted, and the widened path smoke-tested.** The
+chain's own auth probe returns **HTTP 200** with the durable key, so the deep-dive
+leg will not be skipped at the preflight gate; all 5 jobs verify **ARMED** after the
+reboot. Rather than discover a problem at 06:10, the new path was exercised live:
+`screen:deep-dive --market hk --top 3` → **run=8, 3/3 ok, 21 calls, budget 800**,
+and `verdict:validate` picked the new verdicts up with the rank join working (25 →
+28). The 3-name run contributes nothing to the IC (below the breadth floor) by
+design. Note the scheduled run is now ~4× longer (~24 min/lane at the current pool),
+so a mid-run sleep is a real possibility — which W2's `running` row exists to make
+visible.
+
+**Item 3 — the missed-slot decision re-priced, and it is worse than assumed.**
+Realized supply from the store: **5 of 9 expected slots per lane since 2026-09-01 =
+56 %**, a 44 % miss rate (not the ~30 % I estimated when raising it). Priced against
+the measured clocks:
+
+| clock | sessions needed | at 56 % supply | vs at full supply |
+|---|---|---|---|
+| Phase 5 (verdict IC, pooled) | 157 | ~280 sessions ≈ 13.3 mo | +5.9 months |
+| Phase 4c (screen rank IC, US) | 1,194 | ~2,132 sessions ≈ **8.4 y** | +3.7 years |
+
+That is a materially different decision from the one taken on 2026-09-11 morning,
+when the cost of a missed slot was "a stale report" and the only consumer was the
+dashboard. Now it is a **lost observation from two validation samples**, and it
+roughly doubles the longer one.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary

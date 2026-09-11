@@ -31,6 +31,15 @@ export interface VerdictObservation {
   symbol: string;
   /** Continuous conviction in [−1, 1]. Abstains must be excluded upstream. */
   conviction: number;
+  /** The screen rank this name held on the same day — the CONTROL variable.
+   *
+   * Measured 2026-09-11 on the 45 stored verdicts: Spearman(screen rank,
+   * conviction) = **0.319** over 40 non-abstain verdicts. Not an echo (nowhere
+   * near 1), so the layer carries independent information — but the two share
+   * ~10 % of variance, so a positive raw conviction IC could partly be the
+   * screen's own unvalidated ranking leaking through. This field is what makes
+   * that attributable. */
+  rank: number;
   forwardReturn: number | null;
 }
 
@@ -60,6 +69,51 @@ export function verdictIcSeries(observations: VerdictObservation[]): IcPoint[] {
     const ic = spearmanRank(rows.map((x) => x.conviction), rows.map((x) => x.r));
     // A day where every conviction is identical has no ordering to test; it is
     // skipped rather than counted as a zero-IC observation.
+    if (ic == null || Number.isNaN(ic)) continue;
+    points.push({ date, ic, n: rows.length });
+  }
+  return points.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Spearman partial correlation of x and y controlling for z.
+ *
+ * r_xy·z = (r_xy − r_xz·r_yz) / sqrt((1 − r_xz²)(1 − r_yz²))
+ *
+ * Null when a denominator vanishes (no variation to partial out).
+ */
+export function partialSpearman(x: number[], y: number[], z: number[]): number | null {
+  const rxy = spearmanRank(x, y);
+  const rxz = spearmanRank(x, z);
+  const ryz = spearmanRank(y, z);
+  if (rxy == null || rxz == null || ryz == null) return null;
+  const denom = Math.sqrt((1 - rxz * rxz) * (1 - ryz * ryz));
+  if (denom === 0) return null;
+  return (rxy - rxz * ryz) / denom;
+}
+
+/**
+ * Per-day conviction IC **controlling for the screen rank** — the attribution
+ * statistic (Phase 5 pre-registration amendment).
+ *
+ * The raw IC answers "does conviction order outcomes?". This answers the
+ * question the round is actually about: "does the LLM add information the screen
+ * did not already have?". With rank as a control, a raw IC that is positive
+ * while this is ~0 means the layer is echoing the ranking at 0.32 and nothing
+ * more. Both are reported; this one is the one that decides H2.
+ */
+export function verdictIcSeriesControlled(observations: VerdictObservation[]): IcPoint[] {
+  const byDate = new Map<string, { c: number; r: number; k: number }[]>();
+  for (const o of observations) {
+    if (o.forwardReturn == null || !Number.isFinite(o.rank)) continue;
+    const list = byDate.get(o.date) ?? [];
+    list.push({ c: o.conviction, r: o.forwardReturn, k: o.rank });
+    byDate.set(o.date, list);
+  }
+  const points: IcPoint[] = [];
+  for (const [date, rows] of byDate) {
+    if (rows.length < MIN_VERDICT_BREADTH) continue;
+    const ic = partialSpearman(rows.map((x) => x.c), rows.map((x) => x.r), rows.map((x) => x.k));
     if (ic == null || Number.isNaN(ic)) continue;
     points.push({ date, ic, n: rows.length });
   }
@@ -122,6 +176,10 @@ export interface Readiness {
 export interface ReadinessOptions {
   /** Breadth assumed before there is a measured sd (mean verdicts/day). */
   assumedBreadth?: number;
+  /** Covariates partialled out of the statistic. The theoretical per-day SE is
+   *  1/√(N−1−controls), so a rank-controlled series is slightly noisier — stated
+   *  rather than silently reusing the uncontrolled figure. */
+  controls?: number;
   /** Days below which the measured sd is too unstable to trust. */
   minDaysForMeasured?: number;
   /** Regime-shift guard: second-half sd / first-half sd above this ⇒ inconclusive. */
@@ -143,6 +201,7 @@ export function verdictReadiness(
   opts: ReadinessOptions = {},
 ): Readiness {
   const assumedBreadth = opts.assumedBreadth ?? 10;
+  const controls = opts.controls ?? 0;
   const minDays = opts.minDaysForMeasured ?? 20;
   const stabilityRatio = opts.sdStabilityRatio ?? 1.5;
 
@@ -152,7 +211,7 @@ export function verdictReadiness(
   const sdDay = days >= 2 ? sampleSd(xs) : null;
   const measuredSe = days >= minDays ? neweyWestT(xs, horizon)?.se ?? null : null;
 
-  const theoreticalSdDay = assumedBreadth > 1 ? 1 / Math.sqrt(assumedBreadth - 1) : null;
+  const theoreticalSdDay = assumedBreadth - 1 - controls > 0 ? 1 / Math.sqrt(assumedBreadth - 1 - controls) : null;
   const sdForProjection = measuredSe != null ? sdDay : theoreticalSdDay;
   const seSource: Readiness["seSource"] = measuredSe != null ? "measured" : "theoretical";
 

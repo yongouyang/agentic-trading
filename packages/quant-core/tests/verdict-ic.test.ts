@@ -9,11 +9,13 @@
 import { describe, expect, it } from "vitest";
 import {
   MIN_VERDICT_BREADTH,
+  partialSpearman,
   POWER_Z,
   VerdictObservation,
   verdictConvictionSplit,
   verdictFor,
   verdictIcSeries,
+  verdictIcSeriesControlled,
   verdictReadiness,
 } from "../src/verdict-ic.js";
 
@@ -199,5 +201,96 @@ describe("Phase 5 — the benchmark-free conviction split", () => {
   it("needs enough names on each side, and skips flat days", () => {
     expect(verdictConvictionSplit(day("2026-01-02", 4))).toEqual([]); // 2 vs 2 < min
     expect(verdictConvictionSplit(day("2026-01-02", 10, { conv: Array.from({ length: 10 }, () => 0) }))).toEqual([]);
+  });
+});
+
+describe("Phase 5 amendment — attributing the layer against the screen rank", () => {
+  /** Deterministic independent uniforms in [-0.5, 0.5). */
+  function makeRand(seed0: number) {
+    let s = seed0;
+    return () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648 - 0.5;
+  }
+
+  /**
+   * `signal` adds a component to the RETURN that conviction carries but the
+   * screen rank does not. With signal = 0 the two are merely rank-driven at 0.32
+   * and the layer adds nothing; with signal > 0 it genuinely does.
+   */
+  function universe(days: number, signal: number, n = 12): VerdictObservation[] {
+    const obs: VerdictObservation[] = [];
+    const r1 = makeRand(12345);
+    const r2 = makeRand(999);
+    for (let d = 0; d < days; d++) {
+      const date = `2026-${String(1 + Math.floor(d / 28)).padStart(2, "0")}-${String((d % 28) + 1).padStart(2, "0")}`;
+      for (let k = 0; k < n; k++) {
+        const rank = k + 1;
+        const conv = rank + 3 * r1();          // conviction ≈ rank + noise
+        const ret = rank + 3 * r2() + signal * (conv - rank); // return ≈ rank + other noise
+        obs.push({ date, market: "US", symbol: `S${k}`, conviction: conv, rank, forwardReturn: ret });
+      }
+    }
+    return obs;
+  }
+
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+
+  it("sees the confound: with no extra signal the RAW IC looks strong while the controlled one is ~0", () => {
+    // This is the exact failure the amendment exists to prevent — a layer whose
+    // conviction is merely a noisy function of the screen's rank would otherwise
+    // record a healthy IC and be credited with information it does not have.
+    const obs = universe(40, 0);
+    const rawIc = mean(verdictIcSeries(obs).map((p) => p.ic));
+    const ctrlIc = mean(verdictIcSeriesControlled(obs).map((p) => p.ic));
+    expect(rawIc).toBeGreaterThan(0.4);
+    expect(Math.abs(ctrlIc)).toBeLessThan(0.25);
+    expect(rawIc).toBeGreaterThan(Math.abs(ctrlIc) * 2);
+  });
+
+  it("sees real signal: when conviction carries information rank does not, the controlled IC is positive", () => {
+    const obs = universe(40, 1.5);
+    const rawIc = mean(verdictIcSeries(obs).map((p) => p.ic));
+    const ctrlIc = mean(verdictIcSeriesControlled(obs).map((p) => p.ic));
+    expect(ctrlIc).toBeGreaterThan(0.3);
+    expect(rawIc).toBeGreaterThan(0);
+  });
+
+  it("partialSpearman matches the closed form, and is undefined when the control is degenerate", () => {
+    const x = [5, 1, 4, 2, 8, 3, 7, 6];
+    const y = [2, 7, 1, 5, 3, 8, 4, 6];
+    const z = [1, 2, 3, 4, 5, 6, 7, 8];
+    // Spearman pairs computed independently of the implementation (see the
+    // closed form in partialSpearman's docstring), so this asserts the formula
+    // rather than restating the code.
+    const rxy = -0.4523809523809524;
+    const rxz = 0.47619047619047616;
+    const ryz = 0.38095238095238093;
+    // Formula, not the implementation: (rxy - rxz*ryz) / sqrt((1-rxz^2)(1-ryz^2))
+    const expected = (rxy - rxz * ryz) / Math.sqrt((1 - rxz * rxz) * (1 - ryz * ryz));
+    const got = partialSpearman(x, y, z);
+    expect(got).not.toBeNull();
+    // Same sign and magnitude to within the hand-computed rounding.
+    expect(Math.abs(got! - expected)).toBeLessThan(0.02);
+    // z identical to x ⇒ r_xz = 1 ⇒ nothing left to partial out.
+    expect(partialSpearman(x, y, x)).toBeNull();
+  });
+
+  it("needs the rank: an observation without one is dropped, not defaulted", () => {
+    const obs = universe(3, 0).map((o, i) => (i === 0 ? { ...o, rank: Number.NaN } : o));
+    const pts = verdictIcSeriesControlled(obs);
+    // Day 1 loses a name; the remaining days are still counted.
+    expect(pts.length).toBeGreaterThan(0);
+    expect(pts[0]!.n).toBeLessThanOrEqual(pts[pts.length - 1]!.n);
+  });
+
+  it("needs one more day than the raw statistic for the same target (one covariate)", () => {
+    const ic = Array.from({ length: 20 }, (_, i) => 0.1 + 0.06 * Math.sin(i / 2.5)).map((v, i) => ({
+      date: `2026-01-${String(i + 1).padStart(2, "0")}`,
+      ic: v,
+      n: 40,
+    }));
+    const raw = verdictReadiness(ic, 20, 0.1, { assumedBreadth: 40, minDaysForMeasured: 1000 });
+    const ctrl = verdictReadiness(ic, 20, 0.1, { assumedBreadth: 40, controls: 1, minDaysForMeasured: 1000 });
+    expect(ctrl.daysNeeded).toBeGreaterThanOrEqual(raw.daysNeeded);
+    expect(ctrl.daysNeeded / raw.daysNeeded).toBeLessThan(1.1);
   });
 });

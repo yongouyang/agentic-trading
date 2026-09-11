@@ -131,6 +131,52 @@ letting a regime shift masquerade as a signal.
 | **C. Pooling** | Is the primary read per lane or pooled? | (1) Per lane, pooled reported as secondary. (2) **Pooled primary**, per lane descriptive. | **(2)**. Pooling halves the horizon and the two lanes are the same hypothesis applied to two universes; per-lane reads stay reported so a bad lane cannot hide. |
 | **D. Secondary** | Is the conviction-split reported? | (1) Yes, as a benchmark-free descriptive with its own NW t. (2) Omit. | **(1)**. It is the product-shaped question and costs nothing. |
 
+## Pre-registration amendment (2026-09-11, **before any label existed**)
+
+A confound was found and fixed the same day the harness was built. It is recorded
+as an amendment rather than a new round because of *when* it was found.
+
+**Finding.** Across the 45 stored verdicts, Spearman(screen rank, conviction) =
+**0.319** pooled (0.34 / 0.31 / 0.57 / 0.40 per run over 40 non-abstain verdicts).
+Two consequences:
+
+- The layer is **not** an echo of the screen — 0.32 is nowhere near 1 — so H2 is a
+  genuinely distinct hypothesis and the round's premise holds.
+- But they share ~10 % of variance (0.32²), so a positive **raw** conviction IC
+  could partly be the screen's own unvalidated ranking leaking through, and the
+  round could not say whether the LLM added information or merely restated it.
+
+**Why this is legitimate to fix now rather than after the read.** The measurement
+used **no forward returns at all** — only conviction and rank, both known at
+verdict time. So the amendment cannot have been informed by any outcome, and there
+is no label yet for it to have been selected against. Fixing it later, once
+returns exist, would have been the goalpost movement the project forbids.
+
+**Amendment.** A second statistic is pre-registered alongside the raw one, and it
+is the one that **decides H2**:
+
+> `IC | rank` — the per-day Spearman partial correlation of conviction against
+> forward return, controlling for the screen rank.
+
+Both are reported on every run, with their own readiness rules and the same
+SE-stability guard. The reading is pre-registered as:
+
+| raw IC | IC \| rank | conclusion |
+|---|---|---|
+| ≥ target, t ≥ 2 | ≥ target, t ≥ 2 | **the layer adds information** — H2 holds |
+| ≥ target, t ≥ 2 | ~0 | **the layer restates the screen** — H2 does *not* hold, and the raw IC was rank leakage |
+| ~0 | any | no ordering information either way — insufficient, as usual |
+
+The controlled series is slightly noisier by construction (theoretical per-day SE
+`1/√(N−2)` against `1/√(N−1)`, one covariate), so its required horizon is ~2 %
+longer — 326 days against 318 at breadth 40. Reported, not silently absorbed.
+
+**Test evidence that the statistic can do its job:** a synthetic universe whose
+conviction is a noisy function of rank and nothing else produces a **raw IC > 0.4
+while `IC | rank` stays under 0.25**; add genuine conviction-carried information and
+the controlled IC rises above 0.3. Without this the layer could be credited with
+information it does not have.
+
 ## What this round will not do
 
 - **No prompt or pipeline changes.** `PROMPT_VERSION` stays v1; changing the
