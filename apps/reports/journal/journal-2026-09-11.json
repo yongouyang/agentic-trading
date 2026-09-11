@@ -1,0 +1,82 @@
+{
+  "asOf": "2026-09-11T15:49:56.786Z",
+  "source": "/tmp/trades-example.csv",
+  "summary": {
+    "trades": 3,
+    "buys": 3,
+    "matched": 1,
+    "open": 2,
+    "onList": 0,
+    "coverage": 0,
+    "meanReturnOnList": null,
+    "meanReturnOffList": null,
+    "meanDeltaVsList": null,
+    "meanConviction": null
+  },
+  "linked": [
+    {
+      "trade": {
+        "date": "2026-09-14",
+        "symbol": "AAPL",
+        "side": "buy",
+        "quantity": 10,
+        "price": 230.5,
+        "fee": 1.99
+      },
+      "entry": "2026-09-10",
+      "exit": "2026-09-10",
+      "open": false,
+      "onList": false,
+      "listSession": null,
+      "listRank": null,
+      "conviction": null,
+      "realizedReturn": null,
+      "holdSessions": 0,
+      "listReturn": null,
+      "delta": null
+    },
+    {
+      "trade": {
+        "date": "2026-09-15",
+        "symbol": "02269.HK",
+        "side": "buy",
+        "quantity": 500,
+        "price": 45.2,
+        "fee": 28
+      },
+      "entry": "2026-09-15",
+      "exit": null,
+      "open": true,
+      "onList": false,
+      "listSession": null,
+      "listRank": null,
+      "conviction": null,
+      "realizedReturn": null,
+      "holdSessions": null,
+      "listReturn": null,
+      "delta": null
+    },
+    {
+      "trade": {
+        "date": "2026-09-17",
+        "symbol": "TSLA",
+        "side": "buy",
+        "quantity": 2,
+        "price": 300,
+        "fee": 1.5
+      },
+      "entry": "2026-09-10",
+      "exit": "2026-09-10",
+      "open": true,
+      "onList": false,
+      "listSession": null,
+      "listRank": null,
+      "conviction": null,
+      "realizedReturn": null,
+      "holdSessions": 0,
+      "listReturn": null,
+      "delta": null
+    }
+  ],
+  "skipped": []
+}

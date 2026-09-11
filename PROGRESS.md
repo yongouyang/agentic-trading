@@ -413,6 +413,66 @@ date" for both lanes and exit without running a chain — proving the whole path
 nothing. If 06:10 does *not* fire, the catch-up runs the US chain instead, which is
 the correct behaviour and not a duplicate.
 
+## 2026-09-11 (items 4 and 6: the treatment freeze, and the decision-level instrument)
+
+**Item 4 — the treatment must freeze (decided, recorded).** Fork A asked how to buy
+*power*; this asks what keeps the sample *valid*, and the answer is one treatment.
+`PROMPT_VERSION` stays **v1** until the read, enforced by the harness, so the cost
+of a bump is visible as a jump in the excluded count rather than silent — and it is
+a real cost: a bump **resets a ~7.5-month clock**.
+
+Prompt work therefore runs on an **excluded experiment track** that needs no new
+code, because both halves already exist (the version travels inside `verdictJson`;
+the gate excludes anything else):
+
+```bash
+git worktree add ../at-prompt-exp -b prompt-exp   # production keeps sampling v1
+# edit prompts.ts, bump PROMPT_VERSION to v2 THERE
+pnpm -C apps/api screen:deep-dive -- --market us --symbol AAPL,MSFT,NVDA
+pnpm -C apps/api verdict:validate                 # the v2 verdicts show as EXCLUDED
+```
+
+Three properties make it honest rather than convenient: **the tag cannot lie** (the
+version changes when the *text* changes, so the mechanism is a worktree rather than
+a `--prompt-version` flag that could retag unchanged text); **production is
+untouched** (the launchd jobs run from the production tree — the only real hazard
+of an experiment silently becoming the sample); and **both versions can run on the
+same names**, which makes the comparison a comparison. Recorded footgun that this
+workflow makes likelier: an ad-hoc `--symbol` run still becomes the dashboard's
+latest run for that lane; the picker recovers it and the sample is unaffected.
+
+**Item 6 — `journal:link`, the first instrument that measures the DECISION.**
+Everything else here measures a signal; this answers whether the trades actually
+made were the names the system suggested, at what rank and conviction, and how they
+did **against the list they came from** — the counterfactual is the list's top-N
+over the *same* window, so the question is not "did it make money" but "did it beat
+the list".
+
+Built now, with **no trade history**, on purpose: an analysis written after seeing
+outcomes is fitted to them, the same reason Phase 4b's amendments were only
+legitimate because no label existed. Ingestion is a **normalized CSV we control**
+(`date,symbol,side,quantity,price,fee`) rather than a guess at a broker's headers —
+so the broker-specific part reduces to one rename plus the symbol codes, which are
+stable and already implemented (`US.AAPL → AAPL`, `HK.700 → 00700.HK`). The
+forward broker is **Futu/Moomoo** for HK/US EQ and ETF.
+
+Two choices to stop the report flattering its reader: an unparseable row is
+**reported with a reason**, never dropped (a silently skipped trade would make
+coverage look better than it is); and a matched sell **folds into the buy row it
+closes**, so rows are *decisions*, with open positions marked to market and
+labelled rather than counted as completed.
+
+**Found by the tests, in the core:** the lookback counted distinct *list
+publications* rather than **trading sessions**, so a small `--lookback` behaved like
+no lookback at all — a stale list would have counted as current. Fixed and pinned.
+
+**Current limitation, stated plainly:** the linkage needs `ScreenRun.sessionDate`
+to place a list in time, and forward returns to score a trade. The store holds
+session dates for **one** session and bars only to it, so a live run reports `—`
+for every return and `OFF-LIST` for every symbol. Data starvation, not a defect —
+it becomes useful after a few weeks of sessionDate-bearing runs, and it is verified
+meanwhile by 16 pure tests plus a stub-store spec.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary

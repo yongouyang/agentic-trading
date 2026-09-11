@@ -27,7 +27,8 @@
     "ca:f10-refresh": "tsx src/cli/refresh-f10-ca.ts",
     "phase4c:accrual": "tsx src/cli/accrual.ts",
     "verdict:validate": "tsx src/cli/verdict-validate.ts",
-    "ops:catchup": "tsx src/cli/ops-catchup.ts"
+    "ops:catchup": "tsx src/cli/ops-catchup.ts",
+    "journal:link": "tsx src/cli/journal-link.ts"
   },
   "dependencies": {
     "@agentic-trading/agents": "workspace:*",

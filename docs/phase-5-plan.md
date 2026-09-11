@@ -263,6 +263,58 @@ is worth knowing before it happens.
 the Phase-5 clock resets from that date. That is the cost of having a better
 prompt, and it is the right trade — but it should be made on purpose.
 
+## Sibling instrument: `journal:link` (2026-09-11)
+
+Not part of Phase 5 — it measures a different question — but built in the same
+session because it is the only instrument that measures the **decision** rather
+than a signal, and because building it *before* any trade history exists is what
+keeps it unfitted to a result.
+
+**What it answers.** For each buy: was the symbol on the screen list within N
+trading sessions of the trade, at what rank, and with what LLM conviction; what did
+it actually return; and what would the list's own top-N have returned over the
+**same window**. That last number is the point — the question is not "did the trade
+make money" but "did the trade beat the list it was chosen from".
+
+**Why it is built now, with no data.** Investing is manual here, and nothing else
+in the project can see the trades. An analysis written after seeing the outcomes
+would be fitted to them, which is the same reason Phase 4b's two amendments were
+only legitimate because no label existed yet.
+
+**Ingestion is a normalized CSV, deliberately.** Guessing a broker's headers from
+memory would produce a parser that needs rewriting on first contact. The schema is
+one we control:
+
+```csv
+date,symbol,side,quantity,price,fee
+2026-09-14,US.AAPL,buy,10,230.50,1.99
+2026-09-15,HK.02269,buy,500,45.20,28.00
+```
+
+The broker-specific part then reduces to **one documented rename plus the symbol
+codes**, and the codes are stable knowledge that is already implemented:
+`US.AAPL → AAPL`, `HK.700 → 00700.HK`. The target broker for going forward is
+**Futu/Moomoo** (HK and US EQ/ETF), so a first export needs only its column names
+mapped onto the five above.
+
+**Two deliberate design choices**, both to stop the report flattering the reader:
+
+1. A row that cannot be parsed is **reported with a reason**, never dropped —
+   silently skipping a trade would make coverage look better than it is, the same
+   failure as a silently excluded verdict in the Phase-5 harness.
+2. A matched sell **folds into the buy row it closes**, so the row count is
+   *decisions*, not executions. An open position is **marked to market** and
+   labelled `(open, marked)` rather than being counted as a completed outcome.
+
+**Data dependency, stated plainly because it is the current limitation.** The
+linkage needs `ScreenRun.sessionDate` (added 2026-09-11) to place a list in time,
+and forward returns to score a trade. Right now the store holds session dates for
+**one** session and bars only up to it, so a run against a sample file reports
+`—` for every return and `OFF-LIST` for every symbol. That is data starvation, not
+a defect: the instrument becomes useful after a few weeks of sessionDate-bearing
+runs. Verified meanwhile against a stub store (`journal-link.cli.spec.ts`) and 16
+pure tests in `packages/quant-core/tests/journal.test.ts`.
+
 ## What this round will not do
 
 - **No prompt or pipeline changes.** `PROMPT_VERSION` stays v1; changing the

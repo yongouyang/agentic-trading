@@ -9,3 +9,4 @@ export * from "./ic.js";
 export * from "./verdict-ic.js";
 export * from "./portfolio.js";
 export * from "./backtest.js";
+export * from "./journal.js";
