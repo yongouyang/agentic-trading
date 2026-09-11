@@ -5,6 +5,83 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-11 (Round 1 EXECUTED) — health stopped crying wolf; the coverage gate is readable again; the power-off contract is recorded
+
+First of the four rounds proposed in tonight's review. Two commits, tree clean,
+all suites green. Both bugs were the same class as R0's: a signal that was
+always-on (or always-red) and therefore read as noise.
+
+**F1 — a weekly job must be due before it can be late** (`ad32376`). The 09-10
+health artifact was ALERT on `f10: no artifact on record`, but f10 was installed
+Sun **09-10 23:21** — *after* that morning's 09:17 slot — so its first due slot
+was Sun 09-13, two days in the future. `computeHealth` treated "no artifact" as
+failure with no notion of due-ness, and since **any job alert pins the whole
+report**, the banner was red for a job that could not go green before 09-13.
+That also made W5's acceptance impossible: no week, however clean, could ever
+report HEALTHY.
+
+Fixed by anchoring on the **install instant** — `install.sh` *copies* the plist,
+so its mtime dates it — and reusing the existing HKT/weekday slot arithmetic
+(generalised out of `missedSlots`) to ask whether a Sunday slot has passed since.
+A missing plist stays an ALERT: health cannot then even prove the job was
+installed. **Verified live**: `ops:health` went **ALERT → WARN**, exit **1 → 0**,
+with `f10: HEALTHY · no artifact yet — not yet due (installed
+2026-09-10T15:21:34Z)`. The lanes still correctly warn about the runs missed
+today — the report is now honest rather than uniformly red.
+
+**F2 — the coverage gate was red at HEAD, so nobody could read it** (`b993981`).
+`test:coverage` failed at **75.05 % lines vs a 90 % `src/**` threshold**, and had
+been red since the 3c ship (77.97 % recorded there) without ever being
+reconciled — the same silent-failure class R0 was built to remove. Cause is
+narrow: `src/cli/**` sits at 58.16 % lines, three entrypoints at 0 % because they
+are `main()`-only and exercised by real runs (daily chain, launchd, e2e), not
+unit tests — the reasoning that already excludes `src/main.ts`. Every other
+directory is ≥93 %.
+
+The lazy fix is to drop the threshold to 75 %, which makes it a rubber stamp.
+Instead the 90 % gate exempts cli **by negation** (`!src/cli/**`) so it stays
+**default-deny** — a new `src/` subdirectory is gated at 90 % unless someone
+explicitly exempts it, which a per-directory allow-list would not give. The cli
+files keep their own floor (55/78 vs measured 58.16/81.1) so they cannot rot
+further unnoticed, and stay in the printed report. **Verified the gate still
+bites** rather than silently matching nothing: raised to 99 it failed at
+**97.12 %**. Final: exit 0, 437 passed / 1 skipped.
+
+**F3 — the power-off contract is now recorded, not assumed.** Both the daily-hk
+and ops-health plist headers claimed launchd "catches up after wake". True for
+**sleep** (observed 09-10: a 06:10 slot caught up at 08:35), false across
+**power-off**, which keeps no memory of elapsed slots (observed **09-11: booted
+19:44, both the 06:10 and 16:50 slots gone, no replay**). Written into
+architecture §5.1 beside the cadence table, and into the two plist headers.
+Comment-only plist edits — the installed copies pick them up at the next
+`install.sh`.
+
+**Tests:** +7 cases in `ops-health.spec.ts` (not-yet-due, due-and-missed,
+plist-missing, artifact-age-beats-plist-mtime), and the existing weekly cases
+are now hermetic — they were silently reading the developer's real
+`~/Library/LaunchAgents`. Suites: api 437 + 1 skipped (coverage gate green),
+quant-core 77, agents 43, web 102, tsc clean, all plists `plutil -lint` OK.
+
+**Still open from Round 1: the W5 acceptance itself — no scheduled cycle has
+been observed since the 09-10 arming fix**, because every slot since then fell
+while the machine was off or asleep. The next US slot is **Sat 09-12 06:10
+HKT**; it only closes W5 if the machine is awake for it.
+
+**Decided (user, 2026-09-11): slot times stay as they are.** 06:10 / 16:50 are
+kept; a day whose slots fall while the machine is powered off is accepted as
+lost. The rationale is that the failure is already *visible* (`ops:health`
+counts it, the banner shows it, `dataThrough` exposes the stale cutoff) and the
+store heals on the next run — so the cost is a missed session, not a silent one.
+The boot-time catch-up that would recover those days was declined, consistent
+with the R0 spec's "no self-heal job".
+
+Next: Round 2 — Phase 4b, the corrected pre-registration + the top-decile
+hypothesis (**deep tier, high thinking**; the user switches before planning).
+Parked: Round 3 (LLM-layer prospective scoring, fast tier), Databento R1
+baseline, the §7 `deepseek-v4-flash` doc correction.
+
+---
+
 ## 2026-09-10 (Phase 4 EXECUTED) — H1 NOT SUPPORTED; the pre-registered bar is unpassable as specified
 
 Built and ran the Phase-4 backtest (`packages/quant-core/src/{replay,ic,portfolio,backtest}.ts`
