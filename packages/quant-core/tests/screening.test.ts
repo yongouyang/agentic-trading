@@ -174,17 +174,27 @@ describe("screening — score, rank, truncation (§4)", () => {
     expect(ranked.every((p) => p.rank === 1)).toBe(true);
   });
 
-  it("truncates to top 15 per market, keeping the highest scores", () => {
+  it("truncates to the per-market candidate limit, keeping the highest scores", () => {
     // 20 US names with strictly increasing slopes → strictly increasing
-    // mom/scores; the 5 flattest must be dropped.
-    const inputs = Array.from({ length: 20 }, (_, i) => input(`N${i}`, riser(260, 0.1 + i * 0.005)));
+    // mom/scores; the flattest are dropped.
+    const limit = SCREEN_PARAMS.topN.US;
+    const inputs = Array.from({ length: limit + 5 }, (_, i) => input(`N${i}`, riser(260, 0.1 + i * 0.005)));
     const { ranked, excluded } = runScreen(inputs);
     expect(excluded).toEqual([]);
-    expect(ranked).toHaveLength(SCREEN_PARAMS.topN);
-    expect(ranked.map((p) => p.rank)).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
+    expect(ranked).toHaveLength(limit);
+    expect(ranked.map((p) => p.rank)).toEqual(Array.from({ length: limit }, (_, i) => i + 1));
     expect(ranked.map((p) => p.symbol)).not.toContain("N0");
-    expect(ranked[0]!.symbol).toBe("N19");
+    expect(ranked[0]!.symbol).toBe(`N${limit + 4}`);
     for (let i = 1; i < ranked.length; i++) expect(ranked[i]!.score).toBeLessThan(ranked[i - 1]!.score);
+  });
+
+  it("displayTopN is per market and strictly below the candidate limit (Phase 5 Fork A)", () => {
+    // HK's 15 was 60 % of its ~25-name eligible universe — not a ranking. Display
+    // breadth is a product choice decoupled from measurement breadth.
+    expect(SCREEN_PARAMS.displayTopN.HK).toBeLessThan(SCREEN_PARAMS.topN.HK);
+    expect(SCREEN_PARAMS.displayTopN.US).toBeLessThan(SCREEN_PARAMS.topN.US);
+    expect(SCREEN_PARAMS.displayTopN.HK).toBe(5);
+    expect(SCREEN_PARAMS.displayTopN.US).toBe(10);
   });
 
   it("breaks score ties by higher adv20", () => {

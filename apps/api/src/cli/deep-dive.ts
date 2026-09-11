@@ -42,6 +42,7 @@ import { PrismaService } from "../prisma.service.js";
 import { EastmoneyF10Provider } from "../market-data/eastmoney-f10.provider.js";
 import { buildDeepDiveContext, type BuiltContext } from "../agents/context.js";
 import type { FetchNewsDeps } from "../agents/news.js";
+import { SCREEN_PARAMS } from "@agentic-trading/quant-core";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 
@@ -62,7 +63,10 @@ export interface DeepDiveCliArgs {
 }
 
 export function parseDeepDiveArgs(argv: string[]): DeepDiveCliArgs {
-  const args: DeepDiveCliArgs = { market: "all", top: 10, maxCalls: 200 };
+  // Measurement breadth, not display breadth (Phase 5 Fork A): deep-diving the
+  // whole candidate list is what makes the layer validatable this year rather
+  // than in five. The dashboard presents `SCREEN_PARAMS.displayTopN`.
+  const args: DeepDiveCliArgs = { market: "all", top: Math.max(SCREEN_PARAMS.topN.US, SCREEN_PARAMS.topN.HK), maxCalls: 800 };
   const symbols: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;

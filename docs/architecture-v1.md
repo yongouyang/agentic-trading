@@ -352,7 +352,7 @@ the next `install.sh`.
 
 | Label | Runs | Schedule (HKT) |
 |---|---|---|
-| `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive --top 10` | Mon–Fri 16:50 |
+| `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive` (candidate breadth from `SCREEN_PARAMS.topN`) | Mon–Fri 16:50 |
 | `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
 | `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
 | `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
@@ -460,7 +460,7 @@ Reimplements the TradingAgents org-chart *pattern* in TS, lean variant:
 locked: fundamentals analyst = eastmoney F10 statements, stocks only (ETFs
 skip it); news = Google News RSS both lanes (CN+EN for HK) + Yahoo
 supplement; structured output = prompt + strict validate + 1 repair round,
-never `response_format`-dependent; breadth = top 10/lane + `--symbol`;
+never `response_format`-dependent; breadth = the full candidate list + `--symbol`;
 models = Kimi all-roles local, DeepSeek `deepseek-flash` on deploy —
 `api.moonshot.cn` is measured-blackholed from AWS ap-east-1. Decision log =
 `AgentDecision` table keyed by sha256(agent|model|promptVersion|system|user)
@@ -590,6 +590,30 @@ mom60 weight rises (US 0.40 → 0.0199/0.0203/0.0190 vs 0.60 → 0.0103/0.0096/0
 shipped ranks 5/9 (US) and 6/9 (HK), and the surface is a smooth plateau with no
 isolated spike. **It may not be used to change `SCREEN_PARAMS`** without a new
 pre-registered test on data excluding this window.*
+
+***Changed 2026-09-11 (Phase 5 Fork A + the HK lane decision), and what it does
+and does not invalidate.*** *`SCREEN_PARAMS.topN` became per-market and moved
+15 → **40**, and a new `displayTopN` { US 10, HK 5 } decouples what the dashboard
+presents from what is measured.*
+
+*Why: at ~10 verdicts/day the LLM layer's per-day conviction IC has SE ≈ 0.33 and
+20d labels overlap, so a modest IC of 0.10 was ~65 months of accrual away. At 40
+per lane it is ~15. Measurement breadth is a **token-cost** decision (~18k tokens
+and 7.7 calls per name, measured) while display length is a **product** decision,
+and tying them forced a trade that did not exist. HK's display of 5 replaces a
+fixed 15 that was **60 % of its ~25-name eligible universe** — not a ranking, which
+is why its measured spread was indistinguishable from its own breadth.*
+
+*What this does NOT change — stated because `SCREEN_PARAMS` is hypothesis H1:*
+*`topN` truncates the **output**, not the score, so every Gate-1 ranking statistic
+is identical at any value, and the backtest replays with the truncation lifted
+entirely. The Phase-4/4b artifacts therefore still describe the shipped ranking.
+Two things do change: the dashboard now shows 5 HK / 10 US rather than 10/10, and
+the **HK Gate-2 falsification describes a 15-name portfolio** (`PORTFOLIO_TOP_N`,
+an independent backtest constant) — so it falsifies that rule, not the 5-name list
+now displayed. Re-testing the portfolio rule at topN 5 would be a new
+pre-registration. `advFloor` is unchanged: the "widen HK's universe" option was
+declined in favour of shrinking the list.*
 
 *Status 2026-09-11 (Phase 4b, `docs/phase-4b-plan.md`): **the calibration was
 repaired and the verdict re-labelled — `insufficient_evidence` on both lanes.**

@@ -24,8 +24,10 @@ import {
 import { createTestDatabase, destroyTestDatabase, type TestDatabase } from "../helpers/test-db.js";
 
 describe("parseDeepDiveArgs", () => {
-  it("defaults: market all, top 10, max-calls 200", () => {
-    expect(parseDeepDiveArgs([])).toEqual({ market: "all", top: 10, maxCalls: 200 });
+  it("defaults to the MEASUREMENT breadth from SCREEN_PARAMS, not a display count", () => {
+    // Phase 5 Fork A: the deep-dive covers the whole candidate list so the layer
+    // can be validated this year; the dashboard presents displayTopN instead.
+    expect(parseDeepDiveArgs([])).toEqual({ market: "all", top: 40, maxCalls: 800 });
   });
   it("parses all flags and skips pnpm's bare --", () => {
     expect(parseDeepDiveArgs(["--", "--market", "hk", "--top", "5", "--symbol", "0700.HK,0005.HK", "--max-calls", "50", "--as-of", "2026-09-05"])).toEqual({

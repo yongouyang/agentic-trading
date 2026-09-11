@@ -61,11 +61,13 @@ HTTP=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$BASE_URL/chat/completions"
   -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
   -d '{"model":"k3-256k","messages":[{"role":"user","content":"OK"}],"max_tokens":1,"temperature":1,"reasoning_effort":"low"}')
 if [ "$HTTP" != "200" ]; then
-  echo "PREFLIGHT FAIL: llm auth probe http=$HTTP — skipping deep-dive ($HINT, then rerun: pnpm -C apps/api screen:deep-dive -- --market $LANE --top 10)"
+  echo "PREFLIGHT FAIL: llm auth probe http=$HTTP — skipping deep-dive ($HINT, then rerun: pnpm -C apps/api screen:deep-dive -- --market $LANE)"
   exit 3
 fi
 
-pnpm -C apps/api screen:deep-dive -- --market "$LANE" --top 10
+# No --top: the deep-dive defaults to SCREEN_PARAMS.topN per lane (40), which is
+# the MEASUREMENT breadth. The dashboard presents displayTopN (Phase 5 Fork A).
+pnpm -C apps/api screen:deep-dive -- --market "$LANE"
 DD_RC=$?
 echo "screen:deep-dive exit=$DD_RC"
 

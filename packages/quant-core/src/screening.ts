@@ -23,7 +23,28 @@ export const SCREEN_PARAMS = {
   advFloor: { US: 20_000_000, HK: 100_000_000 } as const,
   volMax: 0.6,
   mddMin: -0.5,
-  topN: 15,
+  /**
+   * Candidates persisted per market, by rank. This is the **measurement**
+   * breadth: it feeds the deep-dive, so it sets how fast the LLM layer's verdicts
+   * can be validated (Phase 5 Fork A — at ~10 verdicts/day a modest IC of 0.10 is
+   * ~65 months of accrual away; at 40 it is ~15).
+   *
+   * It does **not** change H1: `topN` truncates the *output*, not the score, so
+   * every Gate-1 ranking statistic is identical at any value, and the backtest
+   * replays with the truncation lifted entirely.
+   */
+  topN: { US: 40, HK: 40 } as const,
+  /**
+   * What the dashboard presents per market — deliberately smaller and decoupled
+   * from `topN` (Phase 5 Fork A): display length is a product choice, while
+   * measurement breadth is a token-cost choice, and tying them forced a false
+   * trade between a readable list and a validatable sample.
+   *
+   * HK is 5 because a fixed 15 was **60 % of its ~25-name eligible universe** —
+   * not a ranking at all, which is why its measured spread was indistinguishable
+   * from its own breadth. US is 10, unchanged (8 % of its 180).
+   */
+  displayTopN: { US: 10, HK: 5 } as const,
   weights: { mom60: 0.5, mom20: 0.25, sharpe252: 0.25 } as const,
 } as const;
 
@@ -121,7 +142,6 @@ interface Candidate {
 /** Run the deterministic §4 screen over one day's inputs (both markets may
  *  be mixed; ranking is per market). Pure function — no I/O. */
 export function runScreen(inputs: ScreenInput[], opts: ScreenOptions = {}): ScreenOutput {
-  const topN = opts.topN ?? SCREEN_PARAMS.topN;
   const excluded: ScreenExclusion[] = [];
   const eligible: Candidate[] = [];
 
@@ -174,8 +194,12 @@ export function runScreen(inputs: ScreenInput[], opts: ScreenOptions = {}): Scre
 
   // Score + rank per market: cross-sectional z-scores over the day's
   // eligible set; descending, top N, ties broken by higher adv20.
+  //
+  // `topN` is per market (Phase 5 Fork A) and `opts.topN` overrides both, which
+  // is how the backtest lifts the truncation entirely.
   const ranked: ScreenPick[] = [];
   for (const market of ["US", "HK"] as const) {
+    const limit = opts.topN ?? SCREEN_PARAMS.topN[market];
     const set = eligible.filter((c) => c.market === market);
     const zMom60 = zscores(set.map((c) => c.mom60));
     const zMom20 = zscores(set.map((c) => c.mom20));
@@ -188,7 +212,7 @@ export function runScreen(inputs: ScreenInput[], opts: ScreenOptions = {}): Scre
         SCREEN_PARAMS.weights.sharpe252 * zSharpe[i]!,
     }));
     scored.sort((a, b) => b.score - a.score || b.adv20 - a.adv20);
-    scored.slice(0, topN).forEach((c, i) => {
+    scored.slice(0, limit).forEach((c, i) => {
       ranked.push({
         rank: i + 1,
         symbol: c.symbol,

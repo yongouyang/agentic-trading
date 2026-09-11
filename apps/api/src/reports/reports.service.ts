@@ -7,7 +7,7 @@
  * this module.
  */
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { annualizedVol, deriveAdjustedBars, maxDrawdown, momentum, sma } from "@agentic-trading/quant-core";
+import { SCREEN_PARAMS, annualizedVol, deriveAdjustedBars, maxDrawdown, momentum, sma } from "@agentic-trading/quant-core";
 import type { Bar, CorporateAction } from "@agentic-trading/quant-core";
 import type { Rating } from "@agentic-trading/quant-core";
 import type { AgentDecision as AgentDecisionRow } from "@prisma/client";
@@ -32,6 +32,20 @@ export const DEFAULT_PRICE_HISTORY_DAYS = 250;
  * and would be wrong here after the next backtest, and a number that rotates
  * silently is worse than no number. The wording says what is stable — nobody has
  * validated these rules — and points at the document that quantifies it. */
+/**
+ * Phase 5 Fork A: the dashboard presents `displayTopN`, not every persisted
+ * candidate. Extracted so the slice is testable — an inline `slice` on a fixture
+ * smaller than the limit is a no-op and would look covered without being covered.
+ *
+ * Unknown markets fall through to the full list rather than an empty one: a
+ * missing entry is a configuration gap, and silently showing nothing would be a
+ * worse failure than showing too much.
+ */
+export function visibleRows<T>(results: T[], market: string): T[] {
+  const limit = SCREEN_PARAMS.displayTopN[market as "US" | "HK"];
+  return typeof limit === "number" ? results.slice(0, limit) : results;
+}
+
 export const SCREEN_RULES_CAVEAT =
   "ranking rules are an unvalidated hypothesis — the pre-registered power bar was out of reach at this lane's " +
   "breadth, and the modelled book trailed buy-and-hold (docs/phase-4b-plan.md)";
@@ -298,7 +312,16 @@ export class ReportsService {
     ]);
     const bySymbol = new Map(reports.map((r) => [r.symbol, r]));
 
-    const rows: DailyRow[] = results.map((r) => {
+    // Phase 5 Fork A: measure broad, display narrow. The screen persists
+    // `topN` candidates (40) so the deep-dive can produce enough verdicts to be
+    // validatable this year, but the dashboard presents `displayTopN` — 10 US,
+    // and **5** for HK, where a fixed 15 was 60 % of its ~25-name eligible
+    // universe and therefore not a ranking at all. `run.topN` still reports how
+    // many were deep-dived, so the narrow display is never mistaken for the
+    // measurement breadth.
+    const visible = visibleRows(results, run.market);
+
+    const rows: DailyRow[] = visible.map((r) => {
       const report = bySymbol.get(r.symbol);
       let verdict: VerdictOverlay | null = null;
       if (report?.verdictJson) {

@@ -4,9 +4,21 @@ Planning session 2026-09-11. Follows Phase 4/4b, which spent the deterministic
 screen's only window and found its Gate 1 bar unreachable at both lanes' breadth
 (`docs/phase-4b-plan.md`).
 
-**Status: DRAFTED — awaiting user lock.** No verdict has been computed; the
-harness built alongside this plan refuses to emit one until the readiness rule
-below is satisfied.
+**Status: LOCKED** (forks decided 2026-09-11). The harness is built and refuses to
+emit a verdict until the readiness rule below is satisfied.
+
+## Locked decisions
+
+| Fork | Decision |
+|---|---|
+| **A. Breadth** | **Decoupled: measure 40, display 10.** The fork as posed offered a false trade — a longer list versus a validatable layer — because measurement breadth and display breadth need not be the same number. `SCREEN_PARAMS.topN` → `{US: 40, HK: 40}` (candidates persisted, which feeds the deep-dive) and a new `SCREEN_PARAMS.displayTopN` → `{US: 10, HK: 5}` (what the dashboard presents). Horizon to a read: ~65 months → **~15 months**; cost ~4× (360k → ~1.44M tokens/day, measured at ~18k tokens/name). The validated claim becomes "conviction orders outcomes within the top 40", which is where the daily list is drawn from anyway. `--top` was removed from `daily-chain.sh` so the CLI default is the single source of truth. |
+| **B. Target IC** | **0.10**, as recommended. |
+| **C. Pooling** | **Pooled primary**, per lane reported. |
+| **D. Secondary** | **Reported** — the benchmark-free conviction split, with its own NW t. |
+
+Post-lock amendment (the review discipline of 4b applied to this plan): the
+**HK display decision** (below) landed in the same session and set
+`displayTopN.HK = 5`, which supersedes the plan's implicit "display 10" for HK.
 
 ## Why this round
 

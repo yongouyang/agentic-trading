@@ -17,6 +17,7 @@ import {
   ReportsService,
   SCREEN_RULES_CAVEAT,
   summarizeMetrics,
+  visibleRows,
 } from "../../src/reports/reports.service.js";
 
 const VERDICT_AAPL = {
@@ -442,5 +443,27 @@ describe("ReportsService", () => {
       const out = await service.daily("US");
       expect(out.integrity.dataThrough).toBe(seededIndDates[seededIndDates.length - 1]);
     });
+  });
+});
+
+describe("visibleRows — display breadth is narrower than measurement breadth", () => {
+  const rows = Array.from({ length: 40 }, (_, i) => ({ rank: i + 1 }));
+
+  it("slices HK to 5 and US to 10, per Phase 5 Fork A", () => {
+    // The defect being fixed: HK showed 15 of ~25 eligible names — 60% of its
+    // universe, which is not a ranking. Measurement breadth (40) is untouched.
+    expect(visibleRows(rows, "HK")).toHaveLength(5);
+    expect(visibleRows(rows, "US")).toHaveLength(10);
+    expect(visibleRows(rows, "HK").map((r) => r.rank)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("is a no-op when fewer candidates exist than the limit", () => {
+    expect(visibleRows([{ rank: 1 }], "US")).toHaveLength(1);
+  });
+
+  it("falls back to the full list for an unknown market rather than showing nothing", () => {
+    // A missing config entry is a gap; silently rendering an empty watchlist
+    // would be the worse failure.
+    expect(visibleRows(rows, "JP")).toHaveLength(40);
   });
 });

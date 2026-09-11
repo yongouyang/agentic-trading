@@ -16,7 +16,10 @@ export function LaneSection({ market, result, picker }: { market: "US" | "HK"; r
         {result.kind === "ok" && (
           <span className="meta">
             run {result.report.run.id} · {new Date(result.report.run.runAt).toLocaleString("en-GB", { hour12: false })} ·
-            top {result.report.run.topN} deep-dived · {result.report.run.failed} failed
+            {/* Phase 5 Fork A: measurement breadth (run.topN, 40) and display
+                breadth (the rows actually shown) differ on purpose. Both are
+                stated so the narrow list is never mistaken for the sample. */}
+            showing {result.report.rows.length} of {result.report.run.topN} deep-dived · {result.report.run.failed} failed
           </span>
         )}
       </div>

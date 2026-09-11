@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { Bar, CorporateAction } from "../src/types.js";
-import { Market, ScreenInput, runScreen } from "../src/screening.js";
+import { Market, SCREEN_PARAMS, ScreenInput, runScreen } from "../src/screening.js";
 import { deriveAdjustedBars } from "../src/adjustment.js";
 import { SymbolSeries, buildForwardSeries, forwardReturn, replayScreen, exclusionCensus, type ReplayDay } from "../src/replay.js";
 import {
@@ -137,7 +137,8 @@ describe("replay — point-in-time correctness", () => {
 describe("runScreen topN override", () => {
   it("returns the full ranking without changing the first N picks or their scores", () => {
     const ds = dates(300);
-    const inputs: ScreenInput[] = Array.from({ length: 20 }, (_, k) => {
+    // One more than the per-market candidate limit, so the truncation is visible.
+    const inputs: ScreenInput[] = Array.from({ length: SCREEN_PARAMS.topN.US + 1 }, (_, k) => {
       const closes = rising(300, 0.0005 + k * 0.00008, 100, 0.006, k);
       return {
         symbol: `S${String(k).padStart(2, "0")}`,
@@ -150,10 +151,11 @@ describe("runScreen topN override", () => {
 
     const capped = runScreen(inputs);
     const full = runScreen(inputs, { topN: Number.MAX_SAFE_INTEGER });
+    const limit = SCREEN_PARAMS.topN.US;
 
-    expect(capped.ranked.length).toBe(15); // SCREEN_PARAMS.topN
-    expect(full.ranked.length).toBeGreaterThan(15);
-    expect(full.ranked.slice(0, 15)).toEqual(capped.ranked);
+    expect(capped.ranked.length).toBe(limit); // per-market SCREEN_PARAMS.topN
+    expect(full.ranked.length).toBeGreaterThanOrEqual(limit);
+    expect(full.ranked.slice(0, limit)).toEqual(capped.ranked);
     expect(full.excluded).toEqual(capped.excluded);
   });
 });

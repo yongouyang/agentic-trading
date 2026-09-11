@@ -220,6 +220,47 @@ next to the differential, since a significant t would partly be a statement abou
 them, not about selection. (The D1 lag-sensitivity and spread-retraction items
 remain.)
 
+## 2026-09-11 (Phase-5 Fork A + HK lane DECIDED and SHIPPED) — measurement breadth decoupled from display; HK's list is 5, not 15
+
+Two production decisions, both taken as recommended, both implemented.
+
+**Fork A — a false trade removed before it could be made.** The plan posed breadth
+as a trade against list length ("a longer list than you want to read, in exchange
+for a validatable layer"). That trade does not exist: the deep-dive produces one
+verdict per name, so **measurement breadth and display breadth can be decoupled**.
+Locked as: `SCREEN_PARAMS.topN` → per-market **40** (candidates persisted, which
+feeds the deep-dive) and a new `displayTopN` → **{US 10, HK 5}** (what the dashboard
+shows). Horizon to a read at IC 0.10: **~65 months → ~15**, for ~4× tokens
+(measured ~18k tokens and 7.7 calls per name; 360k → ~1.44M tokens/day).
+
+The harness proves it without a re-run: `verdict:validate` now derives its assumed
+breadth from `SCREEN_PARAMS.topN`, so the readiness projection moved **1125 → 318
+days** the moment the constant changed — a projection that cannot drift from the
+configuration it is projecting.
+
+**HK lane — shrink the list.** `displayTopN.HK = 5` replaces a fixed 15 that was
+**60 % of HK's ~25-name eligible universe**: not a ranking, which is exactly why
+its measured spread was indistinguishable from its own breadth. The "widen HK's
+universe" option (lowering `advFloor`, breadth 25 → ~55, accrual 18.1 y → ~8 y) was
+**declined** in favour of the minimal change with no new liquidity risk.
+
+**What this does and does not invalidate** — recorded because `SCREEN_PARAMS` *is*
+hypothesis H1, and both prior plans reserved changes to it for exactly this
+approval. `topN` truncates the **output**, not the score, so every Gate-1 ranking
+statistic is identical at any value and the Phase-4/4b artifacts still describe the
+shipped ranking (the backtest lifts truncation entirely). Two things **do** change:
+the dashboard now shows 5 HK / 10 US, and the **HK Gate-2 falsification describes a
+15-name portfolio** (`PORTFOLIO_TOP_N`, an independent backtest constant) — so it
+falsifies *that* rule, not the 5-name list now displayed. Re-testing the portfolio
+rule at topN 5 is a new pre-registration, not an edit.
+
+Implementation: `screening.ts` per-market truncation via `SCREEN_PARAMS.topN[market]`
+(+ `displayTopN`), `reports.service.daily()` slices rows to `displayTopN`, the lane
+header now reads "showing N of M deep-dived" so the narrow list is never mistaken
+for the sample, `daily-chain.sh` drops `--top` (single source of truth), and the
+deep-dive's default is the candidate breadth with the call budget raised 200 → 800
+(80 names × ~7.7 calls would otherwise trip the overspend guard).
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary

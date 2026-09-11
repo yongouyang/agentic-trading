@@ -32,6 +32,7 @@ import {
   type Market,
   type VerdictObservation,
 } from "@agentic-trading/quant-core";
+import { SCREEN_PARAMS } from "@agentic-trading/quant-core";
 import { PrismaService } from "../prisma.service.js";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
@@ -40,8 +41,11 @@ const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
 export const PRIMARY_HORIZON = 20;
 /** Target effect the readiness rule is set to detect. Fork B of the Phase-5 plan. */
 export const DEFAULT_TARGET_IC = 0.1;
-/** Breadth assumed before the series can measure its own sd. */
-export const ASSUMED_BREADTH = 12;
+/** Breadth assumed before the series can measure its own sd. Derived from the
+ *  configured candidate limit so a change to deep-dive breadth cannot leave the
+ *  readiness projection pointing at a world that no longer exists (Phase 5
+ *  Fork A: 40/lane, not the historical 10). */
+export const ASSUMED_BREADTH: number = Math.max(...Object.values(SCREEN_PARAMS.topN));
 
 export interface ValidateArgs {
   json: boolean;
@@ -276,7 +280,7 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
   for (const market of args.markets) {
     const { obs, runs, abstains, pending } = await loadMarket(prisma, market);
     allObs.push(...obs);
-    lanes.push(laneValidation(market, obs, runs, abstains, pending, args.targetIc));
+    lanes.push(laneValidation(market, obs, runs, abstains, pending, args.targetIc, SCREEN_PARAMS.topN[market]));
   }
   const pooled = laneValidation(
     "POOLED",
