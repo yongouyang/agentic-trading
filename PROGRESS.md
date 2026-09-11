@@ -151,6 +151,75 @@ claims to correct. All six done; artifact regenerated; committed and pushed.
   is a standing property of every list. An older api response omits the field and
   renders exactly as before (tested both ways).
 
+## 2026-09-11 (Phase 5 EXECUTED) — the LLM layer has a harness that refuses to answer, and the breadth lever priced
+
+Item 1 of three. The deep-dive layer had **never been scored**; it is also the
+only part of the product that is not a commodity. Unlike the screen, its sample
+accrues for free (`DeepDiveRun`/`DeepDiveReport` + bars are already stored), so
+there was nothing to collect — only something to score, and a decision about when
+scoring is *allowed*.
+
+**The power arithmetic, done before any design** (`docs/phase-5-plan.md`). Per-day
+conviction IC has SE ≈ 1/√(N−1) ≈ 0.33 at 10–12 verdicts, and 20d labels overlap,
+so sessions needed = 20·(SE_day·2.487/IC)²:
+
+| verdicts/day | IC 0.05 | IC 0.10 | IC 0.15 |
+|---|---|---|---|
+| 10 (shipped) | 5496 d ≈ 262 mo | 1374 d ≈ **65 mo** | 611 d ≈ 29 mo |
+| 40 | 1268 d ≈ 60 mo | 317 d ≈ **15 mo** | 141 d ≈ 7 mo |
+| 120 | 416 d ≈ 20 mo | 104 d ≈ **5 mo** | 46 d ≈ 2 mo |
+
+Two conclusions. At the shipped breadth the layer is **not testable either** — the
+same disease as the screen (tiny cross-section rather than tiny effect). But here
+breadth is a **cost** decision, not a time one: the deep-dive can buy power at
+~7 LLM calls per name, and 10 → 40 names/lane cuts the horizon 4.3× (65 → 15
+months) for ~4× the tokens, which Phase 2 already called pennies-class. That is
+Phase 5's central fork, and it is a genuine product trade (a longer list than a
+human wants to read, in exchange for a validatable layer).
+
+**One fork removed by arithmetic:** a per-day *rank* correlation is invariant to
+adding the same constant to every name's forward return that day, so "excess vs
+the lane's universe" and "absolute" give **identical ICs** — the benchmark
+question is moot for the primary statistic and the secondary is therefore defined
+without one.
+
+**Built:** `packages/quant-core/src/verdict-ic.ts` (per-day conviction IC,
+benchmark-free conviction split, and the readiness rule) + `verdict:validate`.
+**The readiness rule is a power condition, not a chosen number**: decide only when
+`SE(mean) ≤ IC_target/2.487` (80 % power, one-sided α = 0.05), and **only a
+MEASURED SE may authorise a decision** — a projected one is for planning. That
+last clause came out of writing the tests: a noiseless fixture was reported
+"decidable" at 10 days because its projected SE was tiny. Deciding on a projection
+is Phase 4's assumed-power error one layer up, so the code now forbids it, and a
+regime-stability guard (second-half sd > 1.5× first-half ⇒ inconclusive) needs
+`minDaysForMeasured` days before it will fire at all — a ratio over 10-vs-10 days
+is itself noise.
+
+**Live on the store right now:** US 2 complete runs / 20 verdicts, HK 5 / 25,
+pooled 45 — all **0 labelled**, because every run is 09-06…09-10 and the 20d
+horizon has not elapsed. Verdict `insufficient_evidence`, `0/1125` days at the
+shipped breadth. That is the correct output, and the harness says so rather than
+manufacturing a read. It exits 0 by design: a status readout, not a gate.
+
+**Item 2 — supply is now counted, because it *is* the statistics.** The accrual
+readout gained collected-vs-expected lane-days, using `scheduledSlotsBetween`
+(extracted from the health module's cadence so a slot is counted once and means the
+same thing in both places): if 21 slots should have fired and 17 did, the
+validation sample is 4 observations shorter — a lost observation, not merely a
+stale report. Both clocks are gated by the same thing, and `verify.sh` still
+reports all 5 jobs **ARMED** after tonight's reboot. The W5 acceptance itself
+still needs a scheduled slot to fire with the machine awake — next chance
+**Sat 2026-09-12 06:10 HKT** (daily-us), which is also the first day the accrual
+counter can be non-zero (prospective-from is 09-12).
+
+**Also fixed (item 5, the review's leftover correctness items):** the review's
+"~8 % structural zeros in the HK benchmark" is **dismissed by measurement** — from
+the persisted series, HK has 9 zeros in 975 days (0.9 %) and US 0 of 1002. The
+benchmark's cost/idle-cash/T+1 composition conventions are now stated in the report
+next to the differential, since a significant t would partly be a statement about
+them, not about selection. (The D1 lag-sensitivity and spread-retraction items
+remain.)
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary

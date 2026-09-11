@@ -266,6 +266,9 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
     `                   SE triple: naive ${num(L.naiveSe, 5)} · heuristic ${num(L.heuristicSe, 5)} · realized NW ${num(L.nwSe, 5)} (df ${num(L.degreesOfFreedom, 1)})`,
   );
   out.push(
+    `                   SE by lag: 5→${num(L.nwSe5, 5)} · 20→${num(L.nwSe, 5)} · 60→${num(L.nwSe60, 5)} — the floor is a lag-20 result`,
+  );
+  out.push(
     `                   mean IC 95% CI [${num(L.ciLo, 4)}, ${num(L.ciHi, 4)}] at q=${num(L.quantile, 3)} — approximate (NW + normal)`,
   );
   for (const h of L.horizons) {
@@ -320,6 +323,14 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
     `     the benchmark is the screen's OWN eligible set, equal-weighted and cost-free — so this differential mostly measures portfolio construction`,
   );
   out.push(`     (concentration, hysteresis, T+1 fills, costs), not the screen's selection.`);
+  // The conventions a significant t would partly be a statement about. Stated
+  // because they are structural, not alpha.
+  out.push(
+    `     conventions: benchmark is cost-free, always fully invested, rebalanced daily over the PREVIOUS day's eligible set;`,
+  );
+  out.push(
+    `                  the portfolio holds idle cash, pays costs, and fills at T+1 open; totalReturn includes terminal liquidation costs the daily series does not.`,
+  );
   out.push(
     `     lag sensitivity: t(5) ${num(gb.nwT5, 2)} · t(20) ${num(gb.nwT, 2)} · t(60) ${num(gb.nwT60, 2)} — descriptive; if these disagree, report that rather than pick a lag`,
   );

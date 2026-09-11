@@ -577,8 +577,14 @@ routes to the portfolio rule and cost model, not to a score revision.*
 *Reported, not gated:* US IC was +0.0185 / +0.0316 / +0.0343 in 2023/24/25 and
 −0.0469 / −0.0208 in 2022/26 — regime-dependent, positive in the middle years.
 US top-N-vs-rest spread was +0.83 % at 20d (60 % of days positive) and +2.19 % at
-60d, which is economically meaningful while rank IC is weak — consistent with a
-signal concentrated at the extremes rather than monotone across the ranking.
+60d. **Retracted as stated (2026-09-11):** an earlier version of this paragraph
+called that "economically meaningful while rank IC is weak". It is a *point
+estimate with no interval*, and 60 % of days positive over ~49 effectively
+independent days is a **z of about 1.4** — suggestive, not established, and judged
+by the standard this same section applies to everything else. The direction is
+consistent with a signal concentrated at the extremes rather than monotone across
+the ranking, which is precisely why Phase 4b re-reported it with a proportional
+cutoff and a Newey-West t (US 20d `t = 1.66` — still below 2).
 The descriptive 9-combo weight sweep is monotone in both lanes: IC *falls* as the
 mom60 weight rises (US 0.40 → 0.0199/0.0203/0.0190 vs 0.60 → 0.0103/0.0096/0.0078),
 shipped ranks 5/9 (US) and 6/9 (HK), and the surface is a smooth plateau with no

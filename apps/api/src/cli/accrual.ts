@@ -20,6 +20,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { scheduledSlotsBetween } from "../ops/health.js";
 import { PrismaService } from "../prisma.service.js";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
@@ -41,6 +42,11 @@ export interface AccrualLane {
   market: "US" | "HK";
   /** Stored production runs after the cutoff — one lane-day observation each. */
   prospectiveSessions: number;
+  /** Slots the cadence says should have fired since the cutoff. */
+  expectedSessions: number;
+  /** expected − collected. Every one is a permanently lost observation, not just
+   *  a stale report: the validation sample needs a fixed number of sessions. */
+  missedSessions: number;
   /** Of those, how many already have a full 20-session forward label. */
   labelled20: number;
   latestBar: string | null;
@@ -105,7 +111,11 @@ export function requiredSessions(observedDays: number, observedSe: number, bar =
   return observedDays * (observedSe / target) ** 2;
 }
 
-export function projectLane(market: "US" | "HK", ip: { sessions: number; labelled20: number; latestBar: string | null }, artifact: any | null): AccrualLane {
+export function projectLane(
+  market: "US" | "HK",
+  ip: { sessions: number; expectedSessions?: number; labelled20: number; latestBar: string | null },
+  artifact: any | null,
+): AccrualLane {
   const lane = artifact?.lanes?.find((l: any) => l.market === market);
   const observedDays: number | null = lane?.gate1?.days ?? null;
   const observedNwSe: number | null = lane?.gate1?.nwSe ?? null;
@@ -123,6 +133,8 @@ export function projectLane(market: "US" | "HK", ip: { sessions: number; labelle
   return {
     market,
     prospectiveSessions: ip.sessions,
+    expectedSessions: ip.expectedSessions ?? ip.sessions,
+    missedSessions: Math.max(0, (ip.expectedSessions ?? ip.sessions) - ip.sessions),
     labelled20: ip.labelled20,
     latestBar: ip.latestBar,
     observedDays,
@@ -141,7 +153,9 @@ export function renderAccrual(r: AccrualReport): string {
   lines.push(`== PHASE 4c ACCRUAL == ${r.asOf} · prospective from ${r.prospectiveFrom}`);
   for (const l of r.lanes) {
     lines.push(
-      `${l.market}: ${l.prospectiveSessions} prospective lane-days · ${l.labelled20} already carry a 20d label · store data through ${l.latestBar ?? "—"}`,
+      `${l.market}: ${l.prospectiveSessions}/${l.expectedSessions} prospective lane-days collected` +
+        `${l.missedSessions > 0 ? ` — **${l.missedSessions} slots missed** (each is a permanently lost observation)` : ""}` +
+        ` · ${l.labelled20} already carry a 20d label · store data through ${l.latestBar ?? "—"}`,
     );
     if (l.observedNwSe == null) {
       lines.push(`    no backtest artifact to project from — run \`backtest:screen\` first`);
@@ -185,10 +199,18 @@ export async function runAccrual(prisma: PrismaService): Promise<AccrualReport> 
     const sessions = await laneSessions(prisma, market);
     const runs = await prisma.screenRun.findMany({ where: { market }, orderBy: { runAt: "asc" } });
     const prospective = runs.map((r) => hktDate(r.runAt)).filter((d) => d >= PROSPECTIVE_FROM);
+    // Supply vs expectation: the same cadence the health check uses, so a missed
+    // slot is counted once and means the same thing in both places.
+    const today = hktDate(new Date());
+    const expectedSessions = scheduledSlotsBetween(market, PROSPECTIVE_FROM, today);
     // A prospective session carries a 20d label once 20 lane sessions exist after it.
     const labelled20 = prospective.filter((d) => sessions.filter((s) => s > d).length >= 20).length;
     lanes.push(
-      projectLane(market, { sessions: prospective.length, labelled20, latestBar: sessions[sessions.length - 1] ?? null }, artifact?.json ?? null),
+      projectLane(
+        market,
+        { sessions: prospective.length, expectedSessions, labelled20, latestBar: sessions[sessions.length - 1] ?? null },
+        artifact?.json ?? null,
+      ),
     );
   }
 
@@ -202,7 +224,8 @@ export async function runAccrual(prisma: PrismaService): Promise<AccrualReport> 
       "They are a planning floor, not a promise: the SE is regime-dependent, which is why D6 pairs the design-half " +
       "bar with an SE-stability guard. Note the two rows are different questions: the rank-IC row asks when the " +
       "0.02 bar becomes *reachable*, while the differential row asks when the statistic D6 actually picks becomes " +
-      "*significant* at its observed IR.",
+      "*significant* at its observed IR. The collected/expected counts are the other half of the same problem: " +
+      "this sample is supplied by the daily chain, so a missed slot is a lost observation rather than a stale report.",
   };
 }
 

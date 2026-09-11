@@ -121,6 +121,11 @@ export interface Gate1Result {
   ciHi: number;
   minIc: number;
   minT: number;
+  /** Phase 4b review: D1 reported a single lag-20 SE while D2 reported a lag
+   *  sensitivity. The published 2.91×/2.76× inflation is a lag-20 result, so the
+   *  SE is reported at 5/20/60 to show how much of the floor is a lag choice. */
+  nwSe5: number;
+  nwSe60: number;
   passed: boolean;
   horizons: HorizonSummary[];
   byYear: { year: string; meanIc: number; days: number }[];
@@ -343,6 +348,8 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
       quantile: power?.quantile ?? 0,
       ciLo: power?.ciLo ?? 0,
       ciHi: power?.ciHi ?? 0,
+      nwSe5: primaryPoints.length ? neweyWestT(primaryPoints.map((p) => p.ic), 5)?.se ?? 0 : 0,
+      nwSe60: primaryPoints.length ? neweyWestT(primaryPoints.map((p) => p.ic), 60)?.se ?? 0 : 0,
       minIc: GATE1_MIN_IC,
       minT: GATE1_MIN_T,
       passed: gate1Passes(stats?.mean ?? 0, stats?.nwT ?? 0),

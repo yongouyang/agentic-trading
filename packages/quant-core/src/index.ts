@@ -6,5 +6,6 @@ export * from "./indicators.js";
 export * from "./screening.js";
 export * from "./replay.js";
 export * from "./ic.js";
+export * from "./verdict-ic.js";
 export * from "./portfolio.js";
 export * from "./backtest.js";
