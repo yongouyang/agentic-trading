@@ -405,7 +405,7 @@ Cost: one session, one ~2-minute re-run, no new data source, no dependency.
 - **No re-litigation of Phase 4's verdict.** This round corrects the *reasons*,
   not the result.
 - **No XNYS / Databento universe work.** It is the only genuinely fresh
-  cross-section available (VendorBar: 16,777 symbols, 15.3 M rows) but it has no
+  cross-section available (VendorBar: ~21.9k symbol-series across two vendor keys (16,565 XNAS + 5,333 XNYS), 15.2 M rows — corrected 2026-09-11, see docs/research-xnys-fresh-cross-section.md) but it has no
   as-of adjustment or CA-degrade layer, so it is a **data project**, not a
   statistics one. Recorded here as the Phase-4c candidate, not attempted.
 - No CPVC/PBO, no intraday, no LLM-layer work (Round 3), no live trading.

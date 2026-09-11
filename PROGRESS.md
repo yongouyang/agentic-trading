@@ -473,6 +473,58 @@ for every return and `OFF-LIST` for every symbol. Data starvation, not a defect 
 it becomes useful after a few weeks of sessionDate-bearing runs, and it is verified
 meanwhile by 16 pure tests plus a stub-store spec.
 
+## 2026-09-11 (item 5 scoped: the XNYS "fresh cross-section" is fresh in NAMES, not TIME — and the 0.02 bar becomes reachable)
+
+Read-only scoping session, full write-up in
+`docs/research-xnys-fresh-cross-section.md`. **Verdict: (b) a bounded data project
+gated on a corporate-action layer.** Not (a) ready, and not (c) the "same universe
+plus a tail" collapse.
+
+**The premise was half true, and the failing half matters.** The archive
+(2021-09-02 → 2026-09-02, 1,254 sessions) overlaps the spent window by **~100 %**,
+adding only ~251 leading sessions. So it is **fresh in names, not in time**: scoring
+it is a *new-population test on the already-spent regime*. That is still legitimate
+— what makes a window spent is that its outcome statistics were looked at, and
+these names' were not — but it must be pre-registered as a **distinct hypothesis**
+testing the screen's *generality*, never as "validated on fresh data".
+
+**The measurement that decided it** (the delegate was inspect-only and could not run
+SQL, so I ran it): symbols with ≥252 bars and `adv20 ≥ $20 M` on vendor volume →
+**1,490 distinct survivors, of which 939 are not in the picker universe**. So real
+breadth exists, above the liquidity floor rather than in a microcap tail. With
+production's eligible breadth ~180, a vendor lane post-gate is plausibly 2–3× that,
+and since the detection floor scales as `1/√(N−1)` the US floor of **0.0298 falls
+toward ~0.018–0.020 — the original 0.02 bar becomes borderline reachable for the
+first time.** That is the prize and the reason to do this at all.
+
+**The blocker is corporate actions.** `VendorBar` is **as-traded** and R1 means
+splits are never applied locally, so every split is a phantom jump. Measured:
+**247 of 1,844 liquid series carry a split-like jump** (±50 %/−40 % in one session)
+while only **39 of 1,490 survivors have any `SplitEvent` row at all** — and just
+**5** of the registry's 2,666 reverse-split events are on picker names, so the
+registry was swept over a different population and says nothing about the 939 new
+ones. Dividends do not exist for this universe anywhere in the stack (no vendor CA
+column, Databento CA API paywalled, Yahoo 404s ~20 %, eastmoney HK-only) — so the
+outcome variable becomes *price* return, and the omission biases the Gate-2
+differential **upward** (the benchmark holds the payers; a trend-selected portfolio
+does not).
+
+**Every defect biases a momentum/trend screen in the same direction — up.** A
+missing reverse split *guarantees* a name passes the trend gates. So the failure
+mode is a **confident false positive, not a noisy null**.
+
+**Two of our own docs were wrong:** the archive is **~21.9k symbol-series across two
+vendor keys** (16,565 XNAS + 5,333 XNYS), 15.2 M rows — not "16,777 symbols", which
+was a single-feed census. Corrected, along with the note that ~354 symbols appear
+under *both* keys, so a loader must choose a feed rather than concatenate.
+
+**And the hard part is smaller than it looks:** the vendor split tooling already
+exists (`scripts/databento/{xnys_split_detector,xnys_full_scan,xnys_registry_crosscheck}.py`,
+plus `audit:inband`), and `quant-core` is already pure over `SymbolSeries` so the
+loader + CLI is ~1 session. The next cheap step is to **run those detectors over the
+1,844 liquid series and re-measure how many of the 247 jumps they explain** — that
+is the go/no-go for any vendor screen run.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
