@@ -5,7 +5,8 @@
 
      Fire times are 07:15 and 17:30 HKT, i.e. after the US chain (Tue-Sat 06:10)
      and after the HK chain (Mon-Fri 16:50). launchd catches missed calendar
-     jobs on wake, so a sleeping laptop delays this rather than skipping it.
+     jobs on wake, so a sleeping laptop delays this rather than skipping it —
+     but a powered-OFF laptop skips it outright (see the daily-hk note).
 
      Exit 1 = at least one lane or weekly job is in ALERT; triage in the log.
      NOTE: this job is a RECORD, not the alerting mechanism — the user-facing

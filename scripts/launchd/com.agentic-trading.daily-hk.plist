@@ -2,7 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- HK daily chain: Mon–Fri 16:50 HKT (HK close 16:00 + settle; §5 cadence).
      launchd fires missed jobs on wake (StartCalendarInterval) — safe across
-     laptop sleep. Install: scripts/launchd/install.sh -->
+     laptop SLEEP, but NOT across power-off: launchd keeps no memory of slots
+     that elapsed while the machine was shut down, so a day whose slot falls in
+     that window is simply lost (observed 2026-09-11: booted 19:44, both the
+     06:10 and 16:50 slots gone, no replay). Install: scripts/launchd/install.sh -->
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.agentic-trading.daily-hk</string>

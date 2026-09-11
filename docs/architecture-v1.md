@@ -328,6 +328,19 @@ Five user LaunchAgents (`scripts/launchd/`, installed into
 `logs/` at the repo root). launchd, not cron, because macOS cron silently
 skips jobs missed while asleep; StartCalendarInterval catches up after wake.
 
+**The catch-up guarantee stops at power-off** (measured 2026-09-11). launchd
+keeps no memory of calendar slots that elapsed while the machine was shut down:
+on a day booted at 19:44, both the US 06:10 and the HK 16:50 slots were gone with
+no replay, and `ops:health` read them as missed runs. Catch-up-on-wake is real
+for *sleep* (observed 2026-09-10: a 06:10 slot caught up at 08:35), which is why
+the health model treats one missed slot as `warn` rather than `alert` — but a
+laptop that is off during its slots loses those sessions outright. That is an
+accepted limitation of the local profile, not a defect: the gaps appear in
+`ops:health` and the dashboard banner, and the store heals on the next run.
+The per-job notes live in the plist headers (`scripts/launchd/`); note that the
+installed copies under `~/Library/LaunchAgents` only pick up comment changes on
+the next `install.sh`.
+
 | Label | Runs | Schedule (HKT) |
 |---|---|---|
 | `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive --top 10` | Mon–Fri 16:50 |
@@ -366,7 +379,13 @@ weekday-arithmetic from the plists (HK Mon–Fri 16:50, US Tue–Sat 06:10 HKT) 
 **no** market-holiday calendar; 1 missed slot is **warn** (runs are
 catch-up-on-wake by design, so "late" must not read as "broken") and 2+, a stale
 `running` row, or an overdue weekly job is **alert**. Weekly jobs are judged from
-dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`).
+dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`), and when no
+artifact exists yet the check is anchored on **when the job was installed** —
+read from the plist's mtime, which `install.sh`'s `cp` makes the install instant.
+Without that anchor "no artifact" cannot be told apart from "has never been
+due": on 2026-09-11 the f10 job (installed 09-10 23:21, first slot Sun 09-13
+09:17) reported ALERT, and since any job alert pins the whole report, the banner
+was red for a job that had not yet been due and could not go green before 09-13.
 
 **Arming.** `install.sh` uses `bootout`/`bootstrap`/`enable` and then runs
 `scripts/launchd/verify.sh`, which **asserts each job's calendar stream is

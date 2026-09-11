@@ -18,7 +18,8 @@
  * locked cadence-aware weekday arithmetic, and the warn/alert split absorbs
  * the holidays it cannot see.
  */
-import { readdirSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PrismaService } from "../prisma.service.js";
@@ -52,6 +53,18 @@ export const LANE_CADENCE: Record<"HK" | "US", { weekdays: number[]; hour: numbe
 
 export const WEEKLY_JOBS = ["sentinel", "f10"] as const;
 export type WeeklyJob = (typeof WEEKLY_JOBS)[number];
+
+/** Where launchd installs the jobs; the plist's mtime dates the install. */
+const DEFAULT_LAUNCH_AGENTS_DIR = path.join(homedir(), "Library", "LaunchAgents");
+
+/** Weekly jobs run Sunday morning (HKT), staggered so the two eastmoney hosts
+ *  are not hit back-to-back. Mirrors scripts/launchd/*.plist — and the plist
+ *  name matters, because its mtime is the only record of when the job was
+ *  installed. */
+export const WEEKLY_CADENCE: Record<WeeklyJob, { label: string; weekday: number; hour: number; minute: number }> = {
+  sentinel: { label: "com.agentic-trading.weekly-sentinel", weekday: 0, hour: 8, minute: 47 },
+  f10: { label: "com.agentic-trading.weekly-f10", weekday: 0, hour: 9, minute: 17 },
+};
 
 export type HealthLevel = "healthy" | "warn" | "alert";
 
@@ -87,6 +100,8 @@ export interface HealthOptions {
   now?: Date;
   /** Defaults to apps/api/reports — where the sentinel and f10 jobs write. */
   reportsDir?: string;
+  /** Defaults to ~/Library/LaunchAgents — where the plist mtimes live. */
+  launchAgentsDir?: string;
 }
 
 // --------------------------------------------------------------------------
@@ -107,8 +122,11 @@ function hktSlot(y: number, m: number, d: number, hour: number, minute: number):
  * Scheduled slots strictly after `since` (or within the scan window when
  * `since` is null) that have already passed by more than the grace window.
  */
-function missedSlots(market: "HK" | "US", since: Date | null, now: Date): number {
-  const cadence = LANE_CADENCE[market];
+function countDueSlots(
+  cadence: { weekdays: number[]; hour: number; minute: number },
+  since: Date | null,
+  now: Date,
+): number {
   const cutoff = new Date(now.getTime() - MISSED_RUN_GRACE_HOURS * 3600 * 1000);
   const scanFrom = since ?? new Date(now.getTime() - NO_RUN_SCAN_DAYS * 86_400_000);
   const from = hktParts(scanFrom);
@@ -128,6 +146,10 @@ function missedSlots(market: "HK" | "US", since: Date | null, now: Date): number
   return count;
 }
 
+function missedSlots(market: "HK" | "US", since: Date | null, now: Date): number {
+  return countDueSlots(LANE_CADENCE[market], since, now);
+}
+
 /** Newest `sentinel-<date>.json` / `f10-refresh-<date>.json` date in a dir. */
 function latestArtifactDate(dir: string, prefix: string): string | null {
   let names: string[] = [];
@@ -141,6 +163,22 @@ function latestArtifactDate(dir: string, prefix: string): string | null {
     .filter((d): d is string => Boolean(d))
     .sort();
   return dates.length ? dates[dates.length - 1]! : null;
+}
+
+/**
+ * When the weekly job was installed — install.sh *copies* the plist, so its
+ * mtime is the install instant. Without this anchor, "no artifact" is
+ * indistinguishable from "has not had a due slot yet": on 2026-09-11 the
+ * f10 job (installed 09-10 23:21, first slot Sun 09-13 09:17) reported ALERT,
+ * and because any job alert pins the whole report, the banner went red for a
+ * job that had never been due.
+ */
+function installedAt(dir: string, label: string): Date | null {
+  try {
+    return statSync(path.join(dir, `${label}.plist`)).mtime;
+  } catch {
+    return null;
+  }
 }
 
 function daysBetween(fromDate: string, now: Date): number {
@@ -157,6 +195,7 @@ function daysBetween(fromDate: string, now: Date): number {
 export async function computeHealth(prisma: PrismaService, opts: HealthOptions = {}): Promise<HealthReport> {
   const now = opts.now ?? new Date();
   const reportsDir = opts.reportsDir ?? path.join(PKG_ROOT, "reports");
+  const launchAgentsDir = opts.launchAgentsDir ?? DEFAULT_LAUNCH_AGENTS_DIR;
   const lanes: LaneHealth[] = [];
 
   for (const market of ["HK", "US"] as const) {
@@ -204,15 +243,40 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
 
   const jobs: JobHealth[] = WEEKLY_JOBS.map((job) => {
     const prefix = job === "sentinel" ? "sentinel" : "f10-refresh";
+    const cadence = WEEKLY_CADENCE[job];
     const last = latestArtifactDate(reportsDir, prefix);
     const reasons: string[] = [];
-    if (!last) {
-      reasons.push(`no ${prefix}-<date>.json artifact on record — cannot confirm the weekly job ran`);
-    } else if (daysBetween(last, now) > WEEKLY_OVERDUE_DAYS) {
+    let level: HealthLevel = "healthy";
+
+    if (last) {
       const age = daysBetween(last, now);
-      reasons.push(`last artifact ${last} is ${age} days old (weekly job overdue past ${WEEKLY_OVERDUE_DAYS}d)`);
+      if (age > WEEKLY_OVERDUE_DAYS) {
+        level = "alert";
+        reasons.push(`last artifact ${last} is ${age} days old (weekly job overdue past ${WEEKLY_OVERDUE_DAYS}d)`);
+      }
+    } else {
+      const anchor = installedAt(launchAgentsDir, cadence.label);
+      const due = anchor
+        ? countDueSlots({ weekdays: [cadence.weekday], hour: cadence.hour, minute: cadence.minute }, anchor, now)
+        : null;
+      if (due === null) {
+        level = "alert";
+        reasons.push(`no ${prefix}-<date>.json artifact on record and no ${cadence.label}.plist to date the install — cannot confirm the weekly job ran`);
+      } else if (due === 0) {
+        // Installed after the most recent Sunday slot. Not a signal either way.
+        reasons.push(
+          `no artifact yet — not yet due (installed ${anchor!.toISOString()}, first Sunday slot ` +
+            `${String(cadence.hour).padStart(2, "0")}:${String(cadence.minute).padStart(2, "0")} HKT)`,
+        );
+      } else {
+        level = "alert";
+        reasons.push(
+          `no ${prefix}-<date>.json artifact on record — cannot confirm the weekly job ran ` +
+            `(${due} scheduled slot(s) passed since the ${anchor!.toISOString()} install)`,
+        );
+      }
     }
-    return { job, level: reasons.length ? "alert" : "healthy", reasons, lastArtifactDate: last };
+    return { job, level, reasons, lastArtifactDate: last };
   });
 
   const all = [...lanes.map((l) => l.level), ...jobs.map((j) => j.level)];

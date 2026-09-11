@@ -8,7 +8,7 @@
  *
  * No DB, no network: computeHealth is called with a stub prisma.
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -198,8 +198,14 @@ describe("computeHealth — weekly jobs", () => {
 
   it("a missing artifact is ALERT but says 'cannot confirm', not 'never ran'", async () => {
     const empty = mkdtempSync(path.join(tmpdir(), "ops-health-empty-"));
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
     try {
-      const r = await computeHealth(stubPrisma(), { now: hkt("2026-09-14T09:00:00"), reportsDir: empty });
+      plistInstalledAt(la, "com.agentic-trading.weekly-f10", hkt("2026-09-06T09:17:00"));
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir: empty,
+        launchAgentsDir: la,
+      });
       const f10 = r.jobs.find((j) => j.job === "f10")!;
       expect(f10.level).toBe("alert");
       expect(f10.lastArtifactDate).toBeNull();
@@ -207,14 +213,123 @@ describe("computeHealth — weekly jobs", () => {
       expect(f10.reasons.join(" ")).not.toMatch(/never run/);
     } finally {
       rmSync(empty, { recursive: true, force: true });
+      rmSync(la, { recursive: true, force: true });
     }
   });
 
   it("a missing reports dir is handled, not thrown", async () => {
-    const r = await computeHealth(stubPrisma(), { now: hkt("2026-09-14T09:00:00"), reportsDir: "/nonexistent/ops-health-test" });
-    expect(r.jobs.every((j) => j.level === "alert")).toBe(true);
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    try {
+      for (const label of ["com.agentic-trading.weekly-sentinel", "com.agentic-trading.weekly-f10"]) {
+        plistInstalledAt(la, label, hkt("2026-09-06T09:17:00"));
+      }
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir: "/nonexistent/ops-health-test",
+        launchAgentsDir: la,
+      });
+      expect(r.jobs.every((j) => j.level === "alert")).toBe(true);
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+    }
   });
 });
+
+describe("computeHealth — a weekly job must be due before it can be late", () => {
+  // Regression for the 2026-09-11 false alarm: the f10 job was installed
+  // Sun 09-10 23:21, *after* that morning's 09:17 slot, so its first due slot
+  // was Sun 09-13. Health still reported ALERT, and because any job alert pins
+  // the whole report, the dashboard banner went red permanently for a job that
+  // had never been due — and could never go green before 09-13.
+  const installed = hkt("2026-09-10T23:21:00");
+  const label = "com.agentic-trading.weekly-f10";
+
+  it("is HEALTHY (not yet due) before the first Sunday slot", async () => {
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const rep = mkdtempSync(path.join(tmpdir(), "ops-health-rep-"));
+    try {
+      plistInstalledAt(la, label, installed);
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-11T20:08:00"),
+        reportsDir: rep,
+        launchAgentsDir: la,
+      });
+      const f10 = r.jobs.find((j) => j.job === "f10")!;
+      expect(f10.level).toBe("healthy");
+      expect(f10.lastArtifactDate).toBeNull();
+      expect(f10.reasons.join(" ")).toMatch(/not yet due/);
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+      rmSync(rep, { recursive: true, force: true });
+    }
+  });
+
+  it("is ALERT once a Sunday slot has passed", async () => {
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const rep = mkdtempSync(path.join(tmpdir(), "ops-health-rep-"));
+    try {
+      plistInstalledAt(la, label, installed);
+      // Sun 09-13 09:17 has passed (1 slot); the 6h grace is long gone.
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir: rep,
+        launchAgentsDir: la,
+      });
+      const f10 = r.jobs.find((j) => j.job === "f10")!;
+      expect(f10.level).toBe("alert");
+      expect(f10.reasons.join(" ")).toMatch(/cannot confirm/);
+      expect(f10.reasons.join(" ")).toMatch(/1 scheduled slot/);
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+      rmSync(rep, { recursive: true, force: true });
+    }
+  });
+
+  it("is ALERT, undated, when the plist is missing (cannot prove the install)", async () => {
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const rep = mkdtempSync(path.join(tmpdir(), "ops-health-rep-"));
+    try {
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir: rep,
+        launchAgentsDir: la,
+      });
+      const f10 = r.jobs.find((j) => j.job === "f10")!;
+      expect(f10.level).toBe("alert");
+      expect(f10.reasons.join(" ")).toMatch(/to date the install/);
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+      rmSync(rep, { recursive: true, force: true });
+    }
+  });
+
+  it("an artifact that exists is judged by age, never by the plist mtime", async () => {
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const rep = mkdtempSync(path.join(tmpdir(), "ops-health-rep-"));
+    try {
+      // Plist says "just installed"; the artifact says "ran 4 days ago".
+      plistInstalledAt(la, label, hkt("2026-09-14T08:00:00"));
+      writeFileSync(path.join(rep, "f10-refresh-2026-09-10.json"), "{}");
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir: rep,
+        launchAgentsDir: la,
+      });
+      expect(r.jobs.find((j) => j.job === "f10")!.level).toBe("healthy");
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+      rmSync(rep, { recursive: true, force: true });
+    }
+  });
+});
+
+/** A plist whose *mtime* dates the install — install.sh copies, so mtime is
+ *  the install instant and the anchor for "has it been due yet?". */
+function plistInstalledAt(dir: string, label: string, at: Date): void {
+  const p = path.join(dir, `${label}.plist`);
+  writeFileSync(p, "<plist/>");
+  utimesSync(p, at, at);
+}
 
 describe("ops-health CLI surface", () => {
   it("parses --lane and rejects junk", () => {
