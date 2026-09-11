@@ -58,6 +58,53 @@ export interface ReplayDay {
    *  whole eligible set; the portfolio rule re-applies its own top-N). */
   ranked: ScreenPick[];
   excludedCount: number;
+  /** Rejections by *reason*, per market, for the Phase-4b D3 census. `runScreen`
+   *  has always computed this; the replay used to throw it away, which is why the
+   *  project never knew which gate was responsible for breadth 180 (US) / 25
+   *  (HK) — the single fact that determines the whole lane's statistical power.
+   *  Per market because a replay may carry both lanes at once. */
+  excludedByReason: Record<Market, Record<string, number>>;
+}
+
+/**
+ * Aggregate per-day exclusions for one lane into a census (Phase 4b D3). Pure.
+ * Descriptive only: it describes the screen's *inputs*, not returns, and may not
+ * be used to choose a gate to relax and then re-test IC on the same window.
+ */
+export interface ExclusionCensus {
+  /** reason → total rejections across the window. */
+  byReason: Record<string, number>;
+  byYear: { year: string; byReason: Record<string, number> }[];
+  total: number;
+  /** Σ ranked (screen-eligible) observations — the exact denominator for the
+   *  reject share, so no invented universe size is involved. */
+  eligible: number;
+  days: number;
+}
+
+export function exclusionCensus(days: ReplayDay[], market: Market): ExclusionCensus {
+  const byReason: Record<string, number> = {};
+  const years = new Map<string, Record<string, number>>();
+  let total = 0;
+  let eligible = 0;
+  for (const day of days) {
+    eligible += day.ranked.reduce((a, p) => a + (p.market === market ? 1 : 0), 0);
+    const year = day.date.slice(0, 4);
+    const bucket = years.get(year) ?? {};
+    years.set(year, bucket);
+    for (const [reason, n] of Object.entries(day.excludedByReason[market] ?? {})) {
+      byReason[reason] = (byReason[reason] ?? 0) + n;
+      bucket[reason] = (bucket[reason] ?? 0) + n;
+      total += n;
+    }
+  }
+  return {
+    byReason,
+    byYear: [...years.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([year, r]) => ({ year, byReason: r })),
+    total,
+    eligible,
+    days: days.length,
+  };
 }
 
 /** Adjusted prices with a date index — the forward-return / mark lookup. */
@@ -138,6 +185,12 @@ export function replayScreen(
   const divEnd = new Int32Array(n);
   const days: ReplayDay[] = [];
 
+  // Exclusions carry no market of their own, so attribute them via the symbol.
+  // Needed because runBacktest may replay both lanes in one pass, while the
+  // census is per lane (it exists to explain that lane's breadth).
+  const marketBySymbol = new Map<string, Market>();
+  for (const s of series) marketBySymbol.set(s.symbol, s.market);
+
   for (const date of dates) {
     const inputs: ScreenInput[] = [];
 
@@ -176,7 +229,13 @@ export function replayScreen(
     }
 
     const screen = runScreen(inputs, { topN: Number.MAX_SAFE_INTEGER });
-    days.push({ date, ranked: screen.ranked, excludedCount: screen.excluded.length });
+    const excludedByReason: Record<Market, Record<string, number>> = { US: {}, HK: {} };
+    for (const ex of screen.excluded) {
+      const m = marketBySymbol.get(ex.symbol);
+      if (!m) continue;
+      excludedByReason[m][ex.reason] = (excludedByReason[m][ex.reason] ?? 0) + 1;
+    }
+    days.push({ date, ranked: screen.ranked, excludedCount: screen.excluded.length, excludedByReason });
   }
 
   return days;

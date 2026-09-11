@@ -322,3 +322,110 @@ pre-registration:
    adequately-powered evidence **and explicitly not as a confirmation** — while
    the Phase-4 plan's blanket "Gate 2 can never confirm" is withdrawn, because it
    rested on an IR that was assumed rather than measured (Finding 2).
+
+---
+
+# Outcome (executed 2026-09-11)
+
+All five deliverables ran. Artifact:
+`apps/api/reports/backtest/2026-09-11.{json,txt}`; the 09-10 artifact is
+annotated by `2026-09-10.ANNOTATION.md`, never rewritten.
+
+**Window caveat first.** The run covers **2022-09-12 … 2026-09-11** — the same
+1003 sessions as Phase 4, shifted two sessions later, because the store holds a
+rolling ~5-year window refreshed by `screen:daily`. So the D2/D3/D4 numbers below
+are computed on a *shifted* window: US mean 20d IC reads +0.0141 against the
+artifact's +0.0145, and the equal-weight benchmark +48.07 % against +50.92 %.
+The 09-10 artifact remains the reference for the pre-registered verdict.
+
+## D5 — the verdict class (the headline)
+
+| lane | stored 09-10 | 4b verdict | why |
+|---|---|---|---|
+| US | `h1_revised` | **`insufficient_evidence`** | floor 0.0298 > bar 0.02 |
+| HK | `h1_revised` | **`insufficient_evidence`** | floor 0.0493 > bar 0.02 |
+
+Both lanes' detection floor exceeds the bar's own magnitude, so neither FAIL can
+falsify the effect. `h1_revised` is now reserved for a FAIL on a bar the lane
+*could* have detected.
+
+## D1 — the power statement, now unconditional
+
+| lane | naive SE | heuristic SE | realized NW SE | floor | 95 % CI | quantile |
+|---|---|---|---|---|---|---|
+| US | 0.00514 | 0.01066 | 0.01488 | 0.0298 | −0.0158 … +0.0440 | 2.010 (df 48.1) |
+| HK | 0.00893 | 0.03014 | 0.02465 | 0.0493 | −0.0696 … +0.0298 | 2.015 (df 44.0) |
+
+The naive/heuristic/realized triple is now printed on **every** run, pass or
+fail — it was previously emitted only when Gate 1 passed, i.e. suppressed in
+exactly the case that needed it.
+
+## D2 — the Gate-2 interval: the assumption, now measured
+
+| lane | daily arithmetic mean | tracking error | IR | NW t (lag 20) | t(5) / t(60) |
+|---|---|---|---|---|---|
+| US | +0.03 % | 15.85 %/yr | **0.49** | **1.19** | 1.06 / 1.25 |
+| HK | −0.02 % | 9.28 %/yr | −0.59 | −1.20 | −1.11 / −1.16 |
+
+**Neither reaches t = 2, and the lag sensitivity agrees.** So Fork B's
+conditional never fired: there is no adequately-powered evidence to promote, and
+Gate 2 stays falsification-only.
+
+The important nuance is *how* Finding 2 resolves. The withdrawn claim was
+"portfolio alpha needs IR ≥ 0.985"; the realized IR is **0.49** — inside the
+0.3–0.7 the original assumption guessed. So Phase 4's *conclusion* was right
+while its *reason* was an assumption. Phase 4b replaces the assumption with the
+measurement and the claim is now supported. That is the difference between
+"unjustified" and "false": only the first was true.
+
+Also confirmed: the artifact's `+41.11 %` differential and the `t = 1.19` are
+**different statistics** — a difference of compounded returns versus the mean of
+the daily arithmetic difference (amendment 3). They are printed side by side.
+
+## D3 — the census: the trend filter, not liquidity, sets breadth
+
+| lane | rejections | reject share | dominant gate | its share |
+|---|---|---|---|---|
+| US | 371,941 | **67.3 %** | `BEARISH_ALIGNMENT` | **81.2 %** (301 names/day) |
+| HK | 100,954 | **81.1 %** | `BEARISH_ALIGNMENT` | 43.9 % (45/day) |
+
+US `LOW_LIQUIDITY` rejects **0.5 %** — the $20 M adv floor is effectively not
+binding, and US breadth 180/552 is almost entirely the `close > sma50 > sma200`
+trend filter. HK is closer to split: `BEARISH_ALIGNMENT` 43.9 %,
+`LOW_LIQUIDITY` 29.4 %. `BEARISH_ALIGNMENT` is the dominant reason in **every
+calendar year** in both lanes.
+
+This is the fact that explains both lanes' power, and it is a *screen-design*
+fact, not a statistical one. Per Fork C it is **documentation only** — no gate was
+relaxed and `SCREEN_PARAMS` is untouched.
+
+## D4 — the proportional spread
+
+| lane | cutoff | 5d | 20d | 60d |
+|---|---|---|---|---|
+| US | 18 of 180 | +0.16 % (t 1.47) | +0.64 % (t **1.66**) | +1.47 % (t 1.14) |
+| HK | 5 of 25 | +0.09 % (t 0.50) | **+0.76 %** (t 1.34) | +2.45 % (t 1.56) |
+
+Finding 3 is confirmed materially rather than cosmetically. HK's 20d spread goes
+from **+0.07 %** (fixed top-15 = 60 % of its universe) to **+0.76 %** (top 5 of
+25) — the old number was diluted into nothing, and the two were never comparable.
+US moves the other way (+0.82 % → +0.64 %) because its decile is 18 names rather
+than 15, so the extra three names are weaker.
+
+US 20d `t = 1.66` is the **largest statistic the project has produced**, and it is
+still below 2. That is the honest state of the top-decile hypothesis: the best
+available framing, on a spent window, is not significant.
+
+## What changed in the code
+
+`packages/quant-core/src/ic.ts` — `tQuantile975` (exact table below df 10, since
+the Cornish–Fisher expansion *understates* the quantile there and would produce an
+overconfident interval), `icPower`, `proportionalCutoff`,
+`spreadSeriesProportional`. `replay.ts` — `ReplayDay.excludedByReason` per market,
+`exclusionCensus`. `backtest.ts` — the unconditional power note, the D2
+interval, the `insufficient_evidence` class, the census, and the withdrawal of the
+IR ≥ 0.985 claim in its own header. `apps/api` — the report.
+
+**Non-goals honoured:** no `SCREEN_PARAMS` change, no tuning, no new data source,
+no production behaviour change. Suites: quant-core 90, api 437 + 1 skipped,
+agents 43, web 102, `tsc` clean.

@@ -9,17 +9,43 @@
  *    cross-sectional — N is 130–550 names per day.
  *  - Gate 2 (FALSIFIES ONLY): the portfolio must not *lose* to the equal-weight
  *    same-universe benchmark at base or 2x costs, nor in a majority of years.
- *    Passing means "not falsified", never "confirmed": portfolio-level alpha
- *    over ~4 years needs IR >= 0.985 to reach t = 2, and a realistic screen IR
- *    is 0.3–0.7.
+ *    Passing means "not falsified", never "confirmed".
+ *
+ *    **Corrected 2026-09-11 (Phase 4b).** This file used to justify that
+ *    asymmetry with "portfolio alpha over ~4 years needs IR >= 0.985 for t = 2,
+ *    and a realistic screen IR is 0.3-0.7". That was a statement about a
+ *    *hypothetical* IR, never measured — the same error class as Gate 1's
+ *    mis-calibrated bar. The realized differential now gets its own Newey-West
+ *    interval (`Gate2Result.nwT`); the *role* is unchanged (promoting a gate
+ *    after seeing its value is goalpost movement), but the claim that this gate
+ *    can never confirm is WITHDRAWN. Phase 4c, which has not yet seen its data,
+ *    may make a powered differential test the deciding gate.
  *
  * There is no tuning anywhere in this path. The shipped SCREEN_PARAMS *are* the
  * hypothesis, so there is no selection bias to control — and no fitted quantity
  * for a split to protect.
  */
 import { Market } from "./screening.js";
-import { ReplayDay, ForwardSeries, SymbolSeries, replayScreen, buildForwardSeries } from "./replay.js";
-import { IcPoint, IcStats, icSeries, icStats, spreadSeries, summarizeSpread } from "./ic.js";
+import {
+  ReplayDay,
+  ForwardSeries,
+  SymbolSeries,
+  ExclusionCensus,
+  exclusionCensus,
+  replayScreen,
+  buildForwardSeries,
+} from "./replay.js";
+import {
+  IcPoint,
+  IcStats,
+  icSeries,
+  icStats,
+  icPower,
+  neweyWestT,
+  spreadSeries,
+  spreadSeriesProportional,
+  summarizeSpread,
+} from "./ic.js";
 import {
   BASE_COSTS,
   CostModel,
@@ -43,6 +69,11 @@ export function gate1Passes(meanIc: number, nwT: number): boolean {
 }
 /** Primary horizon. 5d/60d are reported but may not override this. */
 export const PRIMARY_HORIZON = 20;
+/** Newey-West lag for the Gate-2 daily differential (Phase 4b D2).
+ *  Pre-registered at 20 — the lag the IC gate uses, and comparable to the ~15d
+ *  average hold. 5 and 60 are reported as descriptive sensitivity only. */
+export const DIFFERENTIAL_LAG = 20;
+const SESSIONS_PER_YEAR = 252;
 /** Rank-hysteresis parameters (the shipped defaults, untuned). */
 export const PORTFOLIO_TOP_N = 15;
 export const PORTFOLIO_BUFFER_RANK = 25;
@@ -56,6 +87,14 @@ export interface HorizonSummary {
   days: number;
   spreadMean: number;
   spreadPositiveShare: number;
+  /** Phase 4b D4: the SAME contrast with a proportional cutoff
+   *  (`max(ceil(0.10 × breadth), 5)`) instead of the fixed top-15, so the number
+   *  means the same thing in a 180-name lane and a 25-name lane. Descriptive:
+   *  this window is spent for it. */
+  spreadPropMean: number;
+  spreadPropNwT: number;
+  /** Mean realized cutoff — reveals when the 5-name floor, not the decile, binds. */
+  spreadPropCutoff: number;
 }
 
 export interface Gate1Result {
@@ -70,6 +109,15 @@ export interface Gate1Result {
   /** Smallest mean IC this lane could have detected at t = 2, from its own
    *  observed standard error. The honest statement of the lane's power. */
   detectableIc: number;
+  /** Phase 4b D1: the three estimates of the same SE, side by side, plus the
+   *  interval at the t-quantile for the effective df (T/h − 1). They disagree by
+   *  more than the effect being measured — that IS the finding. */
+  naiveSe: number;
+  heuristicSe: number;
+  degreesOfFreedom: number;
+  quantile: number;
+  ciLo: number;
+  ciHi: number;
   minIc: number;
   minT: number;
   passed: boolean;
@@ -82,19 +130,43 @@ export interface Gate2Result {
   costLabel: string;
   portfolio: PortfolioMetrics;
   benchmarkReturn: number;
-  /** portfolio total return − benchmark total return. */
+  /** portfolio total return − benchmark total return. NOTE: a difference of two
+   *  *compounded* returns, which is NOT what the NW t below tests. */
   differential: number;
+  /** Phase 4b D2: mean of the daily *arithmetic* difference p_t − b_t. */
+  differentialDailyMean: number;
+  /** Annualised stdev of that daily difference. */
+  trackingError: number;
+  /** (dailyMean × 252) / trackingError. */
+  ir: number;
+  /** Pre-registered Newey-West t on the daily differential (lag 20). */
+  nwT: number;
+  /** Descriptive lag sensitivity — if these disagree with `nwT`, report that
+   *  rather than choosing a lag. */
+  nwT5: number;
+  nwT60: number;
   falsified: boolean;
   reasons: string[];
 }
 
-export type LaneVerdict = "h1_holds" | "ranking_power_but_not_tradable" | "h1_revised";
+/** Phase 4b D5: `insufficient_evidence` is distinct from `h1_revised`.
+ *  A lane whose own SE puts the bar out of reach cannot have falsified H1 — its
+ *  Gate-1 FAIL says "this window could not tell", not "no edge". Conflating the
+ *  two is what made Phase 4's result read as a negative finding. */
+export type LaneVerdict =
+  | "h1_holds"
+  | "ranking_power_but_not_tradable"
+  | "h1_revised"
+  | "insufficient_evidence";
 
 export interface LaneResult {
   market: Market;
   gate1: Gate1Result;
   gate2Base: Gate2Result;
   gate2Double: Gate2Result;
+  /** Phase 4b D3: which eligibility gate produced this lane's breadth.
+   *  Descriptive only (Fork C) — it may not select a gate to relax. */
+  exclusions: ExclusionCensus;
   yearly: { year: string; portfolio: number; benchmark: number; differential: number }[];
   verdict: LaneVerdict;
   notes: string[];
@@ -188,11 +260,18 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
     const horizonsSummary: HorizonSummary[] = [];
     let primary: IcStats | null = null;
     let primaryPoints: IcPoint[] = [];
+    const laneDays = daysFor(days, market);
 
     for (const h of horizons) {
-      const points = icSeries(daysFor(days, market), forward, h);
+      const points = icSeries(laneDays, forward, h);
       const stats = icStats(points, h);
-      const spread = summarizeSpread(spreadSeries(daysFor(days, market), forward, h, topN));
+      const spread = summarizeSpread(spreadSeries(laneDays, forward, h, topN));
+      // Phase 4b D4 — the proportional contrast. Descriptive: the window is
+      // already spent for it (the fixed-topN version above was published).
+      const propCutoffs: number[] = [];
+      const propValues = spreadSeriesProportional(laneDays, forward, h, propCutoffs);
+      const propSpread = summarizeSpread(propValues);
+      const propNw = neweyWestT(propValues, h);
       if (stats) {
         horizonsSummary.push({
           horizon: h,
@@ -203,6 +282,9 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
           days: stats.days,
           spreadMean: spread.mean,
           spreadPositiveShare: spread.positiveShare,
+          spreadPropMean: propSpread.mean,
+          spreadPropNwT: propNw?.t ?? 0,
+          spreadPropCutoff: propCutoffs.length ? propCutoffs.reduce((a, b) => a + b, 0) / propCutoffs.length : 0,
         });
       }
       if (h === PRIMARY_HORIZON && stats) {
@@ -212,6 +294,7 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
     }
 
     const stats = primary;
+    const power = stats ? icPower(stats, PRIMARY_HORIZON) : null;
     const gate1: Gate1Result = {
       market,
       primaryHorizon: PRIMARY_HORIZON,
@@ -222,6 +305,12 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
       days: stats?.days ?? 0,
       meanBreadth: stats?.meanBreadth ?? 0,
       detectableIc: stats ? GATE1_MIN_T * stats.nwSe : 0,
+      naiveSe: power?.naiveSe ?? 0,
+      heuristicSe: power?.heuristicSe ?? 0,
+      degreesOfFreedom: power?.df ?? 0,
+      quantile: power?.quantile ?? 0,
+      ciLo: power?.ciLo ?? 0,
+      ciHi: power?.ciHi ?? 0,
       minIc: GATE1_MIN_IC,
       minT: GATE1_MIN_T,
       passed: gate1Passes(stats?.mean ?? 0, stats?.nwT ?? 0),
@@ -242,18 +331,44 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
     if (majorityNegative) reasons.push(`differential negative in ${negativeYears}/${yearly.length} calendar years`);
 
     const falsified = reasons.length > 0;
-    const verdict: LaneVerdict = !gate1.passed ? "h1_revised" : falsified ? "ranking_power_but_not_tradable" : "h1_holds";
+    // Phase 4b D5: a FAIL on an unreachable bar is *insufficient evidence*, not
+    // a revision of H1. Phase 4 collapsed the two and read as a negative finding.
+    const gate1Unreachable = gate1.detectableIc > gate1.minIc;
+    const verdict: LaneVerdict = !gate1.passed
+      ? gate1Unreachable
+        ? "insufficient_evidence"
+        : "h1_revised"
+      : falsified
+        ? "ranking_power_but_not_tradable"
+        : "h1_holds";
 
     const notes: string[] = [];
-    if (gate1.passed && gate1.detectableIc > gate1.minIc) {
+    // Phase 4b D1: UNCONDITIONAL. This used to be emitted only when Gate 1
+    // PASSED — i.e. the single most important context, "this lane could only
+    // detect 0.0298", was suppressed in exactly the case that needed it.
+    if (stats && power) {
       notes.push(
-        `power note: this lane's own SE implies it can only detect mean 20d IC >= ${gate1.detectableIc.toFixed(4)} at t=2, ` +
-          `which is above the ${gate1.minIc} magnitude bar — the t-stat is the binding constraint here.`,
+        `power note: this lane's own NW SE implies it can only detect mean ${PRIMARY_HORIZON}d IC >= ${gate1.detectableIc.toFixed(4)} at t=2` +
+          (gate1Unreachable
+            ? `, which is ABOVE the ${gate1.minIc} magnitude bar — the bar was unreachable in this lane, so FAIL is insufficient evidence, not evidence of no edge.`
+            : `, below the ${gate1.minIc} bar, so this lane could have detected the pre-registered effect.`),
+      );
+      notes.push(
+        `SE triple: naive ${power.naiveSe.toFixed(5)} · heuristic ${power.heuristicSe.toFixed(5)} · realized NW ${gate1.nwSe.toFixed(5)}` +
+          ` (df ${power.df.toFixed(1)}) · 95% CI on mean IC [${gate1.ciLo.toFixed(4)}, ${gate1.ciHi.toFixed(4)}] (approx: NW + normal)`,
       );
     }
     if (!falsified) {
       notes.push(
-        "Gate 2 is NOT falsified — that is not a confirmation. Portfolio-level alpha over this window would need IR >= 0.985 to reach t = 2.",
+        "Gate 2 is NOT falsified — a pre-registered non-falsification, never a confirmation. " +
+          "The Phase-4 claim that this gate can never confirm (IR >= 0.985) is WITHDRAWN: that IR was assumed, never measured. " +
+          "See the differential interval in gate2Base.",
+      );
+    }
+    if (Math.abs(base.gate.nwT) >= 2) {
+      notes.push(
+        `the base-cost daily differential NW t is ${base.gate.nwT.toFixed(2)} (lag ${DIFFERENTIAL_LAG}) — it excludes 0, and this is the ` +
+          "project's only adequately-powered evidence. It is NOT a confirmation: Gate 2 is pre-registered as falsification-only (Phase 4b Fork B).",
       );
     }
 
@@ -261,7 +376,7 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
     const idxRet = idxSym ? buyAndHold(forward.get(idxSym), input.dates) : null;
     if (idxRet != null) indexReturns[market] = idxRet;
 
-    lanes.push({ market, gate1, gate2Base: base.gate, gate2Double: doubled.gate, yearly, verdict, notes });
+    lanes.push({ market, gate1, gate2Base: base.gate, gate2Double: doubled.gate, exclusions: exclusionCensus(days, market), yearly, verdict, notes });
   }
 
   return { lanes, replayDays: days.length, indexReturns };
@@ -272,9 +387,22 @@ function buildForwardMap(s: SymbolSeries): ForwardSeries {
   return buildForwardSeries(s.bars, s.dividends);
 }
 
-/** IC/portfolio work is per market, so restrict the day list's rankings to it. */
+/** IC/portfolio work is per market, so restrict the day list's rankings to it.
+ *  `excludedByReason` is already keyed by market, so it passes through. */
 function daysFor(days: ReplayDay[], market: Market): ReplayDay[] {
-  return days.map((d) => ({ date: d.date, ranked: d.ranked.filter((p) => p.market === market), excludedCount: d.excludedCount }));
+  return days.map((d) => ({
+    date: d.date,
+    ranked: d.ranked.filter((p) => p.market === market),
+    excludedCount: d.excludedCount,
+    excludedByReason: d.excludedByReason,
+  }));
+}
+
+/** Sample stdev (n − 1); 0 for fewer than two points. */
+function sampleSd(xs: number[]): number {
+  if (xs.length < 2) return 0;
+  const m = xs.reduce((a, b) => a + b, 0) / xs.length;
+  return Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / (xs.length - 1));
 }
 
 function runPortfolioAndGate(
@@ -292,6 +420,15 @@ function runPortfolioAndGate(
   const bench = portfolioMetrics(equityFromReturns(benchReturns), benchReturns, [], 0);
   const differential = result.metrics.totalReturn - bench.totalReturn;
 
+  // Phase 4b D2. `differential` above is a difference of COMPOUNDED returns;
+  // this is the mean of the daily ARITHMETIC difference — a different statistic,
+  // and the only one a Newey-West t can be put on. Both series carry a leading 0
+  // (portfolioMetrics drops it), so align on index 1+.
+  const diffDaily = result.dailyReturns.slice(1).map((r, i) => r - (benchReturns[i + 1] ?? 0));
+  const nw = neweyWestT(diffDaily, DIFFERENTIAL_LAG);
+  const trackingError = sampleSd(diffDaily) * Math.sqrt(SESSIONS_PER_YEAR);
+  const dailyMean = nw?.mean ?? 0;
+
   const reasons: string[] = [];
   if (differential <= 0) reasons.push(`[${costDescription}] portfolio ${pct(result.metrics.totalReturn)} vs benchmark ${pct(bench.totalReturn)} — differential ${pct(differential)}`);
 
@@ -304,6 +441,12 @@ function runPortfolioAndGate(
       portfolio: result.metrics,
       benchmarkReturn: bench.totalReturn,
       differential,
+      differentialDailyMean: dailyMean,
+      trackingError,
+      ir: trackingError === 0 ? 0 : (dailyMean * SESSIONS_PER_YEAR) / trackingError,
+      nwT: nw?.t ?? 0,
+      nwT5: neweyWestT(diffDaily, 5)?.t ?? 0,
+      nwT60: neweyWestT(diffDaily, 60)?.t ?? 0,
       falsified: reasons.length > 0,
       reasons,
     },

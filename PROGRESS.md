@@ -5,6 +5,82 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-11 (Phase 4b EXECUTED) — verdicts re-labelled `insufficient_evidence`; Gate 2's power finally measured (IR 0.49, t 1.19); the trend filter — not liquidity — sets breadth
+
+Executed `docs/phase-4b-plan.md` D1–D5 after an adversarial review that produced
+11 amendments pre-run (see that doc). One re-run (~2 min), no new data source, no
+`SCREEN_PARAMS` change. Artifact `apps/api/reports/backtest/2026-09-11.{json,txt}`;
+the 09-10 artifact is **annotated, not rewritten**
+(`2026-09-10.ANNOTATION.md`).
+
+**Window caveat, first.** The run covers 2022-09-12…2026-09-11 — the same **1003
+sessions** as Phase 4, shifted two sessions later, because the store holds a
+rolling ~5-year window refreshed by `screen:daily`. So re-running does *not*
+reproduce Phase 4 exactly: US mean 20d IC +0.0145 → +0.0141, equal-weight
+benchmark +50.92 % → +48.07 %. **The 09-10 artifact stays the reference for the
+pre-registered verdict**; the 09-11 numbers are calibration diagnostics.
+
+**D5 — the headline.** Both lanes are now **`insufficient_evidence`**, not
+`h1_revised`: each lane's detection floor (US 0.0298, HK 0.0493) *exceeds* the
+bar's own 0.02 magnitude, so a FAIL cannot falsify the effect. `h1_revised` is
+reserved for a FAIL on a bar the lane could have detected. Both measured
+intervals contain 0 *and* the pre-registered effect (US −0.016…+0.045, HK
+−0.069…+0.030).
+
+**D2 — the assumption, now measured.** The Phase-4 claim "Gate 2 can never
+confirm (IR ≥ 0.985)" was **withdrawn as unsupported** and then measured:
+realized differential IR is **US 0.49** (NW t **1.19**, TE 15.85 %/yr) and
+**HK −0.59** (t −1.20, TE 9.28 %/yr). Lag sensitivity agrees (US 1.06/1.19/1.25).
+Neither reaches t = 2, so Fork B's conditional never fired and Gate 2 stays
+falsification-only.
+
+That is the nuance worth keeping: the realized IR 0.49 sits *inside* the 0.3–0.7
+the original assumption guessed, so **Phase 4's conclusion was right while its
+reason was an assumption**. Encoded as: the claim was *unjustified*, not *false* —
+only the first was ever true, and it is now supported by the measurement. Also
+confirmed the artifact's `+41.11 %` differential and the `t = 1.19` are **two
+different statistics** (difference of compounded returns vs mean daily arithmetic
+difference), now printed side by side.
+
+**D3 — the finding with the most consequence.** The census shows
+`BEARISH_ALIGNMENT` (`close > sma50 > sma200`) accounts for **81.2 % of US
+rejections** (301 names/day) and 43.9 % of HK's — dominant in **every calendar
+year** in both lanes. US `LOW_LIQUIDITY` rejects just **0.5 %**: the $20 M adv
+floor is effectively not binding, and post-gate breadth 180/552 is almost
+entirely the trend filter. HK is closer to split (BEARISH_ALIGNMENT 43.9 %,
+LOW_LIQUIDITY 29.4 %). Reject share: **67.3 % (US) / 81.1 % (HK)** of screenable
+observations. Per Fork C this is documentation only — no gate was relaxed.
+
+**D4 — Finding 3 confirmed materially.** With the proportional cutoff
+(`max(ceil(0.10 × breadth), 5)`): HK 20d spread **+0.07 % → +0.76 %** (5 of 25,
+t 1.34) — the fixed top-15 was 60 % of HK's universe and diluted the contrast
+into nothing. US moves the other way (+0.82 % → +0.64 %, 18 of 180). **US 20d
+t = 1.66 is the largest statistic the project has produced, and it is still below
+2** — the honest state of the top-decile hypothesis on a spent window.
+
+**D1** now prints the naive / heuristic / realized SE triple and the CI on every
+run, pass or fail — it was previously emitted *only when Gate 1 passed*, i.e.
+suppressed in exactly the case that needed it. US 0.00514 / 0.01066 / 0.01488
+(df 48.1); HK 0.00893 / 0.03014 / 0.02465 (df 44.0).
+
+**One real bug caught by writing the test:** `tQuantile975` as first written used
+the Cornish–Fisher expansion at all df, and at df = 1 it returns 7.15 against a
+true 12.71 — an interval *too narrow*, i.e. overconfident, in exactly the thin-data
+case where it matters most. Now an exact table below df 10, expansion above.
+
+**Tests:** quant-core 90 (was 77), api 437 + 1 skipped, agents 43, web 102, `tsc`
+clean. New coverage: the SE triple, the cutoff rule at HK-scale breadth,
+per-market census attribution, NW wiring on the differential, the verdict class,
+and the unconditional power note.
+
+Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: Phase 4c
+(a pre-registration on data this window does not contain — the powered
+differential test as the deciding gate, per Finding 2, plus a multiplicity rule
+per Finding 5); the XNYS/Databento universe as a **data project**; Databento R1
+baseline; the §7 `deepseek-v4-flash` doc correction.
+
+---
+
 ## 2026-09-11 (Round 1 EXECUTED) — health stopped crying wolf; the coverage gate is readable again; the power-off contract is recorded
 
 First of the four rounds proposed in tonight's review. Two commits, tree clean,

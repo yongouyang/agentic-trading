@@ -172,13 +172,25 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
   const out: string[] = [];
   out.push(`--- ${lane.market} ---`);
   out.push(
-    `GATE 1 (decides)   mean 20d IC ${num(L.meanIc, 4)} · ICIR ${num(L.icir)} · NW t ${num(L.nwT, 2)} (lag ${L.horizons.find((h) => h.horizon === 20)?.horizon ?? 20}) · ${L.days} days · breadth ${num(L.meanBreadth, 0)}`,
+    `GATE 1 (decides)   mean 20d IC ${num(L.meanIc, 4)} · ICIR ${num(L.icir)} · NW t ${num(L.nwT, 2)} (lag ${L.primaryHorizon}) · ${L.days} days · breadth ${num(L.meanBreadth, 0)}`,
   );
   out.push(`                   bar: IC >= ${L.minIc} AND t >= ${L.minT} → ${L.passed ? "PASS" : "FAIL"}`);
   out.push(`                   power floor: this lane can only detect IC >= ${num(L.detectableIc, 4)} at t=2`);
+  // D1: the three SEs side by side. They disagree by more than the effect being
+  // measured, which is the finding — Phase 4 set its bar from the middle one.
+  out.push(
+    `                   SE triple: naive ${num(L.naiveSe, 5)} · heuristic ${num(L.heuristicSe, 5)} · realized NW ${num(L.nwSe, 5)} (df ${num(L.degreesOfFreedom, 1)})`,
+  );
+  out.push(
+    `                   mean IC 95% CI [${num(L.ciLo, 4)}, ${num(L.ciHi, 4)}] at q=${num(L.quantile, 3)} — approximate (NW + normal)`,
+  );
   for (const h of L.horizons) {
     out.push(
       `  ${String(h.horizon).padStart(2)}d: IC ${num(h.meanIc, 4)} · ICIR ${num(h.icir)} · t ${num(h.nwT, 2)} · spread ${pct(h.spreadMean)} (${num(h.spreadPositiveShare * 100, 0)}% days positive)`,
+    );
+    // D4 (descriptive): the same contrast with a proportional cutoff.
+    out.push(
+      `       prop spread ${pct(h.spreadPropMean)} · NW t ${num(h.spreadPropNwT, 2)} · mean cutoff ${num(h.spreadPropCutoff, 0)} of ${num(L.meanBreadth, 0)} names`,
     );
   }
   if (L.byYear.length) {
@@ -194,10 +206,34 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
         ` · Sharpe ${num(m.sharpe, 2)} · MDD ${pct(m.maxDrawdown)} · trades ${m.tradeCount} · hold ${num(m.avgHoldingSessions, 0)}d · turnover ${num(m.turnover, 1)}x`,
     );
   }
+  // D2: the differential's own interval. NOTE the two statistics are different
+  // quantities — `differential` is a difference of compounded returns, `NW t`
+  // tests the mean of the daily arithmetic difference.
+  const gb = lane.gate2Base;
+  out.push(
+    `  differential interval (D2) daily arithmetic mean ${pct(gb.differentialDailyMean)} · TE ${pct(gb.trackingError)}/yr · IR ${num(gb.ir, 2)} · NW t ${num(gb.nwT, 2)} (lag 20)`,
+  );
+  out.push(
+    `     lag sensitivity: t(5) ${num(gb.nwT5, 2)} · t(20) ${num(gb.nwT, 2)} · t(60) ${num(gb.nwT60, 2)} — descriptive; if these disagree, report that rather than pick a lag`,
+  );
   if (lane.yearly.length) {
     out.push(`  yearly differential: ${lane.yearly.map((y) => `${y.year} ${pct(y.differential)}`).join(" · ")}`);
   }
   if (indexReturn != null) out.push(`  buy & hold reference: ${pct(indexReturn)}`);
+  // D3: the eligibility census. Descriptive only (Fork C).
+  const X = lane.exclusions;
+  const reasons = Object.entries(X.byReason).sort((a, b) => b[1] - a[1]);
+  const denom = X.total + X.eligible;
+  out.push(
+    `  exclusion census (D3, descriptive): ${num(X.total, 0)} rejected vs ${num(X.eligible, 0)} eligible observations` +
+      ` → ${num((X.total / Math.max(1, denom)) * 100, 1)}% of screenable observations rejected`,
+  );
+  for (const [reason, n] of reasons) {
+    out.push(`    ${reason.padEnd(22)} ${num(n, 0).padStart(7)}  (${num((n / Math.max(1, X.total)) * 100, 1)}% of rejections, ${num(n / Math.max(1, X.days), 0)}/day)`);
+  }
+  out.push(
+    `    by year: ${X.byYear.map((y) => `${y.year} ${Object.entries(y.byReason).sort((a, b) => b[1] - a[1])[0]?.join(" ") ?? "—"}`).join(" · ")}  (dominant reason)`,
+  );
   out.push(`VERDICT ${lane.market}: ${lane.verdict}`);
   for (const n of lane.notes) out.push(`  note: ${n}`);
   for (const g of [lane.gate2Base, lane.gate2Double]) for (const r of g.reasons) out.push(`  falsified: ${r}`);
@@ -211,7 +247,7 @@ export function renderBacktest(
   weightSweep: Partial<Record<Market, WeightSweepRow[]>> = {},
 ): string {
   const lines: string[] = [];
-  lines.push("== PHASE 4 — SCREEN BACKTEST (H1) ==");
+  lines.push("== PHASE 4b — SCREEN BACKTEST (H1), CALIBRATION REPAIRED ==");
   lines.push(
     `window ${window.start} … ${window.end} (${window.sessions} sessions) · screen parameters UNTUNED (SCREEN_PARAMS as shipped)`,
   );
@@ -235,9 +271,12 @@ export function renderBacktest(
   }
   lines.push("");
   lines.push("Pre-registered limitations:");
-  lines.push("  · Gate 2 cannot confirm anything: portfolio alpha over ~4y needs IR >= 0.985 for t=2.");
+  lines.push("  · Gate 2 is falsification-only: passing means 'not falsified', never 'confirmed'.");
+  lines.push("    The Phase-4 justification for that ('IR >= 0.985' assumed, not measured) is WITHDRAWN — see the differential interval above.");
+  lines.push("  · Gate 1's FAIL is `insufficient_evidence` wherever the lane's own SE puts the 0.02 bar out of reach — that is not evidence of no edge.");
   lines.push("  · Survivorship — the store holds today's universe; results are upper bounds, claims are relative.");
   lines.push("  · SCREEN_PARAMS were designed with knowledge of this period, so this is not a clean prospective test.");
+  lines.push("  · D3's census and D4's proportional spread are DESCRIPTIVE; this window is spent for both.");
   return lines.join("\n");
 }
 

@@ -564,6 +564,47 @@ shipped ranks 5/9 (US) and 6/9 (HK), and the surface is a smooth plateau with no
 isolated spike. **It may not be used to change `SCREEN_PARAMS`** without a new
 pre-registered test on data excluding this window.*
 
+*Status 2026-09-11 (Phase 4b, `docs/phase-4b-plan.md`): **the calibration was
+repaired and the verdict re-labelled — `insufficient_evidence` on both lanes.**
+No re-test: the window is spent for anything Phase 4's artifact already printed,
+and Phase 4b only characterises it. Three results matter.*
+
+***Both lanes are `insufficient_evidence`, not `h1_revised`.*** *Each lane's
+detection floor (US 0.0298, HK 0.0493) exceeds the bar's own 0.02 magnitude, so
+its FAIL cannot falsify the effect. The measured 95 % intervals are US
+−0.016…+0.045 and HK −0.069…+0.030 — both contain 0 **and** the pre-registered
+effect size. `h1_revised` is now reserved for a FAIL on a bar the lane could have
+detected.*
+
+***Gate 2's justification was an assumption, and is now a measurement.*** *The
+claim "Gate 2 can never confirm (IR ≥ 0.985)" was withdrawn as unsupported and
+then measured: the realized differential IR is **US 0.49** (NW t 1.19) and
+**HK −0.59** (t −1.20) — neither reaches t = 2. So the asymmetric gate design
+survives on evidence rather than assertion. The differential's interval is now
+reported alongside the headline differential, which is a **different statistic**
+(a difference of compounded returns, not the mean daily arithmetic difference).*
+
+***Breadth is set by the trend filter, not by liquidity.*** *The eligibility
+census (D3) shows `BEARISH_ALIGNMENT` (`close > sma50 > sma200`) accounts for
+**81.2 % of US rejections** (301 names/day) and 43.9 % of HK's; the US liquidity
+floor rejects just 0.5 %. Post-gate breadth of 180/552 (US) and 25/131 (HK) is
+therefore overwhelmingly a consequence of the trend filter — the fact that
+determines both lanes' statistical power. `LOW_LIQUIDITY` does bite in HK
+(29.4 %).*
+
+*Also re-reported descriptively: the top-N-vs-rest spread with a **proportional**
+cutoff (`max(ceil(0.10 × breadth), 5)`) rather than a fixed top-15, since a fixed
+15 is 8 % of US breadth but 60 % of HK's. HK's 20d spread moves +0.07 % → +0.76 %
+(NW t 1.34) and US +0.82 % → +0.64 % (t 1.66 — the largest statistic in the
+project, still below 2). **Descriptive only**; a gate needs a Phase-4c
+pre-registration on data this window does not contain.*
+
+***Reproducibility note:*** *re-running does not reproduce the 09-10 numbers
+exactly — the store holds a rolling ~5-year window refreshed by `screen:daily`,
+so the replay's warmup boundary advances with the run date (1003 sessions, shifted
+two sessions). The 2026-09-10 artifact stays the reference for the pre-registered
+verdict; `2026-09-10.ANNOTATION.md` records the re-labelling.*
+
 ## 10. Build order
 
 - **Phase 0** — monorepo scaffold; data ingestion + quality report.

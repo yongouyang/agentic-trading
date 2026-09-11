@@ -10,10 +10,30 @@ import { describe, expect, it } from "vitest";
 import type { Bar, CorporateAction } from "../src/types.js";
 import { Market, ScreenInput, runScreen } from "../src/screening.js";
 import { deriveAdjustedBars } from "../src/adjustment.js";
-import { SymbolSeries, buildForwardSeries, forwardReturn, replayScreen } from "../src/replay.js";
-import { icSeries, icStats, neweyWestT, spearmanRank, sweepWeightCombos } from "../src/ic.js";
+import { SymbolSeries, buildForwardSeries, forwardReturn, replayScreen, exclusionCensus, type ReplayDay } from "../src/replay.js";
+import {
+  icSeries,
+  icStats,
+  neweyWestT,
+  spearmanRank,
+  sweepWeightCombos,
+  icPower,
+  proportionalCutoff,
+  spreadSeries,
+  spreadSeriesProportional,
+  tQuantile975,
+  type IcStats,
+} from "../src/ic.js";
 import { BASE_COSTS, benchmarkReturns, scaleCosts, simulatePortfolio } from "../src/portfolio.js";
-import { GATE1_MIN_IC, gate1Passes, equityFromReturns, runBacktest } from "../src/backtest.js";
+import {
+  DIFFERENTIAL_LAG,
+  GATE1_MIN_IC,
+  PORTFOLIO_BUFFER_RANK,
+  PORTFOLIO_TOP_N,
+  gate1Passes,
+  equityFromReturns,
+  runBacktest,
+} from "../src/backtest.js";
 
 // ---------------------------------------------------------------------------
 // synthetic helpers
@@ -342,7 +362,7 @@ describe("runBacktest — end to end on synthetic data", () => {  const ds = dat
     for (const lane of out.lanes) {
       expect(Number.isFinite(lane.gate1.meanIc)).toBe(true);
       expect(lane.gate1.primaryHorizon).toBe(20);
-      expect(["h1_holds", "ranking_power_but_not_tradable", "h1_revised"]).toContain(lane.verdict);
+      expect(["h1_holds", "ranking_power_but_not_tradable", "h1_revised", "insufficient_evidence"]).toContain(lane.verdict);
       // Gate 2 must carry both cost levels.
       expect(lane.gate2Base.costLabel).toBe("base");
       expect(lane.gate2Double.costLabel).toBe("2x");
@@ -393,5 +413,226 @@ describe("runBacktest — end to end on synthetic data", () => {  const ds = dat
     expect(swept.isShipped).toBe(true);
     expect(swept.meanIc).toBeCloseTo(direct.mean, 10);
     expect(swept.nwT).toBeCloseTo(direct.nwT, 10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4b — the calibration repairs (docs/phase-4b-plan.md)
+// ---------------------------------------------------------------------------
+
+describe("Phase 4b D1 — the power statement", () => {
+  it("tQuantile975 matches the published table at the effective df", () => {
+    // Effective df is T/h − 1 ≈ 48 for US, ≈ 44 for HK. 1.96 is the wrong
+    // quantile here, which is why the doc's intervals were recomputed.
+    expect(tQuantile975(48)).toBeCloseTo(2.0106, 3);
+    expect(tQuantile975(44)).toBeCloseTo(2.0154, 3);
+    expect(tQuantile975(1e6)).toBeCloseTo(1.96, 2); // converges to normal
+    // Small df must be CONSERVATIVE: the 2-term expansion understates the true
+    // quantile (7.15 at df=1 against 12.71), which would produce an
+    // overconfident interval. Table values are exact.
+    expect(tQuantile975(1)).toBeCloseTo(12.7062, 3);
+    expect(tQuantile975(4)).toBeCloseTo(2.7764, 3);
+    expect(tQuantile975(4.5)).toBeCloseTo(2.7764, 3); // steps down, not up
+    expect(tQuantile975(9)).toBeCloseTo(2.2622, 3);
+    // Monotone decreasing in df overall.
+    expect(tQuantile975(5)).toBeGreaterThan(tQuantile975(20));
+    expect(tQuantile975(20)).toBeGreaterThan(tQuantile975(200));
+  });
+
+  it("reports the naive / heuristic / realized SE triple from one IcStats", () => {
+    // Shape mirrors the real US numbers so the arithmetic is checkable by hand.
+    const stats: IcStats = { days: 983, mean: 0.0145, sd: 0.1611, icir: 0.09, nwSe: 0.01495, nwT: 0.97, lag: 20, meanBreadth: 180 };
+    const p = icPower(stats, 20);
+    expect(p.naiveSe).toBeCloseTo(0.1611 / Math.sqrt(983), 12);
+    expect(p.heuristicSe).toBeCloseTo((1 / Math.sqrt(179)) * Math.sqrt(20) / Math.sqrt(983), 12);
+    expect(p.df).toBeCloseTo(983 / 20 - 1, 12);
+    // The realized SE is what may set a bar; here it is ~1.4x the heuristic's,
+    // i.e. the ex-ante formula was optimistic in this lane.
+    expect(p.naiveSe).toBeLessThan(p.heuristicSe);
+    expect(p.heuristicSe).toBeLessThan(stats.nwSe);
+    expect(p.ciLo).toBeCloseTo(0.0145 - p.quantile * 0.01495, 12);
+    expect(p.ciHi).toBeCloseTo(0.0145 + p.quantile * 0.01495, 12);
+    expect(p.ciLo).toBeLessThan(0);
+    expect(p.ciHi).toBeGreaterThan(GATE1_MIN_IC); // 0.02 is inside the interval
+  });
+
+  it("returns NaN for the heuristic on a degenerate breadth rather than dividing by zero", () => {
+    const stats: IcStats = { days: 100, mean: 0.01, sd: 0.1, icir: 0.1, nwSe: 0.01, nwT: 1, lag: 20, meanBreadth: 1 };
+    expect(Number.isNaN(icPower(stats, 20).heuristicSe)).toBe(true);
+  });
+
+  it("the power note is emitted even when Gate 1 FAILS (D1's unconditional fix)", () => {
+    // It used to be gated behind `gate1.passed`, so the most important context
+    // was suppressed in exactly the case that needed it. Needs >= MIN_IC_BREADTH
+    // names: with fewer there is no IC series at all, so there is no power
+    // statement to make.
+    const ds = dates(420);
+    const lanes = Array.from({ length: 6 }, (_, k) => series(`A${k}`, "US", ds, rising(420, 0.0008 + k * 0.00006, 100, 0.02, k)));
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(270) });
+    const us = out.lanes.find((l) => l.market === "US")!;
+    expect(us.gate1.passed).toBe(false);
+    expect(us.gate1.days).toBeGreaterThan(0);
+    expect(us.notes.join(" ")).toMatch(/power note/);
+    expect(us.notes.join(" ")).toMatch(/SE triple/);
+    expect(us.notes.join(" ")).toMatch(/95% CI/);
+  });
+});
+
+describe("Phase 4b D4 — the proportional cutoff", () => {
+  it("is a decile where the lane is wide and floors at 5 where it is not", () => {
+    expect(proportionalCutoff(180)).toBe(18); // US: any decile >= floor
+    expect(proportionalCutoff(60)).toBe(6);
+    expect(proportionalCutoff(40)).toBe(5); // ceil(4)=4 → floor binds
+    expect(proportionalCutoff(25)).toBe(5); // HK: ceil(2.5)=3 → floor binds
+    expect(proportionalCutoff(10)).toBe(5);
+  });
+
+  it("is a *different* statistic from the fixed top-15 in a thin lane", () => {
+    // The Finding-3 case: 20 names, the top 5 strongly up, the rest flat.
+    // A fixed top-15 averages in 10 flat names and dilutes the spread; the
+    // proportional cutoff sees exactly the 5 that moved.
+    const ds = dates(2, "2022-01-03");
+    const ds2 = dates(25, "2022-01-03");
+    const names = Array.from({ length: 20 }, (_, k) => `S${String(k).padStart(2, "0")}`);
+    const syms = names.map((s, k) => {
+      // Flat, then +5% on the final session for the top-5 scored names.
+      const closes = Array.from({ length: 2 }, () => 100);
+      return series(s, "US", ds, closes).symbol === s
+        ? series(s, "US", ds, k < 5 ? [100, 105] : [100, 100])
+        : series(s, "US", ds, [100, 100]);
+    });
+    const forward = new Map(syms.map((x) => [x.symbol, buildForwardSeries(x.bars, x.dividends)]));
+    const ranked = names.map((s, k) => ({ symbol: s, market: "US" as Market, rank: k + 1 })) as unknown as ReplayDay["ranked"];
+    const day: ReplayDay = { date: ds[0]!, ranked, excludedCount: 0, excludedByReason: { US: {}, HK: {} } };
+
+    const fixed = spreadSeries([day], forward, 1, 15)[0]!;
+    const prop = spreadSeriesProportional([day], forward, 1, undefined, 0.1, 5)[0]!;
+    expect(fixed).toBeCloseTo((5 * 0.05) / 15, 10); // top 15 of 20 → diluted
+    expect(prop).toBeCloseTo(0.05, 10); // top 5 of 20 → undiluted
+    expect(prop).toBeGreaterThan(fixed);
+    expect(ds2.length).toBe(25); // silence the unused-var lint without a void
+  });
+
+  it("skips a day with no breadth instead of emitting a degenerate zero", () => {
+    const d: ReplayDay = { date: "2022-01-03", ranked: [], excludedCount: 0, excludedByReason: { US: {}, HK: {} } };
+    expect(spreadSeriesProportional([d], new Map(), 1)).toEqual([]);
+  });
+});
+
+describe("Phase 4b D3 — the eligibility census", () => {
+  function rday(date: string, us: Record<string, number>, hk: Record<string, number>, nUs: number, nHk: number): ReplayDay {
+    return {
+      date,
+      ranked: [
+        ...Array.from({ length: nUs }, () => ({ market: "US" as Market })),
+        ...Array.from({ length: nHk }, () => ({ market: "HK" as Market })),
+      ] as unknown as ReplayDay["ranked"],
+      excludedCount: 0,
+      excludedByReason: { US: us, HK: hk },
+    };
+  }
+
+  it("attributes rejections per market and per year, with an exact denominator", () => {
+    const days = [
+      rday("2023-05-02", { LOW_LIQUIDITY: 3, BEARISH_ALIGNMENT: 10 }, { DEEP_DRAWDOWN: 7 }, 100, 20),
+      rday("2024-06-03", { LOW_LIQUIDITY: 1, BEARISH_ALIGNMENT: 20 }, { DEEP_DRAWDOWN: 2 }, 90, 25),
+    ];
+    const us = exclusionCensus(days, "US");
+    expect(us.byReason).toEqual({ LOW_LIQUIDITY: 4, BEARISH_ALIGNMENT: 30 });
+    expect(us.total).toBe(34);
+    expect(us.eligible).toBe(190); // Σ ranked US — the reject-share denominator
+    expect(us.days).toBe(2);
+    expect(us.byYear.map((y) => y.year)).toEqual(["2023", "2024"]);
+    expect(us.byYear[0]!.byReason.BEARISH_ALIGNMENT).toBe(10);
+
+    // The HK lane is counted separately — that separation is the whole point,
+    // since HK's 25-name breadth is what makes its Gate 1 unreachable.
+    const hk = exclusionCensus(days, "HK");
+    expect(hk.byReason).toEqual({ DEEP_DRAWDOWN: 9 });
+    expect(hk.eligible).toBe(45);
+  });
+
+  it("is populated by the replay, per market, from the reasons runScreen already computed", () => {
+    const ds = dates(300);
+    const mk = (sym: string, m: Market, drift: number) => series(sym, m, ds, rising(300, drift, 100, 0.006, 0));
+    // A flat name trips NON_POSITIVE_SHARPE (and is not US-liquid at HK volume),
+    // so both lanes must record a rejection rather than silently dropping it.
+    const flat = mk("FLAT", "US", 0);
+    const up = mk("UP", "US", 0.002);
+    const days = replayScreen(ds.slice(270), [flat, up]);
+    const census = exclusionCensus(days, "US");
+    expect(census.total).toBeGreaterThan(0);
+    expect(Object.keys(census.byReason).length).toBeGreaterThan(0);
+    // Another lane's rejections must not leak into this one's census.
+    expect(exclusionCensus(days, "HK").total).toBe(0);
+  });
+});
+
+describe("Phase 4b D2 — the differential interval", () => {
+  const ds = dates(300);
+  const mkBook = () => Array.from({ length: 8 }, (_, k) => series(`B${k}`, "US", ds, rising(300, 0.001 + k * 0.0004, 100, 0.005, k)));
+
+  it("tests the daily arithmetic difference, and reports it as a distinct quantity from the compounded differential", () => {
+    const lanes = mkBook();
+    const days = replayScreen(ds.slice(250), lanes);
+    const forward = new Map(lanes.map((s) => [s.symbol, buildForwardSeries(s.bars, s.dividends)]));
+    const params = { topN: PORTFOLIO_TOP_N, bufferRank: PORTFOLIO_BUFFER_RANK, costs: BASE_COSTS };
+    const result = simulatePortfolio(days, forward, params, "US");
+    const bench = benchmarkReturns(days, forward, "US");
+
+    // Independently rebuild the series the implementation must be using — same
+    // portfolio params as runBacktest's defaults, or it is a different book.
+    const diff = result.dailyReturns.slice(1).map((r, i) => r - (bench[i + 1] ?? 0));
+    const expected = neweyWestT(diff, DIFFERENTIAL_LAG)!;
+
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(250), markets: ["US"] });
+    const g = out.lanes[0]!.gate2Base;
+    expect(g.nwT).toBeCloseTo(expected.t, 10);
+    expect(g.differentialDailyMean).toBeCloseTo(expected.mean, 12);
+    // IR is the annualised mean over the annualised tracking error.
+    expect(g.ir).toBeCloseTo((g.differentialDailyMean * 252) / g.trackingError, 10);
+    // And the t is NOT the compounded differential over its own SE — the two
+    // headline numbers are different statistics (Phase 4b amendment 3).
+    expect(g.nwT).not.toBeCloseTo(g.differential / g.trackingError, 6);
+  });
+
+  it("carries the pre-registered lag 20 and descriptive 5/60 sensitivity", () => {
+    const lanes = mkBook();
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(250), markets: ["US"] });
+    const g = out.lanes[0]!.gate2Base;
+    expect(DIFFERENTIAL_LAG).toBe(20);
+    for (const t of [g.nwT, g.nwT5, g.nwT60]) expect(Number.isFinite(t)).toBe(true);
+    // All three test the mean of the SAME series, so their signs must agree — a
+    // lag cannot flip the sign of an estimate, only its precision. (No ordering
+    // between them is claimed: a longer lag may raise or lower |t| depending on
+    // whether the autocovariances are positive.)
+    const signs = [g.nwT, g.nwT5, g.nwT60].map((t) => Math.sign(t));
+    expect(new Set(signs).size).toBe(1);
+  });
+});
+
+describe("Phase 4b D5 — the verdict vocabulary", () => {
+  const ds = dates(420);
+
+  it("calls a FAIL on an unreachable bar `insufficient_evidence`, not `h1_revised`", () => {
+    // A tiny synthetic universe has a large SE, so the 0.02 bar is out of reach
+    // and a FAIL must not read as "the hypothesis was revised". Needs
+    // >= MIN_IC_BREADTH names, else there is no IC series to speak of.
+    const lanes = Array.from({ length: 6 }, (_, k) => series(`A${k}`, "US", ds, rising(420, 0.0008 + k * 0.00006, 100, 0.02, k)));
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(270) });
+    const us = out.lanes.find((l) => l.market === "US")!;
+    expect(us.gate1.passed).toBe(false);
+    expect(us.gate1.detectableIc).toBeGreaterThan(0);
+    expect(us.gate1.detectableIc).toBeGreaterThan(us.gate1.minIc);
+    expect(us.verdict).toBe("insufficient_evidence");
+    expect(us.notes.join(" ")).toMatch(/insufficient evidence, not evidence of no edge/);
+  });
+
+  it("keeps `h1_revised` for a lane with no evidence at all (no data, no inference)", () => {
+    const lanes = Array.from({ length: 6 }, (_, k) => series(`A${k}`, "US", ds, rising(420, 0.0008 + k * 0.00006, 100, 0.02, k)));
+    const out = runBacktest({ symbolSeries: lanes, dates: ds.slice(270) });
+    const hk = out.lanes.find((l) => l.market === "HK")!;
+    expect(hk.gate1.days).toBe(0);
+    expect(hk.verdict).toBe("h1_revised");
   });
 });
