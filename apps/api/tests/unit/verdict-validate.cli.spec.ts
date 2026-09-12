@@ -168,3 +168,52 @@ describe("treatment gate — one prompt version per sample", () => {
     expect(renderValidation(r)).toMatch(/EXCLUDED \(deep-dive failed, no verdict\)/);
   });
 });
+
+describe("provenance gate — an operator run is not a prospective observation", () => {
+  it("excludes and counts an ad-hoc run, and keeps the scheduled one", async () => {
+    // The defect this pins: verdict:validate selected every `status: "complete"`
+    // run, so a hand-picked `--symbol` smoke entered the sample that decides H2.
+    // ops/health.ts already pins `source: "chain"` for the dashboard; the
+    // deciding statistic needs the same pin, or the cross-section is a selection.
+    const mkRun = (id: number, source: string) => ({
+      id,
+      market: "US",
+      runAt: new Date("2026-09-10T22:10:00Z"),
+      source,
+      reports: [{ symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }) }],
+    });
+    const prisma = {
+      instrument: { findMany: async () => [{ id: 1, symbol: "AAA" }] },
+      bar: { findMany: async () => [{ instrumentId: 1, date: "2026-09-10", open: 1, high: 1, low: 1, close: 1, volume: 1 }] },
+      corporateAction: { findMany: async () => [] },
+      screenResult: { findMany: async () => [{ symbol: "AAA", rank: 1 }] },
+      deepDiveRun: { findMany: async () => [mkRun(1, "chain"), mkRun(2, "adhoc")] },
+    } as any;
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.adhocExcluded).toBe(1);
+    expect(r.lanes[0]!.pendingLabel).toBe(1); // only the chain verdict is even a candidate
+    expect(renderValidation(r)).toMatch(/ad-hoc operator run/);
+  });
+
+  it("reads a row with no source as scheduled, since the column defaults to chain", async () => {
+    const prisma = {
+      instrument: { findMany: async () => [{ id: 1, symbol: "AAA" }] },
+      bar: { findMany: async () => [{ instrumentId: 1, date: "2026-09-10", open: 1, high: 1, low: 1, close: 1, volume: 1 }] },
+      corporateAction: { findMany: async () => [] },
+      screenResult: { findMany: async () => [{ symbol: "AAA", rank: 1 }] },
+      deepDiveRun: {
+        findMany: async () => [
+          {
+            id: 1,
+            market: "US",
+            runAt: new Date("2026-09-10T22:10:00Z"),
+            reports: [{ symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, promptVersion: "v1" }) }],
+          },
+        ],
+      },
+    } as any;
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.adhocExcluded).toBe(0);
+    expect(r.lanes[0]!.pendingLabel).toBe(1);
+  });
+});

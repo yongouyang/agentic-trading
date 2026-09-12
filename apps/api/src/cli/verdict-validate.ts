@@ -156,6 +156,18 @@ export interface LaneValidation {
    *  formed with information the entry bar did not have. Reported, never silently
    *  dropped. */
   lateExcluded: number;
+  /** Verdicts EXCLUDED as non-prospective: the run carried `source: "adhoc"`,
+   *  i.e. an operator-selected run (`--symbol`, an explicit `--top`, `--as-of`)
+   *  rather than the scheduled chain. The lane's names were chosen by hand, so
+   *  the cross-section is a selection, not a sample. Reported for the same reason
+   *  as `lateExcluded`.
+   *
+   *  This is the same defect class as the promptness gate, and the same one the
+   *  dashboard already had: `ops/health.ts` pins `source: "chain"` so an
+   *  experiment cannot become the lane's view. The deciding statistic needs the
+   *  same pin — a hand-picked run scored as an observation is selection bias in
+   *  the X variable. */
+  adhocExcluded: number;
   /** Verdicts EXCLUDED for carrying a different `promptVersion` — a second
    *  treatment, not more data. Reported for the same reason as `lateExcluded`. */
   otherVersionExcluded: number;
@@ -229,6 +241,7 @@ async function loadMarket(
   abstains: number;
   pending: number;
   late: number;
+  adhoc: number;
   otherVersion: number;
   noVerdict: number;
 }> {
@@ -292,9 +305,20 @@ async function loadMarket(
   let abstains = 0;
   let pending = 0;
   let late = 0;
+  let adhoc = 0;
   let otherVersion = 0;
   let noVerdict = 0;
   for (const run of runs) {
+    // Provenance gate: an operator run is not a prospective observation.
+    // Checked BEFORE the promptness gate because "this was never a sample
+    // member" is more fundamental than "this one was late". Compared against
+    // "adhoc" rather than "!== chain" so the schema default ("chain") and any
+    // row predating the column both read as scheduled, and only a run that
+    // explicitly declares itself hand-built is removed.
+    if (run.source === "adhoc") {
+      adhoc += run.reports.length;
+      continue;
+    }
     const runDate = hktDate(run.runAt);
     const entry = entryDate(laneDates, runDate);
     if (!entry) continue;
@@ -333,7 +357,7 @@ async function loadMarket(
       obs.push({ date: entry, market, symbol: rep.symbol, conviction, rank, forwardReturn: r });
     }
   }
-  return { obs, runs: runs.length, abstains, pending, late, otherVersion, noVerdict };
+  return { obs, runs: runs.length, abstains, pending, late, adhoc, otherVersion, noVerdict };
 }
 
 function laneValidation(
@@ -343,6 +367,7 @@ function laneValidation(
   abstains: number,
   pending: number,
   late: number,
+  adhoc: number,
   otherVersion: number,
   noVerdict: number,
   targetIc: number,
@@ -362,6 +387,7 @@ function laneValidation(
     labelled: obs.filter((o) => o.forwardReturn != null).length,
     pendingLabel: pending,
     lateExcluded: late,
+    adhocExcluded: adhoc,
     otherVersionExcluded: otherVersion,
     failedExcluded: noVerdict,
     abstains,
@@ -402,6 +428,7 @@ export function renderValidation(r: ValidationReport): string {
     lines.push(
       `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs scanned` +
         `${l.lateExcluded > 0 ? ` · ${l.lateExcluded} EXCLUDED as late (look-ahead)` : ""}` +
+        `${l.adhocExcluded > 0 ? ` · ${l.adhocExcluded} EXCLUDED (ad-hoc operator run, not a prospective sample)` : ""}` +
         `${l.otherVersionExcluded > 0 ? ` · ${l.otherVersionExcluded} EXCLUDED (different prompt version)` : ""}` +
         `${l.failedExcluded > 0 ? ` · ${l.failedExcluded} EXCLUDED (deep-dive failed, no verdict)` : ""}`,
     );
@@ -432,10 +459,10 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
   const lanes: LaneValidation[] = [];
   const allObs: VerdictObservation[] = [];
   for (const market of args.markets) {
-    const { obs, runs, abstains, pending, late, otherVersion, noVerdict } = await loadMarket(prisma, market);
+    const { obs, runs, abstains, pending, late, adhoc, otherVersion, noVerdict } = await loadMarket(prisma, market);
     allObs.push(...obs);
     lanes.push(
-      laneValidation(market, obs, runs, abstains, pending, late, otherVersion, noVerdict, args.targetIc, SCREEN_PARAMS.topN[market]),
+      laneValidation(market, obs, runs, abstains, pending, late, adhoc, otherVersion, noVerdict, args.targetIc, SCREEN_PARAMS.topN[market]),
     );
   }
   const pooled = laneValidation(
@@ -445,6 +472,7 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
     lanes.reduce((a, l) => a + l.abstains, 0),
     lanes.reduce((a, l) => a + l.pendingLabel, 0),
     lanes.reduce((a, l) => a + l.lateExcluded, 0),
+    lanes.reduce((a, l) => a + l.adhocExcluded, 0),
     lanes.reduce((a, l) => a + l.otherVersionExcluded, 0),
     lanes.reduce((a, l) => a + l.failedExcluded, 0),
     args.targetIc,
