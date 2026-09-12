@@ -11,8 +11,14 @@
  * So a second, *guarded* slot runs in the evening and does nothing when the day
  * already went well. This CLI is the guard, and it is written as a decision rather
  * than a shell conditional because the question is exactly the one the run ledger
- * answers: **does the store hold a session newer than the newest session any run
- * has screened?**
+ * answers: **is either leg behind?** — (a) the store holds a session newer than
+ * the newest session any run has screened (screen leg), or (b) the newest screen
+ * run has no COMPLETE chain-source deep-dive attached (verdict leg). Checking
+ * only (a) was the 2026-09-12 production miss: HK was "up to date" on the screen
+ * leg while the 09-10/09-11 chain deep-dives had never run (machine off), and the
+ * guard skipped — leaving the verdict sample permanently behind until a manual
+ * run healed it. An ad-hoc deep-dive (`source: "adhoc"`) must NOT satisfy (b):
+ * provenance is the whole point (same policy as `ops/health.ts`).
  *
  * This is not the "self-heal job" R0 declined. That was rejected because the
  * failure it addressed was a stale *report*; this addresses a lost *sample*, and
@@ -73,13 +79,16 @@ export function parseCatchupArgs(argv: string[]): { json: boolean; markets: Mark
 /**
  * Pure decision. `sessionDate` is the newest session any run has screened;
  * an empty/unknown value means **run it**, because a duplicate costs a few
- * minutes while a lost observation is unrecoverable.
+ * minutes while a lost observation is unrecoverable. `chainDeepDive` is whether
+ * that newest screen run carries a complete chain-source deep-dive; the lane is
+ * behind when EITHER leg is.
  */
 export function decideLane(
   market: Market,
   latestBar: string | null,
   lastScreened: string | null,
   lastRunAt: string | null,
+  chainDeepDive: boolean | null,
 ): CatchupLane {
   if (!latestBar) {
     return { market, latestBar, lastScreened, lastRunAt, needsRun: false, reason: "no stored bars — nothing to screen" };
@@ -94,16 +103,33 @@ export function decideLane(
       reason: `no run records which session it screened — running to be safe`,
     };
   }
-  const needsRun = latestBar > lastScreened;
+  if (latestBar > lastScreened) {
+    return {
+      market,
+      latestBar,
+      lastScreened,
+      lastRunAt,
+      needsRun: true,
+      reason: `store holds ${latestBar}, last screened ${lastScreened} — SCREEN leg one session behind`,
+    };
+  }
+  if (!chainDeepDive) {
+    return {
+      market,
+      latestBar,
+      lastScreened,
+      lastRunAt,
+      needsRun: true,
+      reason: `screen current through ${lastScreened} but no complete chain deep-dive for that session — DEEP-DIVE leg behind`,
+    };
+  }
   return {
     market,
     latestBar,
     lastScreened,
     lastRunAt,
-    needsRun,
-    reason: needsRun
-      ? `store holds ${latestBar}, last screened ${lastScreened} — one session behind`
-      : `up to date (screened through ${lastScreened}, store holds ${latestBar})`,
+    needsRun: false,
+    reason: `up to date (screened and deep-dived through ${lastScreened}, store holds ${latestBar})`,
   };
 }
 
@@ -130,12 +156,22 @@ export async function runCatchup(prisma: PrismaService, markets: Market[]): Prom
       orderBy: { runAt: "desc" },
     });
     const newest = run ?? (await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } }));
+    // Verdict leg: the newest screen run must carry a COMPLETE chain-source
+    // deep-dive. An ad-hoc run does not count — the chain's verdicts are the
+    // sample this guard protects.
+    const chainDeepDive = run
+      ? await prisma.deepDiveRun.findFirst({
+          where: { screenRunId: run.id, status: "complete", source: "chain" },
+          select: { id: true },
+        })
+      : null;
     lanes.push(
       decideLane(
         market,
         bar?.date ?? null,
         run?.sessionDate || null,
         newest?.runAt ? newest.runAt.toISOString() : null,
+        run ? chainDeepDive != null : null,
       ),
     );
   }

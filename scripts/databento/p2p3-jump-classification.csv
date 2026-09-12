@@ -1,0 +1,395 @@
+vendor,symbol,prev_date,ex_date,cc_return,classification,p2_tier,factor_est,vol_gate_day,vol_gate_persist,gap_days,persistence,reason
+databento-xnas,AAOI,2023-08-03,2023-08-04,0.528169,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ABVX,2025-07-21,2025-07-22,4.500486,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ACLX,2026-02-20,2026-02-23,0.775854,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ACMR,2022-03-23,2022-03-24,-0.6735,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,AFRM,2022-05-11,2022-05-12,0.595364,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AKRO,2022-09-12,2022-09-13,1.320293,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AKRO,2023-10-09,2023-10-10,-0.689655,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AKRO,2025-01-24,2025-01-27,0.779924,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ALNY,2022-08-02,2022-08-03,0.503768,repricing,NEAR,0.7,11.6233,2.6097,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,ALPN,2024-04-09,2024-04-10,0.646138,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,AMDL,2025-04-08,2025-04-09,0.543478,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AMDL,2025-10-03,2025-10-06,0.522556,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AMLX,2022-09-07,2022-09-08,0.511173,repricing,NEAR,0.56,15.5027,3.9061,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,AMLX,2024-03-07,2024-03-08,-0.821014,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AMZN,2022-06-03,2022-06-06,-0.948866,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ANET,2021-11-17,2021-11-18,-0.749721,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ANET,2024-12-03,2024-12-04,-0.747411,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,APH,2024-06-11,2024-06-12,-0.491814,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,APLD,2022-06-10,2022-06-13,-0.510949,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,APLD,2022-07-15,2022-07-18,0.5,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,APLD,2022-07-18,2022-07-19,0.628205,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,APLD,2023-05-15,2023-05-16,0.813056,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,APLD,2024-09-04,2024-09-05,0.628049,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,APLD,2025-05-30,2025-06-02,0.541973,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,APLS,2026-03-30,2026-03-31,1.358689,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASND,2024-08-20,2024-08-21,0.595621,repricing,NEAR,0.615385,1.6721,0.624,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,ASST,2023-06-09,2023-06-12,0.504425,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASST,2023-11-24,2023-11-27,1.128571,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASST,2023-12-20,2023-12-21,0.874505,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASST,2024-07-01,2024-07-02,3.806492,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ASST,2024-08-23,2024-08-26,0.87037,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASST,2025-01-17,2025-01-21,1.040397,repricing,,,,,4,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASST,2025-01-21,2025-01-22,0.514029,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASST,2025-05-06,2025-05-07,4.901639,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASST,2025-05-07,2025-05-08,1.413889,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASST,2025-05-21,2025-05-22,0.501166,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASST,2025-07-03,2025-07-07,0.625,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASST,2025-09-08,2025-09-09,0.698752,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ASST,2025-10-09,2025-10-10,-0.485294,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASST,2026-02-05,2026-02-06,24.104167,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ASTS,2024-05-28,2024-05-29,0.801512,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ASTS,2024-08-14,2024-08-15,0.570732,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AVDL,2022-05-25,2022-05-26,-0.653846,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AVDL,2022-05-26,2022-05-27,1.153846,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,AVGO,2024-07-12,2024-07-15,-0.899754,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,AXSM,2022-06-24,2022-06-27,0.557676,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AXTI,2026-07-29,2026-07-30,0.538259,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,AZN,2026-01-30,2026-02-02,1.02043,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,B,2025-01-24,2025-05-09,-0.591368,repricing,NEAR,2.5,10.0762,19.7243,105,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,BBIO,2021-12-23,2021-12-27,-0.718119,repricing,NEAR,2.321429,16.19,7.1139,4,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,BBIO,2023-03-03,2023-03-06,0.520947,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,BBIO,2023-07-14,2023-07-17,0.556726,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,BE,2024-11-14,2024-11-15,0.591114,repricing,NEAR,0.65625,6.3424,1.4293,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,BKNG,2026-04-02,2026-04-06,-0.957965,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,BMNR,2025-06-27,2025-06-30,10.347518,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,BMNR,2025-07-02,2025-07-03,1.117533,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,BMNR,2025-07-08,2025-07-09,-0.41094,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,BNY,2026-02-06,2026-05-21,12.632353,repricing,FAR,0.074074,137.8343,249.7508,104,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,BROS,2022-05-10,2022-05-11,-0.472536,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,BULL,2025-04-11,2025-04-14,1.0,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CAI,2021-11-22,2025-06-18,-0.5,repricing,NEAR,2.071429,533.297,54.4493,1304,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,CDTX,2024-04-23,2024-04-24,30.436364,split-like,FAR,0.052632,0.6043,0.3391,1,persistent,p3+p2 pass
+databento-xnas,CDTX,2025-06-20,2025-06-23,1.189498,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CELC,2024-11-14,2024-11-15,-0.629875,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CELC,2024-11-15,2024-11-18,1.477137,repricing,FAR,0.388889,1.4489,1.2079,3,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,CELC,2025-07-25,2025-07-28,1.631769,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CELH,2023-11-14,2023-11-15,-0.673107,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CHDN,2023-05-19,2023-05-22,-0.505645,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CIFR,2022-05-09,2022-05-10,-0.437288,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,CMG,2024-06-25,2024-06-26,-0.980105,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CNQ,2024-06-10,2024-06-11,-0.49866,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,COGT,2022-06-09,2022-06-10,0.582661,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,COGT,2023-12-08,2023-12-11,-0.523148,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,COGT,2024-02-13,2024-02-14,0.59707,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,COGT,2025-11-07,2025-11-10,1.228472,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,COHR,2022-06-30,2022-09-08,-0.836642,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,COKE,2025-05-23,2025-05-27,-0.901128,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,COMM,2025-08-01,2025-08-04,0.838791,repricing,NEAR,0.7,10.5382,2.3997,3,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,CONL,2024-11-05,2024-11-06,0.530901,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,COO,2024-02-16,2024-02-20,-0.74306,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CORT,2025-03-28,2025-03-31,1.088985,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CORT,2025-12-30,2025-12-31,-0.504986,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,CORZ,2022-10-26,2022-10-27,-0.771287,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,CORZ,2022-12-13,2022-12-14,1.579769,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,CORZ,2022-12-20,2022-12-21,-0.674115,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,CORZ,2022-12-21,2022-12-22,0.657143,repricing,,,,,1,untestable,p3-min-price
+databento-xnas,CORZ,2022-12-30,2024-01-24,50.752022,repricing,,,,,390,untestable,p3-min-price
+databento-xnas,CPRT,2022-11-03,2022-11-04,-0.493959,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CPRT,2023-08-21,2023-08-22,-0.491269,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CRDO,2023-02-13,2023-02-14,-0.488083,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CRNX,2023-09-08,2023-09-11,0.65872,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CRNX,2026-07-02,2026-07-06,0.989818,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CRWD,2026-07-01,2026-07-02,-0.745997,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CTAS,2024-09-11,2024-09-12,-0.749428,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CVNA,2022-12-06,2022-12-07,-0.403561,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CVNA,2023-01-31,2023-02-01,0.621782,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CVNA,2023-06-07,2023-06-08,0.636423,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CVNA,2023-07-18,2023-07-19,0.586226,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,CVNA,2026-05-07,2026-05-08,-0.804533,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,CYTK,2023-12-26,2023-12-27,0.841978,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DAVE,2023-01-05,2023-01-06,27.449502,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,DAVE,2024-03-04,2024-03-05,0.610046,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DELL,2021-11-01,2021-11-02,-0.50695,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,DOCS,2026-02-04,2026-02-05,-0.438234,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DOCS,2026-08-05,2026-08-06,0.651206,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DWAC,2021-10-20,2021-10-21,5.594567,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DWAC,2022-11-04,2022-11-07,0.571667,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DWAC,2024-01-19,2024-01-22,0.811725,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,DXCM,2022-06-10,2022-06-13,-0.766267,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ERAS,2026-04-24,2026-04-27,-0.425602,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ETNB,2023-10-09,2023-10-10,-0.446015,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ETNB,2025-09-17,2025-09-18,0.851485,repricing,NEAR,0.53125,23.1776,5.3133,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,EXLS,2023-08-01,2023-08-02,-0.799547,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,FAST,2025-05-21,2025-05-22,-0.504507,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,FBRX,2024-08-27,2024-08-28,21.085714,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,FBRX,2024-11-19,2024-11-20,1.347122,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FBRX,2026-07-08,2026-07-09,0.860544,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FCEL,2024-11-08,2024-11-11,25.76,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,FCNCA,2023-03-24,2023-03-27,0.532916,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FI,2021-10-01,2023-06-07,35.735341,repricing,FAR,0.028571,7.8789,9.2404,614,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,FI,2025-10-28,2025-10-29,-0.436697,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FIG,2025-05-23,2025-07-31,5.042956,repricing,FAR,0.277778,16814.4388,4592.0655,69,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,FISV,2023-06-06,2025-11-11,-0.439252,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,FLNC,2026-05-29,2026-06-01,0.526956,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FRC,2023-03-10,2023-03-13,-0.530965,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FRC,2023-04-27,2023-04-28,-0.620915,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,FTNT,2022-06-22,2022-06-23,-0.797136,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,GLDM,2022-02-22,2022-02-23,1.010599,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,GOOG,2022-07-15,2022-07-18,-0.951283,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,GOOGL,2022-07-15,2022-07-18,-0.951342,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,HTZ,2025-04-15,2025-04-16,1.098361,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,HTZ,2026-08-05,2026-08-06,0.596273,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,HUT,2023-12-01,2023-12-04,3.669604,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,IBKR,2025-06-17,2025-06-18,-0.753239,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,IESC,2026-08-21,2026-08-24,-0.524706,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,IGV,2024-03-06,2024-03-07,-0.796592,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,IJH,2024-02-21,2024-02-22,-0.797037,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,IMGN,2023-05-02,2023-05-03,1.3,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,IMGN,2023-11-29,2023-11-30,0.809141,repricing,NEAR,0.54,13.284,2.8591,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,INSM,2024-05-24,2024-05-28,1.171946,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,IOVA,2022-05-25,2022-05-26,-0.480135,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ISEE,2022-09-02,2022-09-06,0.670551,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ISRG,2021-10-04,2021-10-05,-0.660752,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,IWF,2026-04-28,2026-04-29,-0.750924,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,KDNY,2023-06-09,2023-06-12,0.574406,repricing,NEAR,0.607143,17.0168,3.9728,3,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,KLAC,2026-06-11,2026-06-12,-0.894655,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,KORU,2025-02-07,2025-02-10,9.526055,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,KORU,2026-07-14,2026-07-15,-0.957582,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,KRTX,2022-08-05,2022-08-08,0.738387,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,KRYS,2021-11-26,2021-11-29,1.311982,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,LRCX,2024-10-02,2024-10-03,-0.900649,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,LUNR,2023-02-15,2023-02-16,2.080831,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,LUNR,2023-02-21,2023-02-22,1.832215,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,LUNR,2023-02-22,2023-02-23,-0.802085,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,LUNR,2023-03-08,2023-03-09,0.622055,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,LUNR,2024-02-16,2024-02-20,0.616,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,LUNR,2025-03-05,2025-03-06,-0.45,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,MAGS,2021-09-29,2023-11-09,6.971722,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MCHP,2021-10-12,2021-10-13,-0.496343,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MDGL,2022-12-16,2022-12-19,2.555038,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,META,2022-01-28,2022-06-09,14.040683,repricing,FAR,0.0625,32.6711,44.2039,132,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,MNST,2023-03-27,2023-03-28,-0.508103,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MNST,2026-08-10,2026-08-11,-0.500219,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MORF,2024-07-05,2024-07-08,0.752513,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,MP,2025-07-09,2025-07-10,0.544,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,MRNA,2026-08-18,2026-08-19,1.652472,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,MSTR,2024-08-07,2024-08-08,-0.884695,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MULL,2025-04-08,2025-04-09,0.51633,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,MULL,2026-06-25,2026-06-26,-0.963698,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MUU,2026-07-14,2026-07-15,-0.959415,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,MVLL,2026-06-01,2026-06-02,0.976521,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,MVLL,2026-06-25,2026-06-26,-0.696697,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NARI,2025-01-03,2025-01-06,0.585694,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,NDAQ,2022-08-26,2022-08-29,-0.667478,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NESR,2023-04-27,2024-10-22,2.593156,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NFLX,2025-11-14,2025-11-17,-0.901067,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NOW,2025-12-17,2025-12-18,-0.803526,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NUVL,2022-10-27,2022-10-28,0.578616,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,NVDA,2024-06-07,2024-06-10,-0.899338,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NVDL,2024-03-12,2024-03-13,-0.842084,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NVDL,2026-06-25,2026-06-26,-0.673862,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NVDX,2024-07-15,2024-07-16,-0.9038,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NVO,2023-09-19,2023-09-20,-0.495789,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,NVTS,2025-05-20,2025-05-21,1.763819,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,NVTS,2025-10-10,2025-10-13,0.596814,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,OCTO,2024-08-15,2024-08-16,4.501965,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,OCTO,2024-12-27,2024-12-30,0.71875,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,OCTO,2025-07-23,2025-07-24,0.590909,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,OCTO,2025-09-05,2025-09-08,28.452055,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,OCTO,2025-09-09,2025-09-10,-0.422513,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ODFL,2024-03-27,2024-03-28,-0.477435,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ONON,2022-09-27,2022-09-28,-0.456483,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ONON,2022-09-28,2022-09-29,0.862745,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,OPEN,2025-07-15,2025-07-16,0.542857,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,ORLY,2025-06-09,2025-06-10,-0.931751,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,OUST,2023-04-20,2023-04-21,8.51526,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,PANW,2022-09-13,2022-09-14,-0.668061,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,PANW,2024-12-13,2024-12-16,-0.485116,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,PCVX,2022-10-21,2022-10-24,0.619048,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,PCVX,2025-03-28,2025-03-31,-0.460425,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,PDD,2022-03-15,2022-03-16,0.582942,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,PEGA,2025-06-20,2025-06-23,-0.494507,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,POET,2024-09-20,2024-09-23,0.578778,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,POET,2026-04-24,2026-04-27,-0.552517,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,POET,2026-05-13,2026-05-14,0.592902,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,POWL,2026-04-02,2026-04-06,-0.65704,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,PRAX,2022-06-03,2022-06-06,-0.771828,repricing,NEAR,2.571429,43.7541,5.7874,3,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,PRAX,2023-03-02,2023-03-03,-0.65411,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,PRAX,2023-11-28,2023-11-29,14.702703,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,PRAX,2025-10-15,2025-10-16,1.921635,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,PTGX,2021-09-16,2021-09-17,-0.613267,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,PTGX,2021-10-08,2021-10-11,0.903732,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,PTGX,2023-03-06,2023-03-07,0.592667,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,QBTS,2023-05-19,2023-05-22,0.864583,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,QBTS,2024-11-21,2024-11-22,0.518868,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,QID,2024-04-09,2024-04-10,4.119469,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,QLD,2025-11-19,2025-11-20,-0.537666,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,QMMM,2024-11-15,2024-11-18,-0.743077,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,QMMM,2024-11-19,2024-11-20,-0.414017,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,QMMM,2025-09-05,2025-09-08,0.522487,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,QMMM,2025-09-08,2025-09-09,6.132928,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,RAPT,2024-02-16,2024-02-20,-0.734309,repricing,NEAR,3.714286,19.4942,3.1258,4,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,RAPT,2024-05-08,2024-05-09,-0.4275,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RAPT,2024-12-20,2024-12-23,1.108069,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RAPT,2025-06-16,2025-06-17,6.61165,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,RAPT,2026-01-16,2026-01-20,0.640456,repricing,NEAR,0.611111,58.5092,7.2667,4,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,RCAT,2022-03-11,2022-03-14,0.597826,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RDFN,2025-03-07,2025-03-10,0.577055,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,RETA,2023-02-27,2023-02-28,1.730383,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RGTI,2024-11-22,2024-11-25,0.57377,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RGTI,2024-12-09,2024-12-10,0.593478,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RGTI,2025-01-13,2025-01-14,0.506579,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RIVN,2024-06-24,2024-06-25,0.627949,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RXDX,2022-12-06,2022-12-07,1.681002,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,RXDX,2023-04-14,2023-04-17,0.696693,repricing,NEAR,0.6,25.4939,4.2466,3,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,SAIL,2022-08-15,2025-02-13,-0.662784,repricing,NEAR,2.833333,214.3289,11.7518,913,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,SATS,2025-08-25,2025-08-26,0.847709,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SCHD,2024-10-10,2024-10-11,-0.663205,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SEZL,2023-08-17,2023-09-14,-0.830948,repricing,NEAR,3.625,,,28,untestable,p2-insufficient-volume-window
+databento-xnas,SEZL,2025-03-28,2025-03-31,-0.836799,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SHOP,2022-06-28,2022-06-29,-0.906231,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SIRI,2024-09-09,2024-09-10,9.223881,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SIVB,2023-03-08,2023-03-09,-0.56798,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SIVB,2023-03-09,2023-03-10,-0.551653,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SLNO,2022-08-25,2022-08-26,11.594458,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SLNO,2022-12-16,2022-12-19,0.53168,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SLNO,2023-09-25,2023-09-26,4.914221,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SLS,2022-11-11,2022-11-14,-0.468132,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SMCI,2024-09-30,2024-10-01,-0.902956,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SMH,2023-05-04,2023-05-05,-0.489348,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SMMT,2021-12-17,2021-12-20,-0.47992,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SMMT,2022-08-17,2022-08-18,0.660194,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SMMT,2022-12-05,2022-12-06,2.210191,repricing,NEAR,0.677419,340.1083,105.5444,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnas,SMMT,2024-05-29,2024-05-30,1.996552,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SMMT,2024-09-06,2024-09-09,0.584352,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SOUN,2022-04-29,2022-05-02,1.094891,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SOUN,2022-12-29,2022-12-30,0.718447,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SOUN,2023-02-03,2023-02-06,0.646643,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SOXL,2025-04-08,2025-04-09,0.584184,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SOXS,2022-03-25,2022-03-28,8.885387,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SOXS,2024-04-12,2024-04-15,9.372881,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SOXS,2025-04-08,2025-04-09,-0.571486,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SOXS,2026-03-04,2026-03-05,19.763158,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SOXS,2026-07-14,2026-07-15,9.931442,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SOXX,2024-03-06,2024-03-07,-0.656746,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SPCX,2026-04-06,2026-06-12,6.601367,repricing,FAR,0.148148,483062.8933,158932.1078,67,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,SPXS,2025-09-26,2025-09-29,8.927649,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SPXU,2024-04-09,2024-04-10,4.187311,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SPXU,2025-11-19,2025-11-20,3.29649,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SPYM,2025-02-21,2025-10-31,1.827574,repricing,FAR,0.353846,5231.4382,24753.8202,252,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,SQQQ,2022-01-12,2022-01-13,4.367925,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SQQQ,2024-11-06,2024-11-07,3.760902,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SQQQ,2025-11-19,2025-11-20,4.609841,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SRE,2023-08-21,2023-08-22,-0.496682,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SRM,2023-08-17,2023-08-18,-0.428571,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SRM,2024-10-18,2024-10-21,0.645828,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SRM,2024-12-03,2024-12-04,0.618791,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SRM,2025-02-13,2025-02-14,0.815642,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SRM,2025-06-13,2025-06-16,4.878571,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,SRM,2025-07-15,2025-07-16,0.5,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SRPT,2025-05-05,2025-05-06,-0.417598,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SRPT,2025-07-25,2025-07-28,0.782609,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,SSO,2022-01-12,2022-01-13,-0.512831,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SSO,2025-11-19,2025-11-20,-0.523648,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,SSRM,2024-02-12,2024-02-13,-0.524924,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,STRC,2023-07-05,2023-07-06,4.442177,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,STRC,2024-02-23,2024-02-26,1.186441,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,STRC,2024-04-05,2025-07-30,41.760181,repricing,FAR,0.025,8.5009,3.1932,481,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnas,SWTX,2022-05-25,2022-05-26,-0.401032,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,TECH,2022-11-29,2022-11-30,-0.746291,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TEM,2025-01-17,2025-01-21,0.526435,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,TERN,2025-10-31,2025-11-03,0.738499,repricing,,,,,3,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,TGTX,2022-11-09,2022-11-10,0.588785,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,TGTX,2023-07-31,2023-08-01,-0.504932,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,TQQQ,2022-01-12,2022-01-13,-0.537302,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TQQQ,2025-11-19,2025-11-20,-0.556341,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TSCO,2024-12-19,2024-12-20,-0.796297,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TSLA,2022-08-24,2022-08-25,-0.668977,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TSLQ,2024-11-26,2024-11-27,5.195187,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TSLQ,2025-04-08,2025-04-09,-0.458588,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,TSLQ,2025-10-20,2025-10-21,2.072178,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TTEK,2024-09-06,2024-09-09,-0.797585,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,TVTX,2023-09-20,2023-09-21,-0.400925,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,UGL,2025-06-12,2025-06-13,-0.743256,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,UPRO,2022-01-12,2022-01-13,-0.519919,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,UPST,2022-05-06,2022-05-09,-0.498687,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,USAR,2025-04-11,2025-04-14,0.560335,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,VERA,2022-12-30,2023-01-03,-0.603618,repricing,,,,,4,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,VERA,2024-01-24,2024-01-25,0.514437,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,VERA,2025-05-30,2025-06-02,0.656445,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,VICR,2023-07-25,2023-07-26,0.501761,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,VUG,2026-04-20,2026-04-21,-0.834,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,WMT,2024-02-23,2024-02-26,-0.66139,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,WSC,2022-06-28,2022-06-29,-0.577924,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,WSC,2022-06-29,2022-06-30,1.297661,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,WSM,2024-07-08,2024-07-09,-0.502172,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,WULF,2025-08-13,2025-08-14,0.586207,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnas,XLB,2025-12-04,2025-12-05,-0.501526,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,XLE,2025-12-04,2025-12-05,-0.499296,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,XLK,2025-12-04,2025-12-05,-0.495945,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,XLU,2025-12-04,2025-12-05,-0.504228,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,XLY,2025-12-04,2025-12-05,-0.497546,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnas,ZEN,2022-06-22,2022-06-23,0.545439,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnas,ZETA,2024-11-12,2024-11-13,-0.408662,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnys,AAP,2025-05-21,2025-05-22,0.570425,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,AMCR,2026-01-14,2026-01-15,4.006803,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,ANET,2021-11-17,2021-11-18,-0.74911,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,ANET,2024-12-03,2024-12-04,-0.745621,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,APH,2024-06-11,2024-06-12,-0.489028,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,AZN,2026-01-30,2026-02-02,1.030499,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,B,2025-01-24,2025-05-09,-0.590143,repricing,NEAR,2.5,13.5225,18.2596,105,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,BE,2024-11-14,2024-11-15,0.591867,repricing,NEAR,0.633333,4.6065,1.3178,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,BEKE,2022-03-15,2022-03-16,0.643488,repricing,NEAR,0.695652,2.0059,1.2363,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,BMNR,2025-06-26,2025-06-30,6.655251,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,BMNR,2025-07-02,2025-07-03,1.376296,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,BMNR,2025-07-08,2025-07-09,-0.408145,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,BNY,2026-02-06,2026-05-21,12.62549,repricing,FAR,0.075,301.0385,214.626,104,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnys,CM,2022-05-13,2022-05-16,-0.491664,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,CMG,2024-06-25,2024-06-26,-0.979939,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,CNC,2025-07-01,2025-07-02,-0.403707,repricing,NEAR,1.52381,6.6575,2.5041,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,CNQ,2024-06-10,2024-06-11,-0.49866,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,COHR,2022-06-30,2022-09-08,-0.838447,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,CVNA,2022-12-06,2022-12-07,-0.42921,repricing,NEAR,1.52381,4.8795,2.1339,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,CVNA,2023-06-07,2023-06-08,0.560206,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,CVNA,2026-05-07,2026-05-08,-0.80516,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,DD,2025-10-31,2025-11-03,-0.575138,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,DD,2026-06-23,2026-06-24,1.953075,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,DECK,2024-09-16,2024-09-17,-0.834592,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,DELL,2021-11-01,2021-11-02,-0.510268,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,DOC,2024-02-29,2024-03-04,0.500445,repricing,NEAR,0.666667,5.3885,3.7238,4,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,EPAM,2022-02-25,2022-02-28,-0.456763,repricing,,,,,3,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,ETR,2024-12-12,2024-12-13,-0.499292,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,FIG,2025-05-16,2025-07-31,3.894068,repricing,FAR,0.277778,164500.32,28523.09,76,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnys,GL,2024-04-10,2024-04-11,-0.531402,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,GME,2022-07-21,2022-07-22,-0.76686,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,GME,2024-05-10,2024-05-13,0.743986,repricing,NEAR,0.65625,6.4268,2.8701,3,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,GME,2024-05-13,2024-05-14,0.600985,repricing,FAR,0.478261,7.6719,1.9878,1,untestable,p2-volume-wrong-direction (FAR persistence)
+databento-xnys,HDB,2025-09-05,2025-09-08,-0.498867,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,LRN,2025-10-28,2025-10-29,-0.543737,repricing,NEAR,1.8,15.4933,4.8638,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,LUMN,2024-08-05,2024-08-06,0.930502,repricing,NEAR,0.647059,3.4182,2.6318,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,MLI,2023-10-20,2023-10-23,-0.5022,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,MLI,2026-06-30,2026-07-01,-0.532905,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,MP,2025-07-09,2025-07-10,0.506161,repricing,NEAR,0.65,6.0046,3.4734,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,NLY,2022-09-23,2022-09-26,2.646018,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,NOW,2025-12-17,2025-12-18,-0.80396,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,NVO,2023-09-19,2023-09-20,-0.493558,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,OSCR,2023-03-27,2023-03-28,0.562674,repricing,NEAR,0.7,8.4622,3.7557,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,PRIM,2026-05-05,2026-05-06,-0.501133,repricing,NEAR,1.692308,7.6608,3.1216,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,QXO,2024-07-23,2024-07-24,0.536919,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,QXO,2024-07-29,2024-07-30,-0.814787,split-like,FAR,5.333333,432.3341,108.0503,1,persistent,p3+p2 pass
+databento-xnys,RDW,2025-01-17,2025-01-21,0.513898,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,RH,2025-04-02,2025-04-03,-0.400882,repricing,NEAR,1.526316,7.3375,4.2033,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,SNAP,2022-02-03,2022-02-04,0.588163,repricing,NEAR,0.695652,4.454,1.4668,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,SNAP,2022-05-23,2022-05-24,-0.430797,repricing,NEAR,1.55,5.9593,2.4371,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,SONY,2024-10-08,2024-10-09,-0.799769,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,SOXL,2025-04-08,2025-04-09,0.552998,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,SOXS,2022-03-25,2022-03-28,8.837143,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,SOXS,2024-04-12,2024-04-15,9.338983,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,SOXS,2025-04-08,2025-04-09,-0.562143,repricing,,,,,1,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,SOXS,2026-03-04,2026-03-05,19.692506,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,SOXS,2026-07-14,2026-07-15,9.713287,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,SRE,2023-08-21,2023-08-22,-0.498664,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,TPL,2024-03-26,2024-03-27,-0.656779,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,TPL,2025-12-22,2025-12-23,-0.672688,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,WAL,2023-03-10,2023-03-13,-0.470612,repricing,NEAR,3.764706,59.6998,17.8553,3,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,WOLF,2025-03-27,2025-03-28,-0.518587,repricing,NEAR,1.611111,8.5774,1.9113,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,WOLF,2025-05-20,2025-05-21,-0.591054,repricing,NEAR,2.857143,7.5678,1.2528,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,WOLF,2025-06-30,2025-07-01,0.980943,repricing,NEAR,0.56,2.9712,1.9547,1,untestable,p2-volume-not-scaled (NEAR strict gates)
+databento-xnys,WOLF,2025-07-02,2025-07-03,0.526323,repricing,,,,,1,untestable,p3-open-equals-prevclose (intraday move)
+databento-xnys,WOLF,2025-07-03,2025-07-07,0.957627,repricing,,,,,4,untestable,p3-factor-band (|k-1| < 0.3)
+databento-xnys,WOLF,2025-09-26,2025-09-29,17.264463,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,WSM,2024-07-08,2024-07-09,-0.501297,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,XLE,2025-12-04,2025-12-05,-0.502168,registry,,,,,,,SplitEvent exDate within +/-1d
+databento-xnys,XLK,2025-12-04,2025-12-05,-0.496238,registry,,,,,,,SplitEvent exDate within +/-1d

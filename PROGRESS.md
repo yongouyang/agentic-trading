@@ -5,6 +5,60 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (P2/P3 over the liquid vendor universe: ALL 394 jumps accounted for — splits stop being a blocker) + Round-3 monitoring: the 20:30 catch-up fired clean on its first slot
+
+**P2/P3 detector run (the XNYS scoping session's go/no-go step), from the DB.**
+New `scripts/databento/p2p3_from_db.py` (read-only on the store) reproduces every
+scoping figure exactly — 1,844 series / 1,490 symbols, **394 jumps / 247
+series**, 152 registry-explained (join convention: same symbol, `exDate` within
+±1 day, any event), 2 on-disk candidates — and then classifies the 240
+unexplained with the detector's own discriminating tiers (P3 floors + P2 volume
+persistence, gates extracted verbatim from `xnys_split_detector.py` with
+per-line citations in the docstring):
+
+| class | count |
+|---|---|
+| split-like (P3 + P2 + close-persistence all pass) | **2** — exactly the two already-on-disk candidates (CDTX 1:19 reverse, QXO ≈16:3) |
+| repricing/news | **240** |
+
+Rejection anatomy: 146 fail the P3 factor band (not a legal split factor), 44
+are intraday moves (open ≈ prev close), 36 fail P2 NEAR volume gates, 11 P2
+FAR volume-direction. The profile matches the scoping session's named-case
+reading — biotech readouts and M&A repricings. **All 394 jumps are now
+accounted for**, and the lattice-only classifier stays retracted (the
+discrimination was always in P2/P3). Quarantine list written:
+`scripts/databento/quarantine-gap-series.csv` — exactly the 27 gap-bearing
+series (META 132d identity case, worst CAI 1,304d).
+
+**Go/no-go consequence:** splits/ticker-identity are no longer a blocker for a
+vendor screen run, provided the loader (a) excludes the 27 quarantined series
+and (b) applies the SplitEvent registry plus the CDTX/QXO candidate rows as
+adjustments. The remaining blockers are the ones already ranked: **missing
+dividends** (upward bias on the differential — a purchasing decision),
+venue-distorted adv20, undefined delisting returns. Files written (uncommitted):
+`p2p3_from_db.py`, `p2p3-jump-classification.csv` (394 rows),
+`quarantine-gap-series.csv` (27 rows).
+
+**Round-3 monitoring.** The **20:30 catch-up fired on its first scheduled
+slot** and was the predicted no-op: both lanes "screened through 2026-09-11,
+store holds 2026-09-11", two skips, `worst-exit=0` (the review's #1 fix visible
+in the log). Guarded path now proven end-to-end in production. All 6 jobs have
+fired on their own at least once (`verify.sh`: all ARMED). Phase-4c accrual
+0/0 (first expected lane-days Mon 09-14 HK / Tue 09-15 US); Phase-5 pooled
+0/157 days, 64 awaiting / 24 late-excluded — expected.
+
+**One finding, acted on same-day.** `ops:health` (now provenance-filtered,
+review #2) alerted honestly on HK: last complete **chain** deep-dive was run 5
+(09-09); the 09-11 session had a screen (run 18, 27 candidates) but no chain
+deep-dive, and the catch-up guard only checks screens — a real design gap to
+fix (guard the verdict leg too). With the promptness gate's lag ≤ 1 making
+tonight the last admissible window for 09-11 HK verdicts, a manual
+`screen:deep-dive --market hk` was launched same-evening (run **10**,
+screenRun 18, 27 names, source `chain`, in flight at log time) — heals the
+dashboard/health and banks ~27 prompt verdicts for the Phase-5 sample.
+
+---
+
 ## 2026-09-12 (independent review + #3 journal redesign) — the DeepSeek-Flash sessions cross-checked; 12 follow-ups shipped; journal linkage is now quantity-aware
 
 An independent multi-agent review of the 09-10→09-12 sessions (R0 → Phase 5,
@@ -634,6 +688,45 @@ false positive.
 **Next concrete step (small):** run P2/P3 over the 1,844 series *from the DB*
 (the shipped detector reads the raw `.zst` archive via a pickle) and quarantine the
 27 gap-bearing series.
+
+## 2026-09-12 (docs) — Day 29–30 knowledge-base extraction: the 30-day series is complete
+
+Extracted the last two slide folders (`knowledge-base/day_29`, `day_30` — 8 images
+each) into the same HTML documentation as days 1–28, reusing day_28's **exact style
+block** so the series stays visually identical.
+
+- `docs/day_29_risk-model.html` — 风险模型: the offence/defence split (Strategy 找收益,
+  Risk Model 保生存), the 5-step decision flow with the risk check *between* signal
+  and sizing, then the four pillars — **波动率** (annualisation formula, position
+  scaling 1.2×/1×/0.6× by vol band), **最大回撤** (formula, four risk tiers, the
+  graduated de-risking ladder), **Beta** (portfolio Beta as a *weighted* exposure,
+  0.98 in the worked 5-asset example, and why many names can still be one bet), and
+  **风险暴露** (five dimensions; the 90%-tech-growth "diversified" portfolio), and
+  finally the four risk states (Safe/Caution/High Risk/Extreme) with their per-state
+  actions.
+- `docs/day_30_complete-quant-system.html` — 完整量化系统: the 8-layer panorama
+  (Market Data → Factor Engine → Factor Model → Strategy → Portfolio → Risk Model →
+  Broker → Performance) with a research/test/execute/review loop, the
+  data→factor→score chain with a worked three-stock example, the full rebalancing
+  walkthrough (F/G in, D/E out, back to 20% each), execution costs (手续费 + 滑点 +
+  冲击成本 = 实际可获得收益), performance metrics with a 75/100 scorecard, the six
+  questions every strategy must answer, and the concrete **V1 strategy**
+  (价值 40% / 质量 40% / 动量 20%, Top 20 equal-weight, monthly, with a 100万 账户
+  run showing +2.35% gross → −0.18% cost → **+2.17% net**).
+
+**Verification:** both files pass the same tag-balance parse used for days 25–28, and
+the check was run across the whole series (day_2 … day_30) — all clean. No `<img>`
+tags, matching the existing docs: these are distillations, not slide dumps.
+
+**Four slide typos / inconsistencies preserved with footnotes** rather than silently
+corrected, following the day_26/day_28 precedent: day_29 slide 6's 看正的分散 (read
+真正的分散); day_30 slide 4's 市场追动 (read 市场波动), slide 5's 有一次极端行情中 (read
+在一次), and — the substantive one — the single-name cap appearing as **20% / 10% / 8% /
+5%** across slides 4, 5, 7 and 8 of the same day, left as printed with a note that
+the cap is strategy-specific.
+
+Note for future extraction sessions: these are read by an agent one slide at a time
+(the `read` tool on each JPEG); all 16 images are 1024×1536, which is legible.
 
 ## 2026-09-12 (W5 CLOSED — the first scheduled run fired, clean, end to end) — and a false alarm in my own accrual metric
 

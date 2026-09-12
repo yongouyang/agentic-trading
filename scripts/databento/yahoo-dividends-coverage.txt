@@ -1,0 +1,22 @@
+Yahoo dividends sweep coverage — 1491 survivor symbols
+  ok, has dividends in window (>= 2021-09-02): 914 (61.3%)
+  ok, genuinely no dividends (HTTP 200, empty events): 465 (31.2%)
+  not-found (404 / no data): 112 (7.5%)
+  fetch-failed (transient, re-run to retry): 0 (0.0%)
+  dividend events harvested: 17376
+  anomalies: 
+    SOXS 2022-12-20: large amount 2220
+    SOXS 2023-03-21: large amount 5640
+    SOXS 2023-06-21: large amount 3570
+    SOXS 2023-09-19: large amount 4770
+    SOXS 2023-12-21: large amount 2100
+    SOXS 2024-03-19: large amount 1230
+    SOXS 2024-06-25: large amount 825
+    SOXS 2024-09-24: large amount 702
+    SOXS 2024-12-23: large amount 906
+    SOXS 2025-03-25: large amount 555
+    SOXS 2025-06-24: large amount 168
+    SOXS 2025-09-23: large amount 168
+    SOXS 2025-12-23: large amount 123
+artifacts: /Users/yongouyang/projects/agentic-trading/scripts/databento/yahoo-dividends.csv
+           /Users/yongouyang/projects/agentic-trading/scripts/databento/yahoo-dividends-residual.txt (112 symbols)

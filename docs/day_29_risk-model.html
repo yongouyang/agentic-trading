@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk Model — Before Chasing Returns, Decide What the Worst Case Costs | agentic-trading</title>
+<style>
+  :root{--blue:#1e40af;--blue-light:#dbeafe;--blue-bg:#eff6ff;--green:#15803d;--green-bg:#f0fdf4;--orange:#c2410c;--orange-bg:#fff7ed;--purple:#7e22ce;--purple-bg:#faf5ff;--sky:#0369a1;--sky-bg:#f0f9ff;--red:#b91c1c;--red-bg:#fef2f2;--navy:#1e3a8a;--navy-bg:#eef2ff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--radius:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc;line-height:1.65}
+  .page{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.hero{background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;border-radius:16px;padding:40px 44px;margin-bottom:36px}
+  header.hero .kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8}
+  header.hero h1{font-size:34px;margin:8px 0 10px}
+  header.hero p{font-size:16px;opacity:.92;max-width:760px}
+  header.hero .src{margin-top:16px;font-size:12.5px;opacity:.7}
+  section{margin-bottom:48px}
+  h2{font-size:24px;color:var(--navy);margin-bottom:6px;padding-bottom:10px;border-bottom:2px solid var(--blue-light)}
+  h2 .num{display:inline-block;background:var(--blue);color:#fff;border-radius:8px;width:34px;height:34px;line-height:34px;text-align:center;font-size:17px;margin-right:10px}
+  .subtitle{color:var(--muted);margin-bottom:22px}
+  h3{font-size:17px;margin:22px 0 10px;color:var(--ink)}
+  .quote{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;font-size:15.5px;color:var(--navy);margin:18px 0}
+  .quote strong{font-size:16px}
+  .takeaway{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border-radius:var(--radius);padding:16px 22px;margin-top:24px;font-size:15px}
+  .takeaway .star{margin-right:8px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .mod{border:1.5px solid var(--line);border-radius:var(--radius);padding:16px;background:#fff;border-top:4px solid var(--accent,var(--blue))}
+  .mod .tag{font-size:12px;font-family:ui-monospace,Menlo,monospace;color:var(--accent,var(--blue))}
+  .mod h4{font-size:16px;margin:2px 0 8px;color:var(--accent,var(--blue))}
+  .mod p{font-size:13.5px;color:var(--muted)}
+  .c-val{--accent:#1d4ed8}.c-qual{--accent:#15803d}.c-mom{--accent:#c2410c}
+  .c-grid{--accent:#7e22ce}.c-oos{--accent:#0369a1}.c-warn{--accent:#b91c1c}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;margin:18px 0}
+  .flow .step{flex:1 1 100px;min-width:100px;text-align:center;padding:12px 8px;border-radius:10px;background:var(--stepbg,var(--blue-bg))}
+  .flow .step .icon{font-size:22px}
+  .flow .step .name{font-weight:700;font-size:13px;color:var(--accent,var(--blue))}
+  .flow .step .cn{font-size:11px;color:var(--muted)}
+  .flow .arrow{align-self:center;color:var(--blue);font-size:20px;padding:0 4px;font-weight:700}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  .compare-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.compare,.compare-3{grid-template-columns:1fr}}
+  .panel{border-radius:var(--radius);padding:20px;border:1.5px solid var(--line);background:#fff}
+  .panel.bad{border-top:4px solid var(--red);background:#fffbfb}
+  .panel.good{border-top:4px solid var(--green);background:#fcfffd}
+  .panel.neutral{border-top:4px solid var(--blue)}
+  .panel.purple{border-top:4px solid var(--purple)}
+  .panel h4{font-size:15.5px;margin-bottom:12px}
+  .panel.bad h4{color:var(--red)}.panel.good h4{color:var(--green)}.panel.neutral h4{color:var(--blue)}.panel.purple h4{color:var(--purple)}
+  .panel ul{padding-left:20px;font-size:14px}.panel li{margin-bottom:8px}
+  .spec{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:24px;margin:18px 0;border-left:5px solid var(--accent,var(--blue))}
+  .spec h3{margin-top:0;color:var(--accent,var(--blue));font-size:19px}
+  .spec h3 .tag{font-family:ui-monospace,Menlo,monospace;font-size:13px;opacity:.75;margin-right:8px}
+  .spec .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:760px){.spec .cols{grid-template-columns:1fr}}
+  .io-box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:13.5px}
+  .io-box b{display:block;margin-bottom:6px;color:var(--accent,var(--blue))}
+  .duty{font-size:14px;padding-left:20px}.duty li{margin-bottom:6px}
+  .keypoint{background:var(--orange-bg);border-left:4px solid var(--orange);border-radius:0 8px 8px 0;padding:10px 16px;font-size:13.5px;margin-top:14px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 12px;text-align:left}
+  th{background:#f1f5f9;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .alloc-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;border:1.5px solid var(--line);margin:14px 0;font-size:13px;font-weight:700;color:#fff}
+  .alloc-bar .seg{display:flex;align-items:center;justify-content:center}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:48px;border-top:1px solid var(--line);padding-top:20px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · Risk Model</div>
+  <h1>Risk Model — Before Chasing Returns, Decide What the Worst Case Costs</h1>
+  <p>Markets are always uncertain. We cannot predict the future, but we can control the worst outcome — that is the first principle of quantitative investing. A strategy finds opportunity; the risk model decides how much of it the account can actually survive. Offence brings returns, defence decides how long you stay in the game.</p>
+  <div class="src">Source: knowledge-base/day_29 (IMG_6759–IMG_6766), "30天学习量化投资 · Day 29: 风险模型" · Extracted 2026-09-12</div>
+</header>
+
+<section>
+  <h2><span class="num">1</span>Why a Risk Model Exists</h2>
+  <p class="subtitle">赚钱之前，先想最坏会发生什么 — before making money, decide what the worst case is</p>
+
+  <div class="quote">
+    <strong>“市场永远有不确定性，我们无法预测未来，但可以控制最坏的结果。”</strong><br>
+    Markets are always uncertain; we cannot predict the future — but we can control the worst outcome. <em>— 量化投资的第一原则 (the first principle of quantitative investing)</em>
+  </div>
+
+  <h3>The question to ask first</h3>
+  <p style="font-size:14.5px;margin-bottom:10px">如果判断错了，最坏会发生什么？ — If my judgement is wrong, what is the worst that happens?</p>
+  <div class="modules">
+    <div class="mod c-warn"><span class="tag">01</span><h4>市场大跌</h4><p>Market crash — a broad, correlated fall that no amount of name-counting diversifies.</p></div>
+    <div class="mod c-warn"><span class="tag">02</span><h4>策略失效</h4><p>Strategy failure — the edge stops working, often precisely when it is most exposed.</p></div>
+    <div class="mod c-warn"><span class="tag">03</span><h4>账户大幅回撤</h4><p>Deep drawdown — the loss that triggers the decision you cannot take back.</p></div>
+    <div class="mod c-warn"><span class="tag">04</span><h4>风险过度暴露</h4><p>Over-exposure — concentration, leverage, or a single factor pretending to be diversification.</p></div>
+  </div>
+
+  <div class="keypoint"><b>风险模型的目标</b> — The goal is <em>not</em> higher returns. It is to guarantee the account can withstand the worst case, so that we still get to participate in the market afterwards. (不是追求更高收益，而是保证账户能够承受最坏的情况，让我们有机会继续参与市场。)</div>
+
+  <h3>Strategy vs Risk Model</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Strategy (策略模型) — 进攻</h4>
+      <ul>
+        <li><b>目标</b>: 寻找超额收益 — find excess return</li>
+        <li>通过因子、信号、逻辑找到可能上涨的资产</li>
+        <li>争取超额收益 (seek outperformance)</li>
+        <li><b>目标一句话</b>: 赚更多的钱 — make more money</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>Risk Model (风险模型) — 防守</h4>
+      <ul>
+        <li><b>目标</b>: 控制最坏情况 — control the worst case</li>
+        <li>通过风险指标和规则，控制仓位、暴露和回撤</li>
+        <li>避免重大损失 (avoid the fatal loss)</li>
+        <li><b>目标一句话</b>: 活得久，亏得少 — live long, lose little</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote"><strong>Strategy 负责进攻，Risk Model 负责防守。</strong> 进攻带来收益，防守决定你能在市场里活多久。<br>Strategy attacks, the risk model defends. The attack produces the return; the defence determines how long you survive to keep it.</div>
+
+  <h3>今天你将学到 / What this day covers</h3>
+  <ul class="duty">
+    <li>风险模型的作用和定位 — what a risk model is for, and where it sits</li>
+    <li>核心风险指标：波动率、最大回撤、Beta、风险暴露 — the four core risk metrics</li>
+    <li>风险模型如何与策略配合 — how it cooperates with the strategy</li>
+    <li>风险模型不是让你不亏，而是避免一次错误把账户打出局 — it is not about never losing; it is about never being knocked out by one mistake</li>
+  </ul>
+  <div class="keypoint">重要的是先活下来，然后才有资格谈长期收益！ — The important thing is to <b>survive first</b>; only then are you qualified to talk about long-term returns.</div>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Offence and Defence Together: the Decision Flow</h2>
+  <p class="subtitle">进攻与防守，缺一不可 — good investing = finding opportunity + controlling risk</p>
+
+  <div class="quote">好的投资 = 找到机会 (Strategy) + 控制风险 (Risk Model) — good investing is both, and neither half is optional.</div>
+
+  <h3>Investment decision flow (投资决策流程)</h3>
+  <div class="flow">
+    <div class="step" style="--accent:#1d4ed8;--stepbg:#eff6ff"><div class="icon">🔍</div><div class="name">1. 研究因子</div><div class="cn">find opportunity</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#1d4ed8;--stepbg:#eff6ff"><div class="icon">📣</div><div class="name">2. 生成信号</div><div class="cn">buy / sell</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#15803d;--stepbg:#f0fdf4"><div class="icon">🛡️</div><div class="name">3. 风险模型检查</div><div class="cn">risk metrics &amp; rules</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#7e22ce;--stepbg:#faf5ff"><div class="icon">🥧</div><div class="name">4. 仓位分配</div><div class="cn">capital management</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#0369a1;--stepbg:#f0f9ff"><div class="icon">📋</div><div class="name">5. 执行交易</div><div class="cn">execute &amp; monitor</div></div>
+  </div>
+  <p style="font-size:13.5px;color:var(--muted)">The risk check sits <b>between</b> signal generation and position sizing — it never chooses what to buy, it decides how much of it the book can afford.</p>
+
+  <h3>What each half does alone</h3>
+  <div class="compare">
+    <div class="panel bad">
+      <h4>如果只有 Strategy (strategy only) — 进攻</h4>
+      <ul>
+        <li>可能会赚很多钱，但也可能亏很多钱 — may make a lot, may lose a lot</li>
+        <li>因为没有人控制错误的影响 — because nothing controls the impact of being wrong</li>
+        <li>Assumes the judgement is right; has no plan for when it is not</li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>如果只有 Risk Model (risk model only) — 防守</h4>
+      <ul>
+        <li>风险很低，但过于保守，收益很难提升 — risk is low, but so conservative that returns cannot improve</li>
+        <li>就像一直不出手，永远打不到球 — like never swinging, so you never hit the ball</li>
+        <li>Survival without participation is not investing</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>How the two cooperate (两者如何协作)</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Strategy 不断输出信号</h4>
+      <p style="font-size:14px">「这个股票值得买」— "this stock is worth buying". It emits <em>ideas</em>, repeatedly and without regard for capacity.</p>
+    </div>
+    <div class="panel good">
+      <h4>Risk Model 检查清单 (示例)</h4>
+      <ul>
+        <li>波动率是否过高? — is volatility too high?</li>
+        <li>当前回撤是否超限? — is the current drawdown past its limit?</li>
+        <li>Beta 是否过大? — is Beta too large?</li>
+        <li>组合风险暴露是否过度集中? — is exposure over-concentrated?</li>
+        <li>杠杆是否超出限制? — is leverage over the cap?</li>
+        <li>这笔交易会不会让整体风险超标? — would <em>this</em> trade breach the overall risk budget?</li>
+      </ul>
+    </div>
+  </div>
+  <div class="keypoint">Portfolio 资金配置: 只在风险可控的前提下，决定「买多少」— only once risk is controllable does it decide <b>how much</b> to buy.</div>
+
+  <h3>一个简单的例子 / A worked example</h3>
+  <table>
+    <tr><th>Stage</th><th>What it says</th></tr>
+    <tr><td><b>Strategy 信号</b></td><td>因子模型给出信号：买入半导体 ETF — the factor model says: buy the semiconductor ETF</td></tr>
+    <tr><td><b>Risk Model 检查</b></td><td>波动率 28% (偏高) ⚠ 超限 · 最大回撤 18% ⚠ 超限 · Beta 1.6 ⚠ 偏高 · 行业暴露 科技 85% ⚠ 过度集中 · 杠杆 1.3 倍 ✓ 合理</td></tr>
+    <tr><td><b>Risk Model 决策</b></td><td>风险过高，降低仓位：从计划的 <b>30%</b> 降为 <b>15%</b></td></tr>
+    <tr><td><b>最终执行</b></td><td>买入半导体 ETF，仓位 15%</td></tr>
+  </table>
+  <div class="takeaway"><span class="star">★</span><b>核心观点：Strategy 带来收益的可能，Risk Model 决定你能活多久！</b><br>Strategy creates the <em>possibility</em> of return. The risk model determines how long you are around to collect it.</div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>波动率 (Volatility) — the Risk Budget's First Input</h2>
+  <p class="subtitle">市场越危险，风险预算越应该谨慎 — the more dangerous the market, the more cautious the risk budget</p>
+
+  <div class="quote">波动率衡量的是「收益的波动有多剧烈」。波动越大，不确定性越高，亏损的可能也越大。<br>Volatility measures how violently returns move. The larger it is, the higher the uncertainty — and the larger the scope for loss.</div>
+  <div class="keypoint">波动率高时，即使判断正确，也可能因为波动太大而扛不住！— when volatility is high, even a <em>correct</em> judgement can be un-survivable, because the swings force you out before the thesis pays.</div>
+
+  <h3>什么是波动率 / What it is</h3>
+  <p style="font-size:14px">波动率 (Volatility) 衡量收益率的波动程度，通常用标准差 (Std Dev) 表示。Two strategies with near-identical <em>average</em> returns, from the slide:</p>
+  <table>
+    <tr><th>策略</th><th>每日收益序列 (%)</th><th>平均收益</th><th>波动率 (年化)</th></tr>
+    <tr><td>A (稳健)</td><td class="num">1.0, −0.8, 0.9, −1.1, 1.2, −0.9, 1.0</td><td class="num">0.47%</td><td class="num">11%</td></tr>
+    <tr><td>B (激进)</td><td class="num">8.0, −10.0, 9.5, −8.5, 7.0, −9.0, 8.5</td><td class="num">0.93%</td><td class="num">45%</td></tr>
+  </table>
+  <div class="keypoint">★ 平均收益相近，但策略 B 的波动率远高，风险更大! — similar averages, four times the volatility. Same expectation, very different survival odds.</div>
+  <p style="font-size:13.5px;color:var(--muted)">⚠ 同样的平均收益，高波动会带来更大的回撤风险 — the same mean return with higher volatility produces a deeper drawdown distribution.</p>
+
+  <h3>波动率如何影响仓位管理 / How it sizes positions</h3>
+  <table>
+    <tr><th>波动率水平</th><th>含义</th><th>风险预算调整 (示例)</th></tr>
+    <tr><td>低波动 (年化 &lt; 15%)</td><td>市场平稳，不确定性低</td><td><b>增加仓位</b> (如提高到 1.2 倍)</td></tr>
+    <tr><td>中等波动 (15% ~ 30%)</td><td>市场一般，不确定性中等</td><td>保持仓位 (如 1 倍)</td></tr>
+    <tr><td>高波动 (年化 &gt; 30%)</td><td>市场危险，不确定性高</td><td><b>降低仓位</b> (如降低到 0.6 倍)</td></tr>
+  </table>
+  <div class="compare">
+    <div class="panel good">
+      <h4>核心思想 (the core idea)</h4>
+      <p style="font-size:14px">不是行情好就重仓，而是风险低时才有资格重仓。<br>Size up not because the market looks good, but because risk is <em>low</em> — that is the licence for a heavy position.</p>
+    </div>
+    <div class="panel neutral">
+      <h4>举例 (worked)</h4>
+      <ul>
+        <li>正常仓位 100%，年化波动率 10% → 25% ⇒ 仓位降到 <b>70%</b></li>
+        <li>年化波动率 25% → 40% ⇒ 仓位降到 <b>40%</b></li>
+        <li>目的：保证即使判断错误，也不至于一次就被打出局</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>如何计算 / How it is computed</h3>
+  <div class="spec" style="--accent:#1d4ed8">
+    <h3><span class="tag">formula</span>最常用：收益率序列的标准差，并年化</h3>
+    <div class="io-box" style="margin:12px 0"><b>σ年化 = σ日收益 × √交易日数</b>annualised volatility = daily-return standard deviation × √(trading days)</div>
+    <ol class="duty">
+      <li>计算每日收益率 — compute the daily return series</li>
+      <li>计算标准差 (Std Dev) — take its standard deviation</li>
+      <li>年化：乘以 √N (N 通常为 252) — annualise by √N, with N ≈ 252</li>
+    </ol>
+    <div class="keypoint">💡 不同周期、不同资产的波动率不可直接比较，需统一时间尺度 (如年化) 后再比较。Never compare a daily vol against an annual one — annualise first.</div>
+  </div>
+
+  <h3>实践中如何使用 / Four practical uses</h3>
+  <div class="modules">
+    <div class="mod c-grid"><span class="tag">01</span><h4>动态仓位调整</h4><p>波动率上升 → 降低仓位，降低风险敞口。Vol up, position down.</p></div>
+    <div class="mod c-warn"><span class="tag">02</span><h4>策略过滤</h4><p>波动率过高时，过滤掉交易信号，避免盲目交易。Above a threshold, suppress signals rather than trade into noise.</p></div>
+    <div class="mod c-oos"><span class="tag">03</span><h4>组合风险控制</h4><p>监控组合整体波动率，确保不超过风险预算。Watch the <em>portfolio's</em> vol, not just each name's.</p></div>
+    <div class="mod c-val"><span class="tag">04</span><h4>绩效评估</h4><p>比较策略时，用波动率调整后的指标 (如 Sharpe Ratio) 更客观。Compare risk-adjusted, not raw.</p></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>今日总结：波动率衡量收益的剧烈程度，是风险管理的基础。</b>市场越危险，越要谨慎控制仓位，保护账户生存能力！<br>Volatility measures how violent returns are and is the foundation of risk management. The more dangerous the market, the more carefully position size must be controlled to protect the account's survival.</div>
+</section>
+
+<section>
+  <h2><span class="num">4</span>最大回撤 (Max Drawdown) — At What Loss Must You Act?</h2>
+  <p class="subtitle">亏到什么程度，必须采取行动？ — the drawdown you will not tolerate, decided in advance</p>
+
+  <div class="quote">最大回撤 (Max Drawdown) 衡量的是：从历史高点到后续最低点的最大亏损幅度。它反映了策略在最糟糕时期可能遭受的损失。<br>Max drawdown measures the largest loss from a historical peak to a subsequent trough — what the strategy could suffer in its worst stretch.</div>
+  <div class="keypoint">回撤不可怕，可怕的是不知道何时止损和控制风险！— the drawdown is not the danger; not knowing when to act on it is.</div>
+
+  <h3>公式与例 / Formula and example</h3>
+  <div class="spec" style="--accent:#b91c1c">
+    <h3><span class="tag">formula</span>从历史高点 (Peak) 到之后的最低点 (Trough)</h3>
+    <div class="io-box" style="margin:12px 0"><b>最大回撤 = (Peak − Trough) / Peak × 100%</b></div>
+    <p style="font-size:14px">示例账户净值曲线 (万元): 100 → <b>Peak 120</b> → <b>Trough 90</b> ⇒ (120 − 90) / 120 = <b>25%</b></p>
+  </div>
+
+  <h3>最大回撤的意义 / What the depth means</h3>
+  <table>
+    <tr><th>最大回撤</th><th>风险等级</th><th>说明</th></tr>
+    <tr><td>回撤 &lt; 10%</td><td><span style="color:var(--green);font-weight:700">低</span></td><td>波动小，账户体验好</td></tr>
+    <tr><td>10% ≤ 回撤 &lt; 20%</td><td><span style="color:var(--orange);font-weight:700">中</span></td><td>可接受范围，大多数策略目标区间</td></tr>
+    <tr><td>20% ≤ 回撤 &lt; 30%</td><td><span style="color:var(--red);font-weight:700">高</span></td><td>风险较大，需要严格风控</td></tr>
+    <tr><td>回撤 ≥ 30%</td><td><span style="color:var(--red);font-weight:700">极高</span></td><td>可能导致投资者放弃策略</td></tr>
+  </table>
+  <div class="keypoint">核心观点：我们无法避免回撤，但可以设定<b>可接受的回撤上限</b>，并在达到上限时采取行动，避免风险失控。— You cannot avoid drawdown; you can pre-commit to a limit and act when it is reached.</div>
+
+  <h3>风险模型如何使用 / The graduated response</h3>
+  <p style="font-size:14px">风险模型会实时监控当前回撤，并根据回撤水平调整仓位或采取限制措施。Worked monitoring example: 历史高点 120, 当前净值 95 ⇒ 当前回撤 = (120 − 95) / 120 = <b>20.8%</b>.</p>
+  <table>
+    <tr><th>回撤区间 (示例)</th><th>风险模型动作 (示例)</th></tr>
+    <tr><td>回撤 &lt; 10%</td><td>正常仓位，允许新开仓</td></tr>
+    <tr><td>10% ≤ 回撤 &lt; 15%</td><td>降低仓位 (如降低 20%)，减少新开仓</td></tr>
+    <tr><td>15% ≤ 回撤 &lt; 20%</td><td>进一步降低仓位 (如降低 40%)，只允许减仓</td></tr>
+    <tr><td>回撤 ≥ 20%</td><td>暂停新开仓，考虑更大幅度降仓或清仓部分仓位</td></tr>
+  </table>
+  <div class="keypoint">⚠ 重要：具体阈值需要根据策略特性、市场环境和风险承受能力来设定，<b>不能一刀切</b>！— the thresholds are strategy-, market- and tolerance-specific; there is no universal number.</div>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>✓ 回撤控制的好处</h4>
+      <ul>
+        <li><b>保护本金</b>：避免一次大跌导致长期无法回本</li>
+        <li><b>提升生存能力</b>：让账户有机会熬过困难时期</li>
+        <li><b>稳定心态</b>：减少大幅亏损带来的情绪压力</li>
+        <li><b>增加复利机会</b>：留在市场里，才能赚到后续的钱</li>
+      </ul>
+      <p style="font-size:13.5px;margin-top:10px"><b>活下来，才有资格谈收益！风险控制是长期盈利的前提。</b></p>
+    </div>
+    <div class="panel bad">
+      <h4>⚠ 注意事项 (caveats)</h4>
+      <ul>
+        <li><b>回撤滞后性</b>：回撤是事后指标，不能预测未来跌幅，只能作为触发风控的参考</li>
+        <li><b>与波动率结合使用</b>：高波动环境下回撤可能快速扩大，需要一起看</li>
+        <li><b>避免过度敏感</b>：阈值设太小会导致频繁交易和错失机会，需找到平衡点</li>
+        <li><b>定期复盘优化</b>：根据历史表现和市场变化，定期评估和调整阈值</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>今日总结：最大回撤告诉我们「最坏会亏多少」，是风险模型的重要防线。</b>设定合理的回撤上限，并在触发时果断行动，才能保护账户长期健康!<br>Max drawdown tells you how much the worst case costs. Set a defensible cap, and act decisively when it is hit.</div>
+</section>
+
+<section>
+  <h2><span class="num">5</span>Beta — How Sensitive Is the Portfolio to the Market?</h2>
+  <p class="subtitle">组合对市场整体涨跌有多敏感？ — and why many holdings can still be one bet</p>
+
+  <div class="quote">Beta 衡量的是资产或组合相对于市场的系统性风险。Beta 越高，市场波动时它波动越大；Beta 越低，通常波动更小，更防守。<br>Beta measures systematic risk relative to the market. Higher Beta amplifies market moves; lower Beta damps them.</div>
+  <div class="keypoint">不是买了很多标的就分散了！如果 Beta 太高，组合可能一起跌！— buying many names is not diversification; if Beta is high they fall together.</div>
+
+  <h3>什么是 Beta / What it means</h3>
+  <table>
+    <tr><th>Beta</th><th>含义</th></tr>
+    <tr><td>= 1</td><td>与市场同步 — moves with the market</td></tr>
+    <tr><td>&gt; 1</td><td>比市场更敏感 — amplifies market moves</td></tr>
+    <tr><td>&lt; 1</td><td>比市场更稳健 — damps market moves</td></tr>
+  </table>
+  <p style="font-size:13.5px;color:var(--muted)">基准举例：沪深 300 (CSI 300). Three curves on the slide — market (Beta = 1), Beta &gt; 1 (red), Beta &lt; 1 (green) — diverge exactly as the formula implies.</p>
+
+  <h3>Beta 的示例 / If the market moves +2% that week</h3>
+  <table>
+    <tr><th>资产 / 组合</th><th>Beta</th><th>预期涨跌幅 (约)</th><th>特点</th></tr>
+    <tr><td>高科技 ETF</td><td class="num">1.8</td><td class="num">+3.6%</td><td>进攻型，波动大</td></tr>
+    <tr><td>沪深 300</td><td class="num">1.0</td><td class="num">+2.0%</td><td>与市场同步</td></tr>
+    <tr><td>公用事业 ETF</td><td class="num">0.5</td><td class="num">+1.0%</td><td>防守型，波动小</td></tr>
+    <tr><td>现金 / 货基</td><td class="num">0.0</td><td class="num">0%</td><td>几乎不受市场影响</td></tr>
+  </table>
+  <div class="keypoint">★ 注意：Beta 会随时间变化，需要定期重新估计。— Beta is not a constant; re-estimate it periodically.</div>
+
+  <h3>组合 Beta：不是平均数，而是加权后的整体暴露</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>组合持仓 (示例)</h4>
+      <table>
+        <tr><th>资产</th><th>仓位 (权重)</th><th>Beta</th></tr>
+        <tr><td>腾讯控股</td><td class="num">20%</td><td class="num">1.20</td></tr>
+        <tr><td>宁德时代</td><td class="num">20%</td><td class="num">1.30</td></tr>
+        <tr><td>半导体 ETF</td><td class="num">20%</td><td class="num">1.80</td></tr>
+        <tr><td>银行 ETF</td><td class="num">20%</td><td class="num">0.60</td></tr>
+        <tr><td>现金</td><td class="num">20%</td><td class="num">0.00</td></tr>
+        <tr><td><b>组合 Beta</b></td><td class="num">—</td><td class="num"><b>0.98</b></td></tr>
+      </table>
+    </div>
+    <div class="panel good">
+      <h4>组合 Beta 计算 (简化)</h4>
+      <p style="font-size:14px">组合 Beta ≈ Σ (权重 × Beta)</p>
+      <p style="font-size:13.5px;font-family:ui-monospace,Menlo,monospace;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0">= 20%×1.20 + 20%×1.30 + 20%×1.80<br>&nbsp;&nbsp;+ 20%×0.60 + 20%×0.00 = <b>0.98</b></p>
+      <p style="font-size:14px">✓ 组合 Beta 约 0.98，整体与市场接近，不会放大市场风险。A portfolio Beta near 1 means the book moves with the market — nothing more.</p>
+    </div>
+  </div>
+  <div class="panel bad" style="margin-top:6px">
+    <h4>⚠ 如果全部是高 Beta 资产？</h4>
+    <p style="font-size:14px">假设持仓都是 Beta 1.5 以上的资产：组合 Beta 可能 &gt; 1.5，市场下跌 10%，组合可能跌 15%+!<br><b>标的很多但同质化，风险并没有真正分散！</b> — many names, one exposure: the risk was never diversified.</p>
+  </div>
+
+  <h3>Beta 在风险模型中的作用 / Its four jobs</h3>
+  <div class="flow">
+    <div class="step" style="--accent:#1d4ed8;--stepbg:#eff6ff"><div class="icon">🌐</div><div class="name">衡量市场方向风险</div><div class="cn">measure market-direction risk</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#15803d;--stepbg:#f0fdf4"><div class="icon">🎛️</div><div class="name">控制整体风险水平</div><div class="cn">Beta 过高降仓；过低可能错失机会</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#7e22ce;--stepbg:#faf5ff"><div class="icon">🥧</div><div class="name">辅助仓位调整</div><div class="cn">keep the book controllable</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#0369a1;--stepbg:#f0f9ff"><div class="icon">🎯</div><div class="name">支持风险预算分配</div><div class="cn">consider Beta differences across strategies</div></div>
+  </div>
+  <div class="keypoint">小结：Beta ≠ 好坏 · Beta 是风险属性 · 进攻 ≠ 一定更好 · 防守 ≠ 一定更差 — <b>关键是：与你的风险预算匹配！</b> The only test is whether it matches the risk budget you set.</div>
+
+  <h3>常见 Beta 区间参考 (大致)</h3>
+  <table>
+    <tr><th>Beta 区间</th><th>风险水平</th><th>适合策略类型</th><th>特点</th></tr>
+    <tr><td>&gt; 1.5</td><td>高</td><td>进攻型策略</td><td>收益弹性大，回撤也大</td></tr>
+    <tr><td>1.0 ~ 1.5</td><td>中高</td><td>趋势 / 成长策略</td><td>跟随市场，但波动更大</td></tr>
+    <tr><td>0.5 ~ 1.0</td><td>中等</td><td>均衡型策略</td><td>波动可控，攻守兼备</td></tr>
+    <tr><td>0 ~ 0.5</td><td>低</td><td>防守型策略</td><td>抗跌性强，弹性较小</td></tr>
+    <tr><td>&lt; 0</td><td>特殊</td><td>对冲策略</td><td>与市场负相关</td></tr>
+  </table>
+
+  <h3>实践中如何使用 Beta</h3>
+  <div class="modules">
+    <div class="mod c-grid"><span class="tag">01</span><h4>设定目标 Beta 区间</h4><p>例如：目标 Beta = 0.8 ~ 1.2。</p></div>
+    <div class="mod c-oos"><span class="tag">02</span><h4>实时监控组合 Beta</h4><p>市场大幅波动时，Beta 也会变化。</p></div>
+    <div class="mod c-warn"><span class="tag">03</span><h4>过高时降低仓位或对冲</h4><p>使用低 Beta 资产、期货 / 期权对冲等。</p></div>
+    <div class="mod c-val"><span class="tag">04</span><h4>过低时适度提高风险敞口</h4><p>避免过度保守，错失收益机会。</p></div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>今日总结：Beta 帮助我们理解组合对市场的敏感程度，是风险模型中控制整体风险暴露的重要指标！</b><br>Beta tells you how sensitive the book is to the market — the metric the risk model uses to control <em>aggregate</em> exposure.</div>
+</section>
+
+<section>
+  <h2><span class="num">6</span>风险暴露 (Risk Exposure) — Many Names, One Risk</h2>
+  <p class="subtitle">标的很多，也可能风险高度集中！ — counting holdings is not measuring risk</p>
+
+  <div class="quote">风险暴露衡量的是组合在不同维度上承担风险的程度，而不是你持有多少个标的。标的再多，如果风险来源相同，组合依然非常脆弱。<br>Risk exposure measures how much risk the portfolio carries along each <em>dimension</em>, not how many tickers it holds. Many names sharing one source is still one fragile bet.</div>
+  <div class="keypoint">别被数量迷惑！看清风险来源，才能真正分散！— do not be fooled by the count; only seeing the <em>sources</em> allows real diversification.</div>
+
+  <h3>一个例子：看似分散，实则集中</h3>
+  <div class="compare">
+    <div class="panel bad">
+      <h4>组合示例 (100 万)</h4>
+      <table>
+        <tr><th>资产</th><th>权重</th><th>所属行业</th><th>风险来源</th></tr>
+        <tr><td>腾讯控股</td><td class="num">20%</td><td>互联网</td><td>科技成长</td></tr>
+        <tr><td>阿里巴巴</td><td class="num">20%</td><td>互联网</td><td>科技成长</td></tr>
+        <tr><td>美团-W</td><td class="num">20%</td><td>互联网</td><td>科技成长</td></tr>
+        <tr><td>半导体 ETF</td><td class="num">20%</td><td>半导体</td><td>科技成长</td></tr>
+        <tr><td>AI ETF</td><td class="num">10%</td><td>人工智能</td><td>科技成长</td></tr>
+        <tr><td>现金</td><td class="num">10%</td><td>—</td><td>无风险</td></tr>
+      </table>
+    </div>
+    <div class="panel neutral">
+      <h4>风险来源占比</h4>
+      <div class="alloc-bar">
+        <div class="seg" style="width:90%;background:#1d4ed8">科技成长 90%</div>
+        <div class="seg" style="width:10%;background:#15803d">现金 10%</div>
+      </div>
+      <p style="font-size:14px">Five holdings, three "industries", <b>one risk source</b>. The portfolio is not diversified along the dimension that matters — it is a single leveraged bet on tech growth with a 10% cash buffer.</p>
+    </div>
+  </div>
+
+  <h3>风险暴露的主要维度 / The five dimensions</h3>
+  <div class="modules">
+    <div class="mod c-warn"><span class="tag">01</span><h4>单标的暴露</h4><p>单个资产权重是否过高，避免「赌单一标的」。</p></div>
+    <div class="mod c-warn"><span class="tag">02</span><h4>行业暴露</h4><p>行业占比是否过高，避免单一行业风险。</p></div>
+    <div class="mod c-oos"><span class="tag">03</span><h4>市场暴露 (Beta 暴露)</h4><p>组合对整体市场的敏感度有多高。</p></div>
+    <div class="mod c-grid"><span class="tag">04</span><h4>风格暴露</h4><p>如：成长 / 价值 / 大盘 / 小盘等风格偏好。</p></div>
+    <div class="mod c-qual"><span class="tag">05</span><h4>策略暴露</h4><p>多个策略的相关性是否过高，避免「策略同质化」。</p></div>
+  </div>
+  <div class="keypoint">★ 理想状态：多维度风险分散，而不是只在标的数量上分散。— the goal is dispersion <em>across dimensions</em>, not across tickers.</div>
+
+  <h3>如何量化 / Common measures</h3>
+  <table>
+    <tr><th>维度</th><th>常用指标 / 方法</th></tr>
+    <tr><td>单标的暴露</td><td>最大单一权重</td></tr>
+    <tr><td>行业暴露</td><td>行业权重占比、Herfindahl 指数 (HHI)</td></tr>
+    <tr><td>市场暴露 (Beta)</td><td>组合 Beta = Σ (权重 × 各资产 Beta)</td></tr>
+    <tr><td>风格暴露</td><td>因子暴露 (如 Size、Value、Momentum)</td></tr>
+    <tr><td>策略暴露</td><td>策略相关性矩阵、组合波动贡献度</td></tr>
+  </table>
+  <div class="keypoint">✓ 量化后，才能设定阈值并持续监控。— measure first, then you can set a threshold and watch it.</div>
+
+  <h3>判断与阈值示例</h3>
+  <table>
+    <tr><th>维度</th><th>常见阈值 (示例)</th><th>含义</th><th>行动建议</th></tr>
+    <tr><td>最大单一权重</td><td>≤ 20%</td><td>避免单一标的过度影响</td><td>超标：减仓或分散</td></tr>
+    <tr><td>行业暴露</td><td>≤ 40%</td><td>避免单一行业风险</td><td>超标：分散行业</td></tr>
+    <tr><td>组合 Beta</td><td>0.8 ~ 1.2</td><td>控制对市场的敏感度</td><td>超标：调整仓位</td></tr>
+    <tr><td>组合波动率 (年化)</td><td>≤ 20%</td><td>控制组合整体波动</td><td>超标：降仓降风险</td></tr>
+    <tr><td>策略相关性</td><td>平均相关性 ≤ 0.6</td><td>避免策略过于同质</td><td>超标：增加低相关策略</td></tr>
+  </table>
+  <div class="keypoint">⚠ 阈值需结合你的风险承受能力、投资目标和历史表现设定！— your thresholds, not someone else's.</div>
+
+  <h3>实盘中使用 / The monitoring loop</h3>
+  <div class="flow">
+    <div class="step" style="--accent:#1d4ed8;--stepbg:#eff6ff"><div class="icon">📊</div><div class="name">实时监控</div><div class="cn">各维度风险暴露</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#c2410c;--stepbg:#fff7ed"><div class="icon">⚠️</div><div class="name">接近阈值</div><div class="cn">发出预警</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#7e22ce;--stepbg:#faf5ff"><div class="icon">🎛️</div><div class="name">调整仓位</div><div class="cn">或更换资产</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#15803d;--stepbg:#f0fdf4"><div class="icon">🛡️</div><div class="name">保持可控</div><div class="cn">risk within budget</div></div>
+  </div>
+  <p style="font-size:14px">举例：行业暴露超过阈值 → 预警 → 减少科技类资产权重，增加消费 / 医药等低相关行业。</p>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>总结：风险暴露的核心思想</h4>
+      <ul>
+        <li>真正的分散<sup>*</sup>是降低风险暴露，而不是增加标的数量</li>
+        <li>识别风险来源，避免组合在多个维度上过度集中</li>
+        <li>设定合理阈值，持续监控，及时调整</li>
+        <li>组合的目标不是收益最大化，而是长期稳健生存</li>
+      </ul>
+    </div>
+    <div class="panel neutral">
+      <h4>一句话总结</h4>
+      <p style="font-size:15px"><b>「看清你承担了哪些风险，多少风险，是否超过了你能承受的范围。」</b></p>
+      <p style="font-size:14px;color:var(--muted);margin-top:8px">See clearly which risks you are carrying, how much of each, and whether they exceed what you can bear.</p>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--muted)">*The slide prints 看正的分散; read as 真正的分散 (true diversification) — a slide typo, preserved here rather than silently corrected.</p>
+
+  <div class="takeaway"><span class="star">★</span><b>今日收获：理解风险暴露的多维度含义，学会识别和量化组合的风险来源，避免「表面分散」，打造真正健康的投资组合！</b><br>Understand exposure as multi-dimensional, learn to identify and quantify where the risk actually comes from, and avoid surface-level diversification.</div>
+</section>
+
+<section>
+  <h2><span class="num">7</span>How the Risk Model Intervenes: State, Not Signal</h2>
+  <p class="subtitle">不同风险状态下，采取不同动作 — the same signal deserves a different size in a different regime</p>
+
+  <div class="quote">Risk Model 并不决定「买或卖什么」，而是决定「在当前风险下，能买多少、能不能买」。它通过动态调整仓位、限制开仓或降低风险暴露来保护账户。<br>The risk model does not decide <em>what</em> to buy or sell. It decides how much is affordable — and whether anything is affordable at all — given the current risk state.</div>
+  <div class="keypoint">风险上升时少出手，风险下降时再出手，活下来才有机会赚更多！— swing less as risk rises, and only then re-engage; survival is the precondition for the next return.</div>
+
+  <h3>风险状态划分 (示例)</h3>
+  <table>
+    <tr><th>风险状态</th><th>触发条件 (任意满足)</th><th>风险等级</th><th>核心目标</th></tr>
+    <tr><td><span style="color:var(--green);font-weight:700">正常 (Safe)</span></td><td>波动率处于正常范围 · 当前回撤 &lt; 10% · 市场 Beta 在正常范围</td><td>★☆☆☆☆</td><td>正常参与市场，寻找收益机会</td></tr>
+    <tr><td><span style="color:var(--orange);font-weight:700">谨慎 (Caution)</span></td><td>回撤 10% ~ 15% 或波动率升高 · Beta 偏高 (如 &gt; 1.2) · 部分行业暴露过高</td><td>★★☆☆☆</td><td>降低风险敞口，控制潜在亏损</td></tr>
+    <tr><td><span style="color:var(--red);font-weight:700">高风险 (High Risk)</span></td><td>回撤 15% ~ 20% 或波动率大幅升高 · Beta 很高 (如 &gt; 1.5) · 多个维度暴露集中</td><td>★★★☆☆</td><td>严格控制风险，避免扩大亏损</td></tr>
+    <tr><td><span style="color:var(--red);font-weight:700">极端 (Extreme)</span></td><td>回撤 &gt; 20% 或波动率极端升高 · 市场出现异常事件 · 流动性风险上升</td><td>★★★★☆</td><td>保住本金，等待风险缓解</td></tr>
+  </table>
+
+  <h3>不同风险状态下的应对动作 (示例)</h3>
+  <table>
+    <tr><th>风险状态</th><th>仓位调整</th><th>新开仓</th><th>止损与风控</th><th>组合暴露</th><th>其他措施</th></tr>
+    <tr><td>正常 (Safe)</td><td>保持目标仓位 (如 80%~100%)</td><td>允许开仓</td><td>正常止损 (如 −10%)</td><td>保持在风险预算内</td><td>持续监控</td></tr>
+    <tr><td>谨慎 (Caution)</td><td>降低目标仓位 (如 50%~80%)</td><td>谨慎开仓，只做高胜率信号</td><td>收紧止损 (如 −7% ~ −8%)</td><td>降低行业 / 风格暴露</td><td>提高监控频率</td></tr>
+    <tr><td>高风险 (High Risk)</td><td>大幅降低仓位 (如 20%~50%)</td><td>限制开仓，优先观望</td><td>严格止损 (如 −5%)</td><td>降低 Beta 和行业集中度</td><td>降低杠杆，增加现金</td></tr>
+    <tr><td>极端 (Extreme)</td><td>极低仓位或空仓 (如 0%~20%)</td><td>暂停开仓，只允许平仓</td><td>极严格止损 (如 −3%)</td><td>大幅降低整体风险敞口</td><td>重点保留现金，等待信号</td></tr>
+  </table>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>一个实际流程 (示例)</h4>
+      <ol class="duty">
+        <li><b>计算风险指标</b> — 每天计算波动率、回撤、Beta、暴露等</li>
+        <li><b>判断风险状态</b> — 根据规则确定当前属于哪一档</li>
+        <li><b>执行应对动作</b> — 调整仓位、新开仓限制、止损阈值、暴露控制</li>
+        <li><b>监控执行效果</b> — 观察风险是否缓解，必要时升级或降级状态</li>
+      </ol>
+      <p style="font-size:13.5px;margin-top:10px">✓ 核心：<b>持续循环，动态调整，避免被动挨打！</b></p>
+    </div>
+    <div class="panel purple">
+      <h4>举例：回撤上升时的动作变化</h4>
+      <table>
+        <tr><th>触发</th><th>Risk Model 动作</th></tr>
+        <tr><td>回撤 8% (正常)</td><td>保持仓位，正常交易</td></tr>
+        <tr><td>回撤 12% (谨慎)</td><td>降低仓位，收紧止损</td></tr>
+        <tr><td>回撤 17% (高风险)</td><td>严格风控，限制开仓</td></tr>
+        <tr><td>回撤 23% (极端)</td><td>极低仓位，等待信号</td></tr>
+      </table>
+      <p style="font-size:13.5px;margin-top:8px">⭐ 目标：让账户在最坏情况下，依然活着！</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>⚠ 风险控制不是一次性设好就完事</h4>
+      <ul>
+        <li>市场在变，风险在变，策略也可能失效</li>
+        <li>需要不断监控和调整</li>
+        <li>没有 100% 的安全，只有更合理的风险管理</li>
+        <li>风险控制做得好，才能长期留在牌桌上</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>实践中的小技巧</h4>
+      <ul>
+        <li><b>分层控制</b> — 同时监控整体风险和单资产风险</li>
+        <li><b>动态阈值</b> — 阈值可随市场环境动态调整</li>
+        <li><b>组合层面优先</b> — 先看组合风险，再看单个信号</li>
+        <li><b>记录与复盘</b> — 记录每次风控动作，定期复盘优化</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>今日总结：Risk Model 根据风险状态动态介入，通过调整仓位、限制开仓、控制暴露等方式，把潜在的亏损控制在可承受范围内，让我们在市场中活得更久，走得更远！</b><br>The risk model intervenes <em>by state</em> — adjusting size, restricting entries, controlling exposure — to hold potential losses inside what the account can absorb, so we last longer and go further.</div>
+</section>
+
+<section>
+  <h2><span class="num">8</span>Summary — Strategy Finds the Return, the Risk Model Keeps It</h2>
+  <p class="subtitle">总结：Strategy 找收益，Risk Model 保生存！</p>
+
+  <div class="quote">这 30 天我们不断寻找更好的收益机会，从因子、策略到组合；从今天开始，我们把重点放在：<b>如何在错误发生时，保护账户，活下去，才能走得更远！</b><br>Thirty days of hunting better returns — factors, strategies, portfolios. From today the emphasis shifts to: when the judgement is wrong, protect the account. Survive, and you get to go further.</div>
+  <div class="keypoint">赚钱需要能力，活下来需要风控。长期收益，永远来自长期留在市场！— making money takes skill; surviving takes risk control. Long-term return comes from being in the market long-term.</div>
+
+  <h3>Strategy 与 Risk Model 的分工</h3>
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Strategy (寻找收益)</h4>
+      <ul>
+        <li>寻找有正期望的机会</li>
+        <li>生成买入 / 卖出信号</li>
+        <li>决定买什么、什么时候买卖</li>
+        <li><b>目标</b>：提高收益、获取超额回报</li>
+      </ul>
+      <p style="font-size:13.5px;margin-top:10px"><b>关键词：进攻、探索、收益最大化</b></p>
+    </div>
+    <div class="panel good">
+      <h4>Risk Model (控制风险)</h4>
+      <ul>
+        <li>监控风险指标和风险暴露</li>
+        <li>动态调整仓位和风险预算</li>
+        <li>限制最坏情况的发生</li>
+        <li><b>目标</b>：保护账户、控制回撤、活下去</li>
+      </ul>
+      <p style="font-size:13.5px;margin-top:10px"><b>关键词：防守、约束、最坏情况管理</b></p>
+    </div>
+  </div>
+  <div class="keypoint">🤝 协同工作：<b>收益来自进攻，生存来自防守！</b></div>
+
+  <h3>核心指标回顾 / The four pillars</h3>
+  <div class="modules">
+    <div class="mod c-oos"><span class="tag">01</span><h4>波动率 (Volatility)</h4><p>衡量收益波动的剧烈程度。波动越大，不确定性越高，仓位应该越谨慎。<br><b>作用：控制仓位大小</b></p></div>
+    <div class="mod c-warn"><span class="tag">02</span><h4>最大回撤 (Max Drawdown)</h4><p>从历史高点到最低点的最大跌幅。回撤过大时必须采取行动。<br><b>作用：限制最坏亏损</b></p></div>
+    <div class="mod c-grid"><span class="tag">03</span><h4>Beta (市场敏感度)</h4><p>组合对市场整体涨跌的敏感度。Beta 过高，市场下跌时组合可能一起暴跌。<br><b>作用：控制市场暴露</b></p></div>
+    <div class="mod c-qual"><span class="tag">04</span><h4>风险暴露 (Risk Exposure)</h4><p>标的再多，风险来源相同则组合依然脆弱。需要从多个维度看暴露。<br><b>作用：避免集中风险</b></p></div>
+  </div>
+
+  <h3>风险状态与应对动作 (简化版)</h3>
+  <table>
+    <tr><th>风险状态</th><th>典型特征</th><th>风险等级</th><th>应对动作</th><th>目标</th></tr>
+    <tr><td>正常 (Safe)</td><td>波动率低、回撤 &lt; 10%、Beta 合理、暴露分散</td><td>★☆☆☆☆</td><td>保持仓位，正常交易</td><td>寻找收益机会</td></tr>
+    <tr><td>谨慎 (Caution)</td><td>回撤 10% ~ 15% 或波动率上升、局部集中</td><td>★★☆☆☆</td><td>降低仓位 / 风险暴露，提高监控频率</td><td>控制风险，减少回撤</td></tr>
+    <tr><td>高风险 (High Risk)</td><td>回撤 15% ~ 20% 或 Beta 过高、显著集中</td><td>★★★☆☆</td><td>严格止损，限制开仓，优先降低风险</td><td>避免扩大亏损、保护资金</td></tr>
+    <tr><td>极端 (Extreme)</td><td>回撤 &gt; 20% 或市场出现异常事件</td><td>★★★★☆</td><td>大幅降仓 / 空仓，等待信号</td><td>保住本金，等待风险缓解</td></tr>
+  </table>
+  <div class="keypoint">核心原则：我们无法避免风险，但可以决定：当风险来临时，<b>采取什么行动</b>！— you cannot avoid risk; you can decide what you do when it arrives.</div>
+
+  <h3>今天最重要的收获</h3>
+  <div class="compare">
+    <div class="panel good">
+      <h4>✓ Key takeaways</h4>
+      <ul>
+        <li>风险模型不是让你不亏，而是让你在<b>最坏情况下还能活下来</b></li>
+        <li>没有风险控制，即使短期赚很多，也可能一次回撤就归零</li>
+        <li>波动率、最大回撤、Beta、风险暴露是风险模型的四大基石</li>
+        <li>风险状态决定了你能买、买多少、能不能继续持有</li>
+        <li>Strategy 负责进攻，Risk Model 负责防守，二者缺一不可</li>
+        <li>量化的长期收益，来自长期留在市场的能力，而不是一时的爆发</li>
+      </ul>
+    </div>
+    <div class="panel neutral">
+      <h4>一个简单的例子 (账户 100 万)</h4>
+      <table>
+        <tr><th>情况</th><th>最大回撤</th><th>是否能继续交易</th><th>长期结果</th></tr>
+        <tr><td>没有风控</td><td class="num">−50%</td><td>很可能出局</td><td>归零风险高</td></tr>
+        <tr><td>有风控 (回撤控制在 20% 以内)</td><td class="num">−18%</td><td>可以继续交易</td><td>长期复利增长</td></tr>
+      </table>
+      <p style="font-size:13.5px;margin-top:8px">⭐ 最重要的不是赚多少，而是：<b>在错误发生时，你还能回来！</b></p>
+    </div>
+  </div>
+
+  <div class="takeaway"><span class="star">★</span><b>今日总结：Strategy 帮我们赚取收益，Risk Model 帮我们控制最坏情况。只有先活下来，才能走得更远，看到更大的风景！</b><br>Strategy earns the return; the risk model controls the worst case. Only by surviving first do you get to travel further and see more.<br><br>至此，我们完成了 30 天量化投资学习的第二阶段！下一步：进入组合优化与实盘交易阶段！— this completes stage two; next comes portfolio optimisation and live trading.</div>
+</section>
+
+<footer>
+  agentic-trading · docs/day_29_risk-model.html · Distilled from knowledge-base/day_29 (30天学习量化投资 · Day 29) · 2026-09-12
+</footer>
+</div>
+</body>
+</html>
