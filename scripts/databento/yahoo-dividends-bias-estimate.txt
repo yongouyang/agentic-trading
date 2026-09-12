@@ -1,0 +1,35 @@
+Dividend-harvest bias estimate — vendor equal-weight benchmark
+window: TTM 2025-09-03..2026-09-02, yields vs latest vendor close
+symbols with harvest ok: 1378 (payers 885 = 64.2%, non-payers 493), residual not-found/failed: 112
+equal-weight TTM yield over ok symbols (non-payers = 0): 1.95%/yr
+payer-conditional TTM yield: 3.04%/yr
+
+Interpretation for Gate 2: the scoping session estimated the missing
+-dividend upward bias at ~1.5%/yr (~6% cumulative over 4y). The
+harvest makes 1.95%/yr of benchmark yield adjustable on
+1378/1490 symbols (92.5%
+of the universe). The residual's yield is unmeasurable via Yahoo;
+bounded above by the payer-conditional 3.04%/yr but
+almost certainly far below (404s skew delisted/ADR/obscure).
+
+Top-20 payers by TTM yield (sanity: expect REITs/mLPs/BDCs):
+  SOXS     645.24%/yr  (databento-xnas;databento-xnys)
+  BITO      30.83%/yr  (databento-xnas;databento-xnys)
+  STNE      26.24%/yr  (databento-xnas)
+  BITX      15.34%/yr  (databento-xnas)
+  QQQI      14.16%/yr  (databento-xnas)
+  AGNC      13.56%/yr  (databento-xnas)
+  NLY       12.55%/yr  (databento-xnys)
+  RYN       12.19%/yr  (databento-xnys)
+  STWD      12.14%/yr  (databento-xnys)
+  STRC      12.01%/yr  (databento-xnas)
+  JEPQ      11.46%/yr  (databento-xnas)
+  TSLL      10.57%/yr  (databento-xnas)
+  SQQQ      10.01%/yr  (databento-xnas)
+  TSLQ       9.63%/yr  (databento-xnas)
+  KWEB       8.15%/yr  (databento-xnas)
+  MSFU       7.94%/yr  (databento-xnas)
+  OWL        7.84%/yr  (databento-xnys)
+  HST        7.77%/yr  (databento-xnas)
+  CAG        7.57%/yr  (databento-xnys)
+  GLPI       7.56%/yr  (databento-xnas)

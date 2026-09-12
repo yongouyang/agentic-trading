@@ -52,6 +52,16 @@ already met:
    disclosed in the run report. Consequence: the Gate-2 differential carries a
    known **upward bias** (the equal-weight benchmark holds the payers; a
    trend-selected portfolio does not), bounded by the harvested coverage.
+   *Measured 2026-09-12 (harvest, pre-bar-lock): 1,378 of 1,490 survivors
+   (92.5 %) covered — 914 with dividends in-window (17,376 events), 464
+   genuinely non-paying; 112 not-found (7.5 %, delisted/acquired/renamed
+   skew). Harvested TTM yield across covered names ≈ 1.48 %/yr (excluding a
+   SOXS split-basis artifact), so effectively all of the benchmark's
+   ~1.5 %/yr yield is adjustable; residual bias ≤ ~0.1 %/yr, disclosed.
+   Artifacts: `scripts/databento/yahoo-dividends.csv` (17,376 rows),
+   `yahoo-dividends-residual.txt` (the 112). Loader caveat: amounts are
+   Yahoo-nominal at ex-date — consistent with as-traded prices and SplitEvent
+   factors, but never ratio them against split-adjusted prices.*
 4. A symbol appearing under both vendor keys (≈ 354) is loaded from **one**
    feed (choose by bar count; record the choice) — never concatenated.
 

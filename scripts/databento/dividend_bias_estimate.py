@@ -46,6 +46,7 @@ def main():
     with open(SURVIVORS) as fh:
         for row in csv.DictReader(fh):
             vendors[row["symbol"]] = row["vendor_keys"]
+    recs = {s: r for s, r in recs.items() if s in vendors}
 
     con = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
     liquid = load_liquid(con)

@@ -5,6 +5,62 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (Phase-4c pre-registration LOCKED — vendor lane decides, rank IC revived with a capped bar; dividends harvested at 92.5 %; catch-up guards the verdict leg)
+
+Three items from the "next round" review, all landed.
+
+**1. Phase-4c pre-registration written and locked** (`docs/phase-4c-plan.md`),
+before any vendor-lane number exists. Five forks user-decided, all as
+recommended:
+
+- **Vendor lane carries the deciding verdict**; prospective differential stays
+  the background long clock (D6 skeleton verbatim). The vendor test is
+  pre-registered as H1-**generality** — fresh names on the spent regime, never
+  "validated on fresh data".
+- **HK reported-only**, decided on power grounds (25-name lane floors near
+  0.05 IC), not on this window's outcomes.
+- **SE-stability guard 1.5×** — same factor as Phase-5's regime guard, one
+  convention.
+- **Nuisance parameters (SE, breadth, IR) from the spent window; the firewall
+  holds on effect sizes** — they inform design, never a bar.
+- **Rank IC decides on the vendor lane, reversing D6's demotion** — the
+  demotion's premise was picker-lane breadth; at ~500-name vendor breadth a
+  2.5-y test half gives t ≈ 2.5 at IC 0.02, while the differential at IR 0.49
+  yields t ≈ 0.8 on any 2.5-y half. Bar = the IC at 0.8 power from the
+  design-half SE, **capped at 0.03**: above the cap the lane is
+  `underpowered`, declared before outcomes, never re-barred after.
+
+**2. Dividend harvest: the upward bias is now removable.** Yahoo sweep of the
+1,490 survivors (~15 min, resumable journal): **914 payers / 464 non-paying /
+112 not-found (7.5 %)** — far better than the scoping's ~20 % (that figure
+covered the delisted tail; the $20 M floor filters it). 17,376 events; MSFT/
+XOM/O spot-checks exact. Harvested TTM yield ≈ **1.48 %/yr** across covered
+names — effectively all of the benchmark's ~1.5 %/yr — so the Gate-2
+differential's dividend bias shrinks to a disclosed **≤ ~0.1 %/yr** residual.
+"Yahoo now, Databento if earned" held; the purchase stays gated on lane
+graduation. Loader caveat recorded: Yahoo-nominal amounts share the as-traded
+basis with prices and SplitEvent factors, but never ratio against
+split-adjusted prices (SOXS reads 645 %/yr otherwise). Numbers appended to the
+pre-registration pre-bar-lock, the last legitimate moment.
+
+**3. Catch-up guard now checks the verdict leg.** Tonight's production gap
+(HK "up to date" with no chain deep-dive for the screened session) is closed:
+a lane is behind when the screen is stale **or** the newest screen run lacks a
+complete **chain** deep-dive; ad-hoc or crashed runs don't satisfy it; the log
+names the leg. Whole-chain catch-up kept — the screen re-run is idempotent
+(accrual dedups by `sessionDate`), and a deep-dive-only path would add a
+signal channel to a launchd job to save ~3 minutes. +8 tests (api **497** + 1
+skipped, tsc clean).
+
+**Tonight's HK intervention landed**: run 10 — 27/27 reports, 191 calls, 0
+failures, `chain` — and `ops:health` is HEALTHY on every job.
+
+Next: the vendor-screen loader + CLI (execution step 2 of the
+pre-registration, fast tier), then the design-half measurement locks the bar
+numerically. Standing: Track-B accrual (passive), Databento R1 baseline.
+
+---
+
 ## 2026-09-12 (P2/P3 over the liquid vendor universe: ALL 394 jumps accounted for — splits stop being a blocker) + Round-3 monitoring: the 20:30 catch-up fired clean on its first slot
 
 **P2/P3 detector run (the XNYS scoping session's go/no-go step), from the DB.**
