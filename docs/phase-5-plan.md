@@ -105,6 +105,42 @@ breadth or target **then**, while the sample is still unlabelled, rather than
 discover it in a decade. `daysNeeded` already rescales itself to the measured sd;
 the watch line exists so that rescaling is *seen* rather than inferred.
 
+**A5 — the candidate universe was corrected while unlabelled (2026-09-12).** The
+HSI half of `apps/api/data/universe.hk.json` had been compiled from a constituent
+list frozen at ~January 2026, so it carried the pre-2026-02-13 membership:
+**14 verified index members were missing** (incl. CATL `3750`, WuXi AppTec `2359`,
+China Resources Power `0836`, JD Logistics `2618`, CMOC `3993`, Chalco `2600`,
+J&T Express `1519`, Laopu Gold `6181`, Weichai Power `2338`, and the HSTECH names
+`0100` MiniMax, `2513` Z.AI, `1698` TME, `9863` Leapmotor, `9903` Iluvatar CoreX)
+and **4 names an official notice removes were still present** (Zhongsheng `0881`,
+HSI eff. 2026-03-09; Kingdee `0268` and Kingsoft `3888`, HSTECH eff. 2026-06-08;
+Tongcheng Travel `0780`, HSTECH eff. 2026-09-07). Universe **131 → 141**
+(+14 / −4); every added symbol probe-verified against Yahoo v8 before committing,
+the convention the 2026-09-02 HSCEI expansion set.
+
+**Why this is recorded here and not filed as a data fix: the universe is an input
+to H1 and to this lane's candidate pool.** Adding names changes what the screen
+ranks and therefore which verdicts enter H2's sample — a pre-registered change, not
+housekeeping. It is legitimate **only** because this lane has `labelled: 0`: no
+forward label has matured, so nothing could have selected it. Applied once labels
+exist it would be goalpost movement of exactly the kind §8 forbids, which is why the
+window is now explicitly closed — any further universe change is a new
+pre-registration.
+
+**Root cause, recorded so it does not recur.** The HSI half was taken from a
+Wikipedia constituent table that lists **85** names against its own stated **88**,
+so it silently omits members; the HSCEI half was pulled live from the hsi.com.hk
+feed and was current. `_meta` now forbids the Wikipedia table as an HSI source and
+names the factsheet + quarterly-review-notice path instead.
+
+**Effect on H2's arithmetic: none on the statistic, the bar, or the readiness
+rule.** Candidate breadth is still bounded by `topN` (40/lane). But HK's post-gate
+eligible set was ~25 (amendment A1), so this may raise HK's *realised* per-day
+breadth toward its 40-name cap — the direction A1 said the lane could not reach.
+Re-read the projection-watch line as usual. Three additions (`0100`, `2513`,
+`9903`) have < 252 sessions and will screen as `INSUFFICIENT_HISTORY` until roughly
+2027-01 — expected, not a defect.
+
 ## Why this round
 
 Phases 4 and 4b established that the **deterministic screen is not resolvable**

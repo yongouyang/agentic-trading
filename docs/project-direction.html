@@ -590,6 +590,11 @@
       <td>R1 declares "stored raw is split-adjusted" universal while <code>VendorBar</code> is as-traded by design; and the routing table drops "any paid source in v1" while the Databento archive is imported. <code>ops-hardening-plan</code> W4a also specifies a <code>status: "complete"</code> health query that the code has since tightened to <code>source: "chain"</code>.</td>
       <td><span class="pill p-part">LOW — DOC FIXES</span> three one-line corrections</td>
     </tr>
+    <tr>
+      <td><b>The HK universe was two quarterly reviews stale</b></td><td>P1, R1</td>
+      <td>The HSI half of <code>universe.hk.json</code> came from a constituent list frozen at ~Jan 2026 — a Wikipedia table that lists <b>85</b> names against its own stated <b>88</b>. It was missing <b>14 verified index members</b> (CATL, WuXi AppTec, China Resources Power, JD Logistics, CMOC, Chalco, J&amp;T Express, Laopu Gold, Weichai Power, MiniMax, Z.AI, TME, Leapmotor, Iluvatar CoreX) and still held <b>4 names official notices remove</b> (Zhongsheng, Kingdee, Kingsoft, Tongcheng Travel). Found while checking why "popular" tickers like <code>3750</code> were silently absent.</td>
+      <td><span class="pill p-ok">CLOSED 2026-09-12</span> universe 131 → 141 (+14 / −4), every addition probe-verified against Yahoo v8. Recorded as <b>phase-5 amendment A5</b>, not a data fix: the universe is an H1 input, so the change was legitimate only while <code>labelled: 0</code>. That window is now closed.</td>
+    </tr>
   </table>
 
   <div class="takeaway">

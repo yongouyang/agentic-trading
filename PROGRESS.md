@@ -5,6 +5,73 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (the HK universe was two quarterly reviews stale — 14 index members missing, 4 stale names held; fixed as a recorded pre-label amendment)
+
+Started from a question about "popular" HK tickers (`3750`, `3455`, `2840`, `1879`,
+`1609`, `2410`, `2150`, `753`, `800000`). Answering it split into three cases and
+then found a real defect.
+
+**The three benign cases, so they are not re-litigated:**
+
+- **`800000` is the Hang Seng Index in Futu/Moomoo's index namespace, not an HKEX
+  security code.** Yahoo's equivalent is **`^HSI`** (verified: INDEX/HKD/HKG); `^HSCE`
+  for HSCEI, and Yahoo carries no HSTECH symbol. It is absent from the universe by
+  design — `universe.hk.json` is the *tradeable instrument* set — and the HK market is
+  already covered as a benchmark through the ETF proxy **`2800.HK`** (Tracker Fund),
+  pinned at `backtest-screen.ts:471` as `indexSymbol: { US: "SPY", HK: "2800.HK" }`.
+- **Five tickers are in the universe and rejected by the screen**, which is the screen
+  working: `0700` Tencent, `0388` HKEX and `9618` JD on `BEARISH_ALIGNMENT`; `9988`
+  Alibaba on `DEEP_DRAWDOWN` (mdd252 −51.2 % vs a −50 % floor, failing by 1.2 pp);
+  `2840` SPDR Gold on `LOW_LIQUIDITY` (adv20 HK$68.2 M vs the HK$100 M floor). HK's
+  trend filter rejects first for 52 of 104 rejections on the 09-11 run.
+- **`3455` (INVESCO QQQ) is deliberately out** — a US-domiciled cross-listing with no
+  tax benefit (architecture §2 names it, and keeps `3195.HK` instead). `1879`/`1609`/
+  `2410`/`2150`/`753` are simply not constituents of HSI/HSCEI/HSTECH.
+
+**The defect.** The universe spec (phase-1-spec §1) is HSI + HSTECH + ETFs (HSCEI was a
+documented 09-02 add-on). The HSI half had been hand-compiled from a list frozen at
+~January 2026, so it carried the pre-2026-02-13 membership. Walking every constituent
+change from the last three reviews against the file exposed the asymmetry that made it
+visible: **the HSCEI additions from those same reviews were all present** (2423, 9660,
+3692, 9926 — that feed was pulled live on 09-02) while **every HSI addition was
+missing**.
+
+| | found |
+|---|---|
+| missing index members | **14** — 3750 CATL, 2359 WuXi AppTec, 0836 China Resources Power, 2618 JD Logistics, 3993 CMOC, 6181 Laopu Gold, 1519 J&T Express, 2600 Chalco, 2338 Weichai Power, 0100 MiniMax, 2513 Z.AI, 1698 TME, 9863 Leapmotor, 9903 Iluvatar CoreX |
+| stale names held | **4** — 0881 Zhongsheng (HSI, eff. 03-09), 0268 Kingdee + 3888 Kingsoft (HSTECH, eff. 06-08), 0780 Tongcheng Travel (HSTECH, eff. 09-07) |
+
+**Sources, in order of authority:** the HSI factsheet (data as at 31 Aug 2026 — the
+compile reference date) and the HSTECH/HSCEI factsheets, which are full lists; plus the
+official quarterly review notices of 2026-02-13, 2026-05-22 and 2026-08-21 for the names
+those factsheets' top-50 cut omits. **Root cause: the Wikipedia HSI table lists 85 names
+against its own stated 88** — the same class of stale source the 09-02 note had already
+flagged for HSCEI ("cross-checked against Wikipedia, Aug 2022"). `_meta` now forbids it
+and records the correct path.
+
+**Applied**: universe **131 → 141** (+14 / −4), each addition probed against Yahoo v8
+before committing (the convention the 09-02 HSCEI expansion set). Three additions
+(0100, 2513, 9903) have < 252 sessions and will screen as `INSUFFICIENT_HISTORY` until
+~2027-01 — expected. **Deliberately NOT removed**: 12 universe names that no available
+list attributes to an index (0004, 0017, 0083, 0144, 0151, 0293, 0522, 0772, 1199, 1833,
+2018, 2888) — the only list that would confirm them is the incomplete one, and deleting a
+legitimate constituent is the worse error. Recorded as OPEN in `_meta.maintenance`.
+
+**Governance.** The universe is an input to H1 and to Phase-5's candidate pool, so this is
+a pre-registered change, not housekeeping — and it is legitimate **only** because H2 has
+`labelled: 0`. Recorded as **phase-5 amendment A5** with that reasoning; the window is now
+explicitly closed, so any further universe change needs a new pre-registration. Same class
+as amendment A4's predecessor: the fix is cheap today and would be goalpost movement next
+month.
+
+**Next:** the scheduled 16:50 HKT chain picks the 14 new names up automatically
+(upserts `Instrument` + 5y of bars). An acceptance screen was deliberately **not** run by
+hand — it would create a ScreenRun with no chain deep-dive and so trigger a full HK
+deep-dive on the next catch-up (~40 names of token spend) for no verification benefit,
+since all 14 were already probe-verified. Say the word if you want that run anyway.
+
+---
+
 ## 2026-09-12 (A3 decided: the target IC is ratified as a knowing departure; the 0.03 cap is scoped; the sd projection is now watched)
 
 User decision on the audit's last open item, taken with the arithmetic on the table.

@@ -1,9 +1,10 @@
 {
   "_meta": {
-    "source": "Hang Seng Index, Hang Seng China Enterprises Index (HSCEI) and Hang Seng Tech Index constituents (hand-compiled from Hang Seng Indexes public constituent lists, 2026-09-01; HSCEI from the hsi.com.hk constituents feed, 2026-09-02) plus liquid HKEX-listed ETFs, including HK-domiciled US-index trackers.",
+    "source": "Hang Seng Index and Hang Seng Tech Index constituents (hsi.com.hk official factsheets, refreshed 2026-09-12), Hang Seng China Enterprises Index constituents (hsi.com.hk official factsheets), cross-checked against the hsi.com.hk quarterly index review notices of 2026-02-13, 2026-05-22 and 2026-08-21; plus liquid HKEX-listed ETFs, including HK-domiciled US-index trackers.",
     "compiled": "2026-09-01",
-    "note": "Refresh manually; index membership drift accepted in v1 (see docs/phase-1-spec.md §1). Stale symbols surface as GENUINELY_ABSENT at runtime.",
-    "maintenance": "2026-09-01: added 2888.HK Standard Chartered (HSI constituent missed in initial curation). 2026-09-02: added 9 HSCEI constituents not already covered via HSI/HS Tech (1288, 1658, 1801, 2057, 2328, 2423, 6160, 9926, 9987); source: hsi.com.hk HSCEI constituents feed retrieved 2026-09-02 (50 constituents, cross-checked against Wikipedia, Aug 2022 list); each probed against Yahoo v8 chart before adding."
+    "note": "Refresh manually; index membership drift is accepted in v1 and stale symbols surface as GENUINELY_ABSENT at runtime. Do NOT source the HSI half from a Wikipedia constituent table: the January-2026 table lists 85 names against its own stated 88, so it silently drops members. Read the official factsheets (top 50 by weight) plus the quarterly review notices for the rest, as the HSCEI feed already did.",
+    "maintenance": "2026-09-01: added 2888.HK Standard Chartered (HSI constituent missed in initial curation). 2026-09-02: added 9 HSCEI constituents not already covered via HSI/HS Tech (1288, 1658, 1801, 2057, 2328, 2423, 6160, 9926, 9987); source: hsi.com.hk HSCEI constituents feed retrieved 2026-09-02 (50 constituents). 2026-09-12: PRE-LABEL AMENDMENT (Phase-5 H2 had 0 matured labels). The HSI half had been compiled from a list frozen at ~Jan 2026, so it carried the pre-2026-02-13 membership. Added 14 verified index members: 3750 CATL and 2359 WuXi AppTec (HSI factsheet, top 50, 31 Aug 2026); 0836 China Resources Power and 2618 JD Logistics (HSI membership); 3993 CMOC and 6181 Laopu Gold (review eff. 2026-03-09); 1519 J&T Express and 2600 Chalco (eff. 2026-06-08); 2338 Weichai Power (eff. 2026-09-07); 0100 MiniMax, 2513 Z.AI, 1698 TME and 9863 Leapmotor (HSTECH factsheet, 31 Aug 2026); 9903 Iluvatar CoreX (HSTECH, eff. 2026-09-07). Removed 4 names an official notice shows are no longer members of any constituent index here: 0881 Zhongsheng (HSI, eff. 2026-03-09), 0268 Kingdee and 3888 Kingsoft (HSTECH, eff. 2026-06-08), 0780 Tongcheng Travel (HSTECH, eff. 2026-09-07). Universe 131 -> 141. Every added symbol was probed against Yahoo v8 chart before committing. OPEN: 12 universe names could not be attributed to any index list available in this pass (0004, 0017, 0083, 0144, 0151, 0293, 0522, 0772, 1199, 1833, 2018, 2888); they are RETAINED, because the only HSI list that includes them is incomplete and deleting a legitimate constituent is the worse error.",
+    "refreshed": "2026-09-12"
   },
   "symbols": [
     {
@@ -85,6 +86,12 @@
       "kind": "stock"
     },
     {
+      "symbol": "0100.HK",
+      "name": "MiniMax Group - W",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "0101.HK",
       "name": "Hang Lung Properties Ltd.",
       "currency": "HKD",
@@ -117,12 +124,6 @@
     {
       "symbol": "0267.HK",
       "name": "CITIC Ltd.",
-      "currency": "HKD",
-      "kind": "stock"
-    },
-    {
-      "symbol": "0268.HK",
-      "name": "Kingdee International Software Group Co. Ltd.",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -217,14 +218,14 @@
       "kind": "stock"
     },
     {
-      "symbol": "0780.HK",
-      "name": "Tongcheng Travel Holdings Ltd.",
+      "symbol": "0823.HK",
+      "name": "Link Real Estate Investment Trust",
       "currency": "HKD",
       "kind": "stock"
     },
     {
-      "symbol": "0823.HK",
-      "name": "Link Real Estate Investment Trust",
+      "symbol": "0836.HK",
+      "name": "China Resources Power Holdings Co. Ltd.",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -237,12 +238,6 @@
     {
       "symbol": "0868.HK",
       "name": "Xinyi Glass Holdings Ltd.",
-      "currency": "HKD",
-      "kind": "stock"
-    },
-    {
-      "symbol": "0881.HK",
-      "name": "Zhongsheng Group Holdings Ltd.",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -391,8 +386,20 @@
       "kind": "stock"
     },
     {
+      "symbol": "1519.HK",
+      "name": "J&T Global Express Ltd. - W",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "1658.HK",
       "name": "Postal Savings Bank of China Co. Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "1698.HK",
+      "name": "Tencent Music Entertainment Group - SW",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -499,6 +506,18 @@
       "kind": "stock"
     },
     {
+      "symbol": "2338.HK",
+      "name": "Weichai Power Co. Ltd. - H",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2359.HK",
+      "name": "WuXi AppTec Co. Ltd. - H",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "2382.HK",
       "name": "Sunny Optical Technology (Group) Co. Ltd.",
       "currency": "HKD",
@@ -513,6 +532,24 @@
     {
       "symbol": "2423.HK",
       "name": "KE Holdings Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2513.HK",
+      "name": "Z.AI - H",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2600.HK",
+      "name": "Aluminum Corporation of China Ltd. - H",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "2618.HK",
+      "name": "JD Logistics Inc.",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -661,8 +698,8 @@
       "kind": "stock"
     },
     {
-      "symbol": "3888.HK",
-      "name": "Kingsoft Corp. Ltd.",
+      "symbol": "3750.HK",
+      "name": "Contemporary Amperex Technology Co. Ltd. - H",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -679,8 +716,20 @@
       "kind": "stock"
     },
     {
+      "symbol": "3993.HK",
+      "name": "CMOC Group Ltd. - H",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "6160.HK",
       "name": "BeOne Medicines Ltd.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "6181.HK",
+      "name": "Laopu Gold Co. Ltd. - H",
       "currency": "HKD",
       "kind": "stock"
     },
@@ -739,6 +788,12 @@
       "kind": "stock"
     },
     {
+      "symbol": "9863.HK",
+      "name": "Zhejiang Leapmotor Technology Co. Ltd. - H",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
       "symbol": "9866.HK",
       "name": "NIO Inc.",
       "currency": "HKD",
@@ -753,6 +808,12 @@
     {
       "symbol": "9888.HK",
       "name": "Baidu Inc.",
+      "currency": "HKD",
+      "kind": "stock"
+    },
+    {
+      "symbol": "9903.HK",
+      "name": "Shanghai Iluvatar CoreX Semiconductor Co. Ltd. - H",
       "currency": "HKD",
       "kind": "stock"
     },

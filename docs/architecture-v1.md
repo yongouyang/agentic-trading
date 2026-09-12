@@ -39,7 +39,7 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
 | Cadence | **Daily after close** — installed **16:50 HKT** (HK) and **06:10 HKT** (post US close), plus a guarded 20:30 HKT catch-up slot (§5.1) |
 | LLM providers | Kimi (Moonshot) as workhorse; budget/open models (DeepSeek/Qwen) optional for cheap summarization. OpenAI-compatible client, swappable via env vars |
-| Universe | **Large/liquid only (~800 tickers)**: S&P 500 + Nasdaq 100 + ~50 major US ETFs; HSI + HS Tech constituents + liquid HK ETFs |
+| Universe | **Large/liquid only (~800 tickers)**: S&P 500 + Nasdaq 100 + ~50 major US ETFs; HSI + HS Tech constituents + liquid HK ETFs (HK 141 as of 2026-09-12 — see `universe.hk.json._meta` for the refresh and the HSI-source warning) |
 | Agent depth | **Lean pipeline** (~6–8 LLM calls/stock): News/Sentiment Analyst + Fundamentals Analyst → Bull vs Bear debate → structured verdict |
 | UI stack | Next.js (React) app + Nest.js API; TradingView lightweight-charts |
 
