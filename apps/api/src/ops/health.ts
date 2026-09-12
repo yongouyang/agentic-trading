@@ -150,26 +150,6 @@ function missedSlots(market: "HK" | "US", since: Date | null, now: Date): number
   return countDueSlots(LANE_CADENCE[market], since, now);
 }
 
-/**
- * Scheduled lane slots in an inclusive HKT date range, from the same cadence the
- * health check uses.
- *
- * Extracted for Phase 5 (`phase4c:accrual` / `verdict:validate`): a missing slot
- * is not just a stale report, it is a **lost observation** from a validation
- * sample that needs a fixed number of sessions. Supply and statistics are the
- * same question here, so they must not be counted two different ways.
- */
-export function scheduledSlotsBetween(market: "HK" | "US", fromDate: string, toDate: string): number {
-  const cadence = LANE_CADENCE[market];
-  const [fy, fm, fd] = fromDate.split("-").map(Number) as [number, number, number];
-  const [ty, tm, td] = toDate.split("-").map(Number) as [number, number, number];
-  let count = 0;
-  for (let t = Date.UTC(fy, fm - 1, fd); t <= Date.UTC(ty, tm - 1, td); t += 86_400_000) {
-    if (cadence.weekdays.includes(new Date(t).getUTCDay())) count++;
-  }
-  return count;
-}
-
 /** Newest `sentinel-<date>.json` / `f10-refresh-<date>.json` date in a dir. */
 function latestArtifactDate(dir: string, prefix: string): string | null {
   let names: string[] = [];

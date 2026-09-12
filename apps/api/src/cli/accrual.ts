@@ -20,7 +20,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { scheduledSlotsBetween } from "../ops/health.js";
 import { PrismaService } from "../prisma.service.js";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
@@ -42,10 +41,12 @@ export interface AccrualLane {
   market: "US" | "HK";
   /** Stored production runs after the cutoff — one lane-day observation each. */
   prospectiveSessions: number;
-  /** Slots the cadence says should have fired since the cutoff. */
+  /** Sessions the store holds after the cutoff — what should have been screened. */
   expectedSessions: number;
   /** expected − collected. Every one is a permanently lost observation, not just
-   *  a stale report: the validation sample needs a fixed number of sessions. */
+   *  a stale report: the validation sample needs a fixed number of sessions.
+   *  Note the sessions a lane's own slot count would suggest can differ: US runs
+   *  Tue-Sat but its SESSIONS are Mon-Fri, which is what this counts. */
   missedSessions: number;
   /** Of those, how many already have a full 20-session forward label. */
   labelled20: number;
@@ -207,8 +208,15 @@ export async function runAccrual(prisma: PrismaService): Promise<AccrualReport> 
     );
     // Supply vs expectation: the same cadence the health check uses, so a missed
     // slot is counted once and means the same thing in both places.
-    const today = hktDate(new Date());
-    const expectedSessions = scheduledSlotsBetween(market, PROSPECTIVE_FROM, today);
+    // Expected = sessions the STORE holds after the cutoff, so both sides count
+    // SESSIONS. Counting scheduler *slots* here instead produced a false alarm on
+    // the very first successful run: the US lane's Saturday 06:10 slot screens
+    // FRIDAY's session, so 09-12 expected 1 slot while the session it collected
+    // (09-11) belongs to the spent window and is correctly excluded — reporting
+    // "1 slot missed" for a run that worked. A session whose bars backfill but
+    // which was never screened still counts as expected and not collected, which
+    // is the miss this metric exists to show.
+    const expectedSessions = sessions.filter((d) => d > PROSPECTIVE_FROM).length;
     // A prospective session carries a 20d label once 20 lane sessions exist after it.
     const labelled20 = prospective.filter((d) => sessions.filter((s) => s > d).length >= 20).length;
     lanes.push(

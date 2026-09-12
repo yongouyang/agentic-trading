@@ -99,3 +99,39 @@ describe("accrual — surfaces", () => {
     expect(GATE1_BAR / GATE1_T).toBe(0.01);
   });
 });
+
+describe("accrual — the false 'missed' alarm that the first successful run exposed", () => {
+  it("counts SESSIONS on both sides, so a Saturday slot collecting Friday is not 'missed'", async () => {
+    // The real case: 2026-09-12 is a Saturday, so the US lane's Tue-Sat cadence
+    // expects a slot; but the session that run collected is Friday 09-11, which
+    // belongs to the spent window and is correctly excluded. Counting expected by
+    // slot and collected by session reported "0/1, 1 slot missed" for a run that
+    // worked perfectly. Both sides now count sessions the store actually holds.
+    const prisma = {
+      bar: {
+        findMany: async () => [{ date: "2026-09-11" }],
+      },
+      screenRun: {
+        findMany: async () => [{ runAt: new Date("2026-09-11T22:14:00Z"), sessionDate: "2026-09-11" }],
+      },
+    } as any;
+    const r = await runAccrual(prisma);
+    for (const l of r.lanes) {
+      expect(l.expectedSessions).toBe(0); // no session after the cutoff exists yet
+      expect(l.prospectiveSessions).toBe(0);
+      expect(l.missedSessions).toBe(0); // and therefore nothing is missing
+    }
+  });
+
+  it("still reports a genuine miss: a session in the store that was never screened", async () => {
+    const prisma = {
+      bar: { findMany: async () => [{ date: "2026-09-11" }, { date: "2026-09-14" }, { date: "2026-09-15" }] },
+      screenRun: { findMany: async () => [{ runAt: new Date("2026-09-11T22:14:00Z"), sessionDate: "2026-09-11" }] },
+    } as any;
+    const r = await runAccrual(prisma);
+    const us = r.lanes.find((l) => l.market === "US")!;
+    expect(us.expectedSessions).toBe(2); // 09-14 and 09-15 exist and are new
+    expect(us.prospectiveSessions).toBe(0);
+    expect(us.missedSessions).toBe(2); // both permanently lost
+  });
+});

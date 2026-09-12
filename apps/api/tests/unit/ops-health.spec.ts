@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { computeHealth, MISSED_RUN_GRACE_HOURS, scheduledSlotsBetween, type HealthReport } from "../../src/ops/health.js";
+import { computeHealth, MISSED_RUN_GRACE_HOURS, type HealthReport } from "../../src/ops/health.js";
 import { parseOpsHealthArgs, renderHealth, todayHkt, opsHealthArtifactPath, LOG_DIR } from "../../src/cli/ops-health.js";
 
 /** HKT instant as a Date (HKT = UTC+8, no DST since 1979). */
@@ -368,26 +368,5 @@ describe("ops-health CLI surface", () => {
 
   it("grace is 6h and runs are alert-free inside it", () => {
     expect(MISSED_RUN_GRACE_HOURS).toBe(6);
-  });
-});
-
-describe("scheduledSlotsBetween — the supply side of the validation sample", () => {
-  it("counts the lane's cadence weekdays inclusively", () => {
-    // US runs Tue–Sat, HK Mon–Fri. 2026-09-12 is a Saturday, 09-13 a Sunday.
-    expect(scheduledSlotsBetween("US", "2026-09-12", "2026-09-18")).toBe(5); // Sat, Tue, Wed, Thu, Fri
-    expect(scheduledSlotsBetween("HK", "2026-09-12", "2026-09-18")).toBe(5); // Mon–Fri
-    expect(scheduledSlotsBetween("HK", "2026-09-12", "2026-09-13")).toBe(0); // weekend
-    expect(scheduledSlotsBetween("US", "2026-09-13", "2026-09-13")).toBe(0); // Sunday
-  });
-
-  it("is empty when the range runs backwards, rather than counting the whole span", () => {
-    // The live case on 2026-09-11: prospective-from is the next day.
-    expect(scheduledSlotsBetween("US", "2026-09-12", "2026-09-11")).toBe(0);
-  });
-
-  it("agrees with the daily lanes' own cadence over a full week each", () => {
-    // One week must contain each lane's slot count: US 5 (Tue-Sat), HK 5 (Mon-Fri).
-    expect(scheduledSlotsBetween("US", "2026-09-07", "2026-09-13")).toBe(5);
-    expect(scheduledSlotsBetween("HK", "2026-09-07", "2026-09-13")).toBe(5);
   });
 });

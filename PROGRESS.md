@@ -578,6 +578,84 @@ false positive.
 (the shipped detector reads the raw `.zst` archive via a pickle) and quarantine the
 27 gap-bearing series.
 
+## 2026-09-12 (W5 CLOSED — the first scheduled run fired, clean, end to end) — and a false alarm in my own accrual metric
+
+**W5's acceptance is satisfied at last.** `daily-us` fired on its own at
+**06:10:03 HKT** (not a catch-up after wake), ran all three legs, and exited 0:
+
+```
+== daily-chain us 2026-09-12 06:10:03 HKT ==
+== DATA INTEGRITY == US 2026-09-11 · 555/555 screened · 0 fetch-failed · DEGRADED: no
+  ... 40-name shortlist ...
+screen:daily exit=0
+deep-dive US run=9 screenRun=19 names=40 ok=40 failed=0 llmCalls=279 cacheHits=0 budget=800
+screen:deep-dive exit=0
+== OPS HEALTH == ... HEALTHY   HK: HEALTHY · US: HEALTHY
+ops:health exit=0
+daily-chain us worst-exit=0 (screen=0 deep-dive=0 health=0)
+```
+
+Everything the last two days changed showed up in production at once:
+
+- **The widened breadth works**: the shortlist is **40 names** (ranks 1–40), and the
+  deep-dive took **40 names / 279 calls / 0 failures** against a budget of 800.
+  `--top` is gone from the chain, so the CLI default (40) is the single source.
+- **`sessionDate` is populated** (screenRun 19 → 2026-09-11) and `dataThrough`
+  healed to 09-11 for both lanes; US had been a session behind since 09-10.
+- **The 07:15 scheduled `ops-health` fired too** and reported **HEALTHY** for both
+  lanes, `missed 0`.
+- **Round 1's f10 due-ness fix is visible in production**: `f10: HEALTHY · no
+  artifact yet — not yet due (first Sunday slot 09:17 HKT)` — where the old code
+  reported a permanent ALERT.
+
+**Token cost, measured rather than extrapolated**: 279 decisions / **624,085
+tokens** for 40 US names = **15,602 tokens per name**. My 18,000 estimate was 13 %
+**high**, so both lanes at 40/day is ~**1.25 M** tokens/day against my 1.44 M
+projection. Also confirmed by the log: `fundamentals-analyst` ran 37 times for 40
+names — the **3 ETFs** (XOP, USO, XBI) correctly skipped the fundamentals leg, as
+Phase 2 designed.
+
+**A false alarm in my own accrual metric, found because of this run.** It printed
+`US: 0/1 prospective lane-days collected — 1 slots missed` for a run that worked.
+Cause: it counted *expected* by scheduler slot (Saturday **is** a US slot) but
+*collected* by screened session (Friday 09-11, correctly outside the prospective
+window), so a perfect run looked like a miss. Fixed by counting **sessions on both
+sides** — expected is now the number of sessions the store holds after the cutoff.
+A session whose bars backfill but which was never screened still counts as expected
+and uncollected, which is the miss this metric exists to show. `scheduledSlotsBetween`
+became dead code and was **deleted** rather than left unused (the lesson from
+`excludedCounts`). Now reads `0/0`, no miss.
+
+**First confound measurement on the widened run** — the number Phase-5's amendment
+exists for: Spearman(screen rank, conviction) on run 9's 40 names = **0.174**,
+against 0.319 pooled across the earlier 10-name runs. Higher breadth gives a more
+reliable estimate, and it says the layer is *less* coupled to the screen than the
+small runs suggested — which strengthens the round's premise and makes the
+rank-controlled statistic more important, not less. Conviction spread [−0.45, 0.55],
+rating mix 17 buy / 21 neutral / 2 sell, 0 abstains.
+
+**Phase-5 sample state:** US 50 awaiting a 20d label (+10 late-excluded), HK 14
+(+14 late), pooled **64 awaiting / 24 excluded**. Readiness is still
+`insufficient_evidence` at 0/318 days, as expected.
+
+**First prospective observations:** the accrual counts sessions after 09-11, and no
+such US/HK session has been collected yet. HK's next slot is **Mon 09-14 16:50**
+(screening 09-14); US's next is **Tue 09-15 06:10** (the Tue–Sat cadence skips Sun
+and Mon, screening Mon 09-14). Those are the first two lane-days of the 4.7-year
+clock.
+
+**Tonight's 20:30 catch-up was verified to be a no-op**: the guard reports
+`nothing to do` — US and HK both "screened through 2026-09-11, store holds
+2026-09-11" — so the first scheduled execution of the catch-up job will log two
+skips, which proves the guarded path end to end for free.
+
+**One live consequence to fix:** HK's dashboard shows **run 8**, my 3-name smoke,
+because it is the newest *complete* deep-dive run for that lane — so the HK view is
+5 rows from the legacy 15-candidate screenRun 17, only 3 of which have verdicts,
+while the newer 27-candidate list (screenRun 18) is invisible. This is exactly the
+documented ad-hoc-run footgun. Monday's HK chain heals it; the real fix is to stop
+an ad-hoc run from becoming the lane's latest.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
