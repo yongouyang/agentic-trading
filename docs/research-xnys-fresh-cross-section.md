@@ -65,6 +65,11 @@ OHLCV only. Two **separate series under different vendor keys**, with no
 consolidated-tape reconciliation: **16,565 XNAS symbols / 11.20 M rows** and
 **5,333 XNYS symbols / 3.99 M rows**, 15.2 M rows total.
 
+*(Corrected 2026-09-12, re-measured from the DB: **16,765 XNAS distinct symbols
+/ 11,330,404 rows**, **5,333 XNYS / 3,993,374 rows** (XNYS was right), **15.32 M
+rows total**; plain (A–Z only) XNAS symbols are **16,647**, not 16,781. The
+§3 conclusion — two feeds, a loader must choose — is unchanged.)*
+
 **Our docs say "VendorBar: 16,777 symbols, 15.3 M rows".** That figure is a
 single-feed census and understates the archive: it is **~21.9k symbol-series across
 two vendor keys**, and ~354 symbols appear under *both* keys (1,844 pairs vs 1,490
@@ -73,7 +78,8 @@ concatenating.
 
 **Survivorship is genuinely clean** — the opposite of `Instrument`, which is a
 hand-compiled current index list. Evidence: 3,365 of 16,781 XNAS plain symbols
-(20 %) 404 on Yahoo, `symbol-listing-exchange.csv` matches only 11,875 as currently
+(20 %) *(Corrected 2026-09-12: 16,647 plain symbols by the DB recount above;
+3,365/16,647 is still ~20 %)* 404 on Yahoo, `symbol-listing-exchange.csv` matches only 11,875 as currently
 listed, and the manifest's tail shows series ending mid-2026 (`AAA … 142 bars, last
 2026-06-09`). A delisting tail is present by construction.
 

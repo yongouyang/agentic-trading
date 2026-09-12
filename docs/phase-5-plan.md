@@ -49,7 +49,7 @@ day's set, so effective N ≈ T/h and:
 |---|---|---|---|
 | 10 (today) | 5496 d ≈ **262 mo** | 1374 d ≈ **65 mo** | 611 d ≈ **29 mo** |
 | 20 | 2603 d ≈ 124 mo | 651 d ≈ 31 mo | 289 d ≈ 14 mo |
-| 40 | 1268 d ≈ 60 mo | 317 d ≈ **15 mo** | 141 d ≈ **7 mo** |
+| 40 | 1268 d ≈ 60 mo | 318 d ≈ **15 mo** | 141 d ≈ **7 mo** |
 | 120 | 416 d ≈ 20 mo | 104 d ≈ **5 mo** | 46 d ≈ 2 mo |
 
 **Two conclusions, and the second is the actionable one.**

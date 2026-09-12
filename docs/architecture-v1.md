@@ -305,7 +305,8 @@ same-provider for both lanes when it runs on US names).
   3. Technical screen (deterministic, quant-core):
        trend structure (MA alignment, Day 3/18), momentum, volume
        confirmation, volatility/Sharpe bounds (Day 12)
-     → ranked shortlist, top ~10–15 per market
+     → ranked shortlist, top N per market (`SCREEN_PARAMS.topN` = 40 US / 40 HK
+       measurement breadth; the dashboard presents `displayTopN` = 10 US / 5 HK)
   4. Lean LLM deep-dive per candidate (~6–8 calls each):
        News/Sentiment Analyst + Fundamentals Analyst (parallel)
        → Bull vs Bear debate (2 rounds)
@@ -332,7 +333,7 @@ for debate + verdict.
 
 ### 5.1 Scheduling (launchd, installed 2026-09-06)
 
-Five user LaunchAgents (`scripts/launchd/`, installed into
+Six user LaunchAgents (`scripts/launchd/`, installed into
 `~/Library/LaunchAgents` by `scripts/launchd/install.sh`; stdout/stderr →
 `logs/` at the repo root). launchd, not cron, because macOS cron silently
 skips jobs missed while asleep; StartCalendarInterval catches up after wake.

@@ -500,7 +500,10 @@ first time.** That is the prize and the reason to do this at all.
 **The blocker is corporate actions.** `VendorBar` is **as-traded** and R1 means
 splits are never applied locally, so every split is a phantom jump. Measured:
 **247 of 1,844 liquid series carry a split-like jump** (±50 %/−40 % in one session)
-while only **39 of 1,490 survivors have any `SplitEvent` row at all** — and just
+while only **39 of 1,490 survivors have any `SplitEvent` row at all** *(Corrected
+2026-09-12: 39 is the reverse-split-only (factor < 1) count; **168 of 1,490**
+have any `SplitEvent` row. The conclusion is unchanged — the registry still
+covers a small minority of survivors)* — and just
 **5** of the registry's 2,666 reverse-split events are on picker names, so the
 registry was swept over a different population and says nothing about the 939 new
 ones. Dividends do not exist for this universe anywhere in the stack (no vendor CA
@@ -514,7 +517,8 @@ missing reverse split *guarantees* a name passes the trend gates. So the failure
 mode is a **confident false positive, not a noisy null**.
 
 **Two of our own docs were wrong:** the archive is **~21.9k symbol-series across two
-vendor keys** (16,565 XNAS + 5,333 XNYS), 15.2 M rows — not "16,777 symbols", which
+vendor keys** (16,565 XNAS + 5,333 XNYS), 15.2 M rows *(Corrected 2026-09-12:
+16,765 XNAS + 5,333 XNYS, 15.32 M rows — see research-xnys-fresh-cross-section.md)* — not "16,777 symbols", which
 was a single-feed census. Corrected, along with the note that ~354 symbols appear
 under *both* keys, so a loader must choose a feed rather than concatenate.
 
@@ -700,10 +704,10 @@ Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary
 lane, firewall); the XNYS/Databento universe as a **data project**; Databento R1
-baseline; the §7 `deepseek-v4-flash` doc correction.
+baseline.
 
 *Post-execution review note: an independent multi-model adversarial pass found 15
-further defects, three of them wrong numbers written into the paragraphs of
+further defects *(Corrected 2026-09-12: 16 — the round-2 list runs R1–R16)*, three of them wrong numbers written into the paragraphs of
 `docs/phase-4b-plan.md` that existed to correct wrong numbers (a dropped √years in
 Gate 2's t=2 threshold; a multiplicity figure that should have been 4.5 % and
 needed no correction at all; and a "unpassable bar" claim that is false). All 15

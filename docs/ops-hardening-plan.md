@@ -50,7 +50,9 @@ at 08:31:22 and no sleep until 21:29:01. No `node`/`tsx` crash report exists in
 run ever firing and HK never running.
 
 **Mitigating:** the `AgentDecision` hash log makes a post-crash rerun ~free (the
-40 calls replay at $0). R0 is about visibility and recovery, not token cost.
+40 calls replay at $0). *(Corrected 2026-09-12: measured false same-day — 0
+cache hits / 72 live calls on the rerun; see PROGRESS.md 2026-09-12.)* R0 is
+about visibility and recovery, not token cost.
 
 ## Scope
 

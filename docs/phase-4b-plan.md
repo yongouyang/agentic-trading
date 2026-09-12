@@ -43,7 +43,8 @@ a locked document is legitimate — but *visibly*, by the same rule that made
 
 The executed round was then reviewed adversarially by an independent
 multi-model pass. It confirmed the SE/interval arithmetic and the implemented
-code, and found **fifteen further defects** — several of them wrong numbers in
+code, and found **sixteen further defects** *(Corrected 2026-09-12: said "fifteen";
+the round-2 list below has 16 items, R1–R16)* — several of them wrong numbers in
 *this document*, in the paragraphs written to correct wrong numbers. They are
 recorded here rather than silently patched; the superseded text of the earlier
 round-2 edits is recoverable from commit `d6e558f`, and the pre-review locked
