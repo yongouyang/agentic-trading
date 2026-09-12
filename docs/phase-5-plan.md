@@ -20,6 +20,52 @@ Post-lock amendment (the review discipline of 4b applied to this plan): the
 **HK display decision** (below) landed in the same session and set
 `displayTopN.HK = 5`, which supersedes the plan's implicit "display 10" for HK.
 
+### Amendments of 2026-09-12 (pre-label — the verified `labelled` count is 0)
+
+Four things the plan did not state, added while no forward label exists so that no
+outcome could have informed them. No locked value is changed by any of them.
+
+**A1 — HK cannot supply 40 names, so the pooled projection overshoots.** HK's
+post-gate eligible breadth is ~25 (`docs/phase-4b-plan.md` Finding 4: 131 → 25),
+and the lane is in fact delivering ~2–3 verdicts per run (6 runs → 14 awaiting,
+14 late-excluded) against US's ~17 (3 runs → 50 awaiting, 10 late-excluded).
+`topN.HK = 40` therefore truncates a list that never reaches 40. The pooled row of
+the power table — which is what the "318 d ≈ 15 months" figure stands on — assumes
+40 per lane and is unreachable on the HK half. The correct reading is: **the pooled
+clock is bounded below by the US lane, and HK's contribution is ~25/day minus its
+own promptness losses.** This does not change the bar, the statistic, or the
+pooling decision; it changes the *stated* horizon, and it may not be papered over by
+a projection that assumes names the lane cannot supply.
+
+**A2 — measured slot supply is 56 %.** 5 of 9 expected slots per lane have fired
+since 2026-09-01, re-pricing readiness from 157 sessions at full supply to ~280
+sessions ≈ **13.3 months**, and Phase 4c's US screen clock from 1,194 to ~2,132
+sessions ≈ 8.4 y. Both clocks are quoted at measured supply from here on; the
+full-supply figures are projections, not schedules.
+
+**A3 — the target IC's provenance, stated plainly, because 4b set a rule for it.**
+`docs/phase-4b-plan.md` §"Methodology rule to carry forward" requires: *"Set a bar
+from a power calculation on a design subset, never from a plausible effect size."*
+Fork B does the inverse — it fixes `IC_target = 0.10` on product grounds ("roughly
+the smallest edge that would change which names you act on") and lets the clock
+follow. The plan's own gloss — "No magic threshold is invented" — is true of the
+*readiness* rule and not of `IC_target` itself. This is recorded as a **knowing
+departure from the stated rule**, not an oversight, and it is legitimate only
+because it was pre-registered before any label existed; it may not be re-set now
+that labels are accruing. If the cap in Phase 4c (0.03) is meant to scope H2 as
+well, that must be said explicitly rather than inferred — 0.10 sits 3.3× above it,
+and the two documents currently disagree by silence.
+
+**A4 — the readiness projection's SE depends on a formula 4b measured as failing.**
+Phase 4b Finding 1 measured the per-day `1/√(N−1)` approximation to be off by
+2.16× (US) and 1.31× (HK), which is why 4c caps its bar at 0.03 and measures its SE
+on a design half. Phase 5's power table and the entire breadth fork rest on that
+same approximation, with nothing absorbing the error until a measured SE exists.
+The readiness rule's insistence that *only a measured SE may authorise a decision*
+is the mitigation and it is the right one — but until enough days accrue to measure
+it, `daysNeeded` is a projection computed from a formula already known to be biased,
+and the run report must say so (it does: `seSource: "theoretical"`).
+
 ## Why this round
 
 Phases 4 and 4b established that the **deterministic screen is not resolvable**
@@ -109,13 +155,25 @@ accrued sample satisfies the power condition for a stated target effect:
 from the accrued series — never assumed — and until enough days exist to measure
 it, the projection uses the theoretical `1/√(N−1)` per-day SE and says so.
 
-**Verdict vocabulary** (reusing Phase 4b's D5 class, because the same distinction
-bites here):
-- `h2_holds` — IC ≥ target **and** NW t ≥ 2, at the readiness threshold.
-- `h2_falsified` — IC ≤ 0 with t ≤ −2, at the readiness threshold.
+**Verdict vocabulary — mapped onto the project's fixed five-class set.** Phase 4
+coined `h1_holds`/`h1_revised`; 4b introduced `insufficient_evidence`; this phase
+coined `h2_holds`/`h2_falsified`. Three vocabularies for one project is drift, so
+the H2 outputs are restated as the fixed classes
+(`docs/project-direction.html` §8, R4), with the phase-specific name kept as a
+reading aid rather than a second taxonomy:
+
+- `supported` (H2: `h2_holds`) — IC ≥ target **and** NW t ≥ 2, at the readiness
+  threshold.
+- `falsified` (H2: `h2_falsified`) — IC ≤ 0 with t ≤ −2, at the readiness
+  threshold.
 - `insufficient_evidence` — readiness not met, **or** met with the interval
-  spanning zero. This is the expected outcome for months and must be the *default*
-  reading, not a failure to explain.
+  spanning zero. The expected outcome for months; the *default* reading, not a
+  failure to explain.
+- `underpowered` — the design could not have detected the target at the breadth the
+  lane can actually supply, declared **before** any outcome is read. This is the
+  class HK is heading for under amendment A1 unless its breadth or its treatment
+  changes, and declaring it late is exactly what the class exists to prevent.
+- `inconclusive` — the 1.5× SE-stability guard tripped (below).
 
 **SE-stability guard** (inherited from Phase-4b D6, where the cross-sectional SE
 factor proved unstable): if the second half's realized per-day SE exceeds the

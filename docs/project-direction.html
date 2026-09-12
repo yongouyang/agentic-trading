@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Objective &amp; Direction — agentic-trading North Star</title>
+<style>
+  :root {
+    --blue: #1e40af; --blue-light: #dbeafe; --blue-bg: #eff6ff;
+    --green: #15803d; --green-bg: #f0fdf4;
+    --orange: #c2410c; --orange-bg: #fff7ed;
+    --purple: #7e22ce; --purple-bg: #faf5ff;
+    --sky: #0369a1; --sky-bg: #f0f9ff;
+    --red: #b91c1c; --red-bg: #fef2f2;
+    --navy: #1e3a8a; --navy-bg: #eef2ff;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink); background: #f8fafc; line-height: 1.65;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; border-radius: 16px; padding: 40px 44px; margin-bottom: 28px;
+  }
+  header.hero .kicker { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  header.hero h1 { font-size: 34px; margin: 8px 0 10px; }
+  header.hero p { font-size: 16px; opacity: .92; max-width: 780px; }
+  header.hero .mission {
+    margin-top: 22px; padding: 16px 20px; border-radius: 10px;
+    background: rgba(255,255,255,.13); border-left: 4px solid rgba(255,255,255,.6);
+    font-size: 16.5px; max-width: 820px;
+  }
+  header.hero .src { margin-top: 16px; font-size: 12.5px; opacity: .72; }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 24px; color: var(--navy); margin-bottom: 6px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--blue-light);
+  }
+  h2 .num {
+    display: inline-block; background: var(--blue); color: #fff; border-radius: 8px;
+    width: 34px; height: 34px; line-height: 34px; text-align: center; font-size: 17px; margin-right: 10px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 22px; }
+  h3 { font-size: 17px; margin: 24px 0 10px; color: var(--ink); }
+
+  .quote {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 16px 20px;
+    font-size: 15.5px; color: var(--navy); margin: 18px 0;
+  }
+  .quote strong { font-size: 16px; }
+  .quote .cn { display: block; margin-top: 4px; font-size: 13.5px; opacity: .78; }
+
+  .takeaway {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff;
+    border-radius: var(--radius); padding: 16px 22px; margin-top: 24px; font-size: 15px;
+  }
+  .takeaway .star { margin-right: 8px; }
+
+  .warn {
+    background: var(--red-bg); border-left: 4px solid var(--red);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 20px;
+    font-size: 14.5px; color: #7f1d1d; margin: 18px 0;
+  }
+  .warn b { color: var(--red); }
+
+  .modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 20px 0; }
+  .mod {
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px;
+    background: #fff; border-top: 4px solid var(--accent, var(--blue));
+  }
+  .mod .tag { font-size: 12px; font-family: ui-monospace, Menlo, monospace; color: var(--accent, var(--blue)); }
+  .mod h4 { font-size: 16px; margin: 2px 0 8px; color: var(--accent, var(--blue)); }
+  .mod p { font-size: 13.5px; color: var(--muted); }
+  .mod ul { padding-left: 18px; font-size: 13.5px; color: var(--muted); }
+  .mod li { margin-bottom: 5px; }
+  .c-data { --accent: #1d4ed8; } .c-ind { --accent: #15803d; } .c-strat { --accent: #ea580c; }
+  .c-port { --accent: #7e22ce; } .c-broker { --accent: #0369a1; } .c-risk { --accent: #dc2626; }
+  .c-bt { --accent: #3730a3; } .c-agent { --accent: #0f766e; } .c-ops { --accent: #6d28d9; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  @media (max-width: 760px) { .compare { grid-template-columns: 1fr; } }
+  .panel { border-radius: var(--radius); padding: 20px; border: 1.5px solid var(--line); background: #fff; }
+  .panel.bad { border-top: 4px solid var(--red); background: #fffbfb; }
+  .panel.good { border-top: 4px solid var(--green); background: #fcfffd; }
+  .panel.neutral { border-top: 4px solid var(--blue); }
+  .panel.purple { border-top: 4px solid var(--purple); }
+  .panel h4 { font-size: 15.5px; margin-bottom: 12px; }
+  .panel.bad h4 { color: var(--red); }
+  .panel.good h4 { color: var(--green); }
+  .panel.neutral h4 { color: var(--blue); }
+  .panel.purple h4 { color: var(--purple); }
+  .panel ul { padding-left: 20px; font-size: 14px; }
+  .panel li { margin-bottom: 8px; }
+  .panel li b { color: var(--ink); }
+
+  .spec {
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 22px 24px; margin: 18px 0; border-left: 5px solid var(--accent, var(--blue));
+  }
+  .spec h3 { margin-top: 0; color: var(--accent, var(--blue)); font-size: 19px; }
+  .spec h3 .tag { font-family: ui-monospace, Menlo, monospace; font-size: 13px; opacity: .75; margin-right: 8px; }
+  .spec .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 12px; }
+  @media (max-width: 760px) { .spec .cols { grid-template-columns: 1fr; } }
+  .io-box { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 13.5px; }
+  .io-box b { display: block; margin-bottom: 6px; color: var(--accent, var(--blue)); }
+  .io-box ul { padding-left: 18px; }
+  .io-box li { margin-bottom: 5px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; margin: 12px 0; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--navy-bg); color: var(--navy); font-weight: 600; }
+  td.num { font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .srcline { font-size: 12.5px; color: var(--muted); margin-top: -4px; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 12.8px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 20px; padding: 2px 10px; white-space: nowrap; }
+  .p-ok   { background: var(--green-bg); color: var(--green); }
+  .p-no   { background: var(--red-bg); color: var(--red); }
+  .p-unk  { background: #f1f5f9; color: #475569; }
+  .p-part { background: var(--orange-bg); color: var(--orange); }
+  .p-prop { background: var(--purple-bg); color: var(--purple); }
+
+  .flow {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 20px 16px; margin: 18px 0;
+  }
+  .flow .step {
+    flex: 1 1 105px; min-width: 105px; text-align: center; padding: 12px 6px;
+    border-radius: 10px; background: var(--stepbg, var(--blue-bg));
+  }
+  .flow .step .icon { font-size: 20px; }
+  .flow .step .name { font-weight: 700; font-size: 13px; color: var(--accent, var(--blue)); }
+  .flow .step .st { font-size: 11px; color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--blue); font-size: 18px; padding: 0 4px; font-weight: 700; }
+
+  .northstar {
+    background: linear-gradient(135deg, #0f766e, #0891b2); color: #fff;
+    border-radius: var(--radius); padding: 22px 26px; margin: 20px 0;
+  }
+  .northstar .lbl { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: .82; }
+  .northstar .val { font-size: 21px; font-weight: 700; margin: 6px 0 8px; }
+  .northstar p { font-size: 14.5px; opacity: .95; }
+
+  .appendix { font-size: 13.5px; }
+  .appendix ul { padding-left: 20px; }
+  .appendix li { margin-bottom: 6px; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="kicker">agentic-trading · North Star</div>
+  <h1>Objective &amp; Direction</h1>
+  <p>The charter for this project: what it is for, what it is not, the principles it operates on, where it actually stands after six months of building, and the staged direction it heads toward next — each stage entered and exited by a pre-registered gate.</p>
+  <div class="mission">
+    <b>Mission.</b> Replace ad-hoc stock picking with a system that <b>finds</b> candidates, <b>manages</b> risk, <b>executes</b> with discipline, and <b>improves only on evidence</b> — so that every claim this project makes about an edge is one it has tried, and failed, to falsify first.
+  </div>
+  <div class="src">Reconciled against the built system: <code>docs/architecture-v1.md</code>, <code>docs/phase-0…5-plan.md</code>, <code>PROGRESS.md</code> · 2026-09-12</div>
+</header>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">1</span>What this is, and what it is not</h2>
+  <p class="subtitle">Scope discipline first — every later claim depends on it</p>
+
+  <div class="quote">
+    <strong>This is a personal research instrument, not a product, not a fund, not a broker.</strong>
+    <span class="cn">它是一个人的研究工具：每天跑，出清单，带证据和风险；下单的手是人。</span>
+  </div>
+
+  <div class="compare">
+    <div class="panel good">
+      <h4>It is</h4>
+      <ul>
+        <li><b>An agent-assisted stock picker.</b> A daily pipeline that screens a liquid universe, deep-dives the survivors with an LLM, and emits a ranked watchlist with evidence and named risks.<br><span class="srcline">architecture-v1 §1</span></li>
+        <li><b>Two lanes only:</b> HK and US stocks/ETFs. US exposure in the HK lane goes through HK-domiciled index trackers to avoid US estate tax.<br><span class="srcline">architecture-v1 §2, §6</span></li>
+        <li><b>Manual trading.</b> The output is read by a human who places the orders.<br><span class="srcline">architecture-v1 §9</span></li>
+        <li><b>A measurement machine that happens to trade.</b> The distinguishing asset is the ability to <i>decide</i>, not the daily list.</li>
+      </ul>
+    </div>
+    <div class="panel bad">
+      <h4>It is not</h4>
+      <ul>
+        <li><b>Not a dealer.</b> No broker integration and no order execution in v1. Position tracking exists only as <b>manual trade-journal attribution</b> (<code>journal:link</code> — a CSV in, a decision-versus-list report out; FIFO lots, open positions marked to market): analytics, not portfolio management, and no orders.<br><span class="srcline">architecture-v1 §9; <code>packages/quant-core/src/journal.ts</code></span></li>
+        <li><b>Not intraday.</b> Daily bars only; installed runs at <b>16:50 HKT</b> (HK) and <b>06:10 HKT</b> (US), plus a guarded <b>20:30 HKT</b> catch-up slot — six jobs, not two.<br><span class="srcline">architecture-v1 §5, §5.1; <code>scripts/launchd/*.plist</code></span></li>
+        <li><b>Not a black box.</b> Deterministic quant core is the trusted layer; <i>agents propose, the quant core disposes</i>. Every verdict is auditable to its exact prompt.</li>
+        <li><b>Not a promise of alpha.</b> Six months in, no edge is validated. §5 states what is actually known.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>How this document relates to the others</h3>
+  <table>
+    <tr><th>Document</th><th>Answers</th><th>Status</th></tr>
+    <tr><td><code>docs/project-direction.html</code> <b>(this)</b></td><td><b>Why</b> the project exists and <b>where</b> it heads — objective, principles, staged direction, kill criteria</td><td>Charter of intent</td></tr>
+    <tr><td><code>docs/architecture-v1.md</code></td><td><b>How</b> the system is built — data layer, pipeline, agent layer, UI, build order</td><td>Design of record</td></tr>
+    <tr><td><code>docs/phase-N-*.md</code></td><td>What is <b>locked</b> for the current validation round, with the forks recorded before any number exists</td><td>Pre-registrations</td></tr>
+    <tr><td><code>PROGRESS.md</code></td><td>What actually <b>happened</b>, newest first, with decisions and measured results</td><td>Session log</td></tr>
+  </table>
+  <p class="srcline">This document sets direction; it does not override a locked pre-registration. If they conflict, the pre-registration wins until this document is explicitly revised.</p>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">2</span>The objective</h2>
+  <p class="subtitle">The end-state, stated concretely enough to be falsified</p>
+
+  <h3>2.1 The system-level objective</h3>
+  <p>The operating objective: assemble the layers into one runnable system, each layer doing exactly one job and passing its output upward.</p>
+
+  <div class="quote">
+    Use data and rules to find opportunity, manage risk, and execute — then iterate continuously for stable long-run return.
+    <span class="cn">用数据和规则去发现机会、管理风险、执行交易，并通过持续迭代获得长期稳定的收益。</span>
+  </div>
+
+  <div class="modules">
+    <div class="mod c-val"><span class="tag">01</span><h4>Find opportunity</h4><p>Find what is worth buying — and prove it is not noise.</p></div>
+    <div class="mod c-risk"><span class="tag">02</span><h4>Manage risk</h4><p>Control drawdown and volatility; protect capital first.</p></div>
+    <div class="mod c-broker"><span class="tag">03</span><h4>Execute</h4><p>Discipline, cost-awareness, no emotion.</p></div>
+    <div class="mod c-ops"><span class="tag">04</span><h4>Iterate on evidence</h4><p>Verify, falsify, replace — never tune to the past.</p></div>
+  </div>
+
+  <h3>2.2 The concrete target — allocations, risk envelope, costs</h3>
+  <table>
+    <tr><th>Module</th><th>Setting</th><th>Where it lives today</th></tr>
+    <tr><td>Factor weights</td><td class="num">value 40% / quality 40% / momentum 20%</td><td>Trend/momentum + liquidity + volatility screen shipped; value/quality not wired</td></tr>
+    <tr><td>Rebalance</td><td class="num">monthly</td><td>Daily screen; no rebalance cadence in v1 (manual)</td></tr>
+    <tr><td>Portfolio size</td><td class="num">top 20, equal weight, single name ≤ 5%</td><td><span class="pill p-part">measure 40 / display 10 US · 5 HK</span></td></tr>
+    <tr><td>Sector cap</td><td class="num">≤ 30%</td><td><span class="pill p-unk">not enforced</span></td></tr>
+    <tr><td>Volatility cap</td><td class="num">≤ 18% annualised</td><td><span class="pill p-part">NOT AT 18 %</span> a <b>per-name eligibility reject</b> at 60 % (<code>volMax</code> 0.6) sits on the signal path — 40 US names rejected on 2026-09-11. The 18 % portfolio-level cap is unimplemented.</td></tr>
+    <tr><td>Max drawdown</td><td class="num">≤ 25% → de-risk or pause</td><td><span class="pill p-part">NOT AT 25 %</span> per-name reject at −50 % (<code>mddMin</code> −0.5, 16 US names 2026-09-11). There is <b>no account-level state gate anywhere</b> — <code>riskState</code> does not exist in the code.</td></tr>
+    <tr><td>Beta band</td><td class="num">0.8 – 1.2</td><td><span class="pill p-unk">not computed</span></td></tr>
+    <tr><td>Cash floor</td><td class="num">≥ 5%</td><td><span class="pill p-unk">not enforced</span></td></tr>
+    <tr><td>Costs</td><td class="num">fee 0.03%/side · slippage 0.02–0.10%</td><td>Cost model shipped (<code>packages/quant-core/src/portfolio.ts</code>)</td></tr>
+  </table>
+  <p class="srcline">These are the project's own agreed working settings — the target a complete strategy must hit, including the six questions it must be able to answer: hypothesis, factors, buy/sell rules, rebalance cadence, risk control, backtest validation. The right-hand column is the repo reality as of 2026-09-12.</p>
+
+  <h3>2.3 The objective that actually distinguishes this project</h3>
+  <div class="quote">
+    <strong>Build the machine that can tell you whether an edge exists — before risking money on the belief that it does.</strong>
+    A momentum or Sharpe ranking is reproducible by anyone. A pre-registered, falsifiable verdict about whether a signal works, with the bar locked before the numbers are seen, is the thing this project actually built.
+    <span class="cn">任何人的排名都能复制；这个项目真正造出来的，是「事先锁死标准、再看结果」的裁决能力。</span>
+  </div>
+
+  <div class="northstar">
+    <div class="lbl">North Star metric</div>
+    <div class="val">Time-to-verdict at pre-registered power — <code>days / daysNeeded</code></div>
+    <p>Not return. Not Sharpe. The project's success is measured by how fast it converts a hypothesis into a <b>verdict class</b> it can trust. Returns are evidence about the world; the verdict is evidence about our own claims about the world — and only the second one is fully in our control. Every direction choice in §6 is justified by whether it shortens time-to-verdict or lengthens it.</p>
+    <p style="margin-top:8px">Immediate consequence: at ~10 deep-dive verdicts per lane per day, a modest IC of 0.10 is ~65 months away; at 40 the Phase-5 power table says ~15 months for ~4× the tokens — and that arithmetic drove the measurement-breadth decision (<code>SCREEN_PARAMS.topN</code> 15 → 40).<br><span class="srcline" style="color:rgba(255,255,255,.75)">docs/phase-5-plan.md (power table)</span></p>
+    <p style="margin-top:8px"><b>Two corrections to that arithmetic, both measured.</b> (1) <b>Real slot supply is 56 %</b> — 5 of 9 expected slots per lane since 2026-09-01 — which re-prices the Phase-5 clock to ~280 sessions ≈ <b>13.3 months</b> and Phase 4c's US lane from 1,194 to ~2,132 sessions ≈ <b>8.4 years</b>. (2) <b>HK cannot supply 40 names.</b> Its post-gate eligible breadth is ~25, and the lane is actually delivering ~2–3 verdicts per run (6 runs → 14 awaiting, 14 late-excluded) against US's ~17 per run. The pooled 40/lane projection is therefore unreachable on the HK half — breadth is a real constraint, not just a token budget.<br><span class="srcline" style="color:rgba(255,255,255,.75)">PROGRESS 2026-09-11/12; <code>apps/api/reports/verdict-2026-09-12.json</code></span></p>
+  </div>
+
+  <h3>2.4 Success defined in three levels — and which one is actually met</h3>
+  <table>
+    <tr><th>Level</th><th>Claim</th><th>Status 2026-09-12</th></tr>
+    <tr><td><b>L1 — It runs</b></td><td>The pipeline runs daily, unattended, on two lanes, with visible failure modes</td><td><span class="pill p-ok">MET</span> six launchd jobs, <code>ops:health</code> HEALTHY on every job</td></tr>
+    <tr><td><b>L2 — It can decide</b></td><td>Hypotheses are pre-registered, bars are locked pre-outcome, verdicts are emitted in a fixed vocabulary</td><td><span class="pill p-part">IN PROGRESS</span> machinery built and exercised once; no verdict on the differentiator yet</td></tr>
+    <tr><td><b>L3 — It makes money</b></td><td>Some layer shows a validated edge that survives costs, live, in real capital</td><td><span class="pill p-no">NOT PROVEN</span> and not close — §5</td></tr>
+  </table>
+  <p class="srcline">L3 is the goal. L1 and L2 are the preconditions, and L2 is the one this project chose to build rather than skip.</p>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">3</span>Operating principles</h2>
+  <p class="subtitle">Each principle with the measured bill for having ignored it</p>
+
+  <div class="quote">
+    These are the principles this project operates on, and they are held to the same standard as everything else: where a principle bit hard, the bill is recorded in the last column. A principle you have not yet paid for is still just a slogan.
+  </div>
+
+  <table>
+    <tr><th>Principle</th><th>What it demands</th><th>What it cost here when tested</th></tr>
+    <tr>
+      <td><b>A strategy is a hypothesis</b></td>
+      <td>Understand the market first, translate it into executable rules, then validate — and be able to say <i>why</i> you make money.</td>
+      <td>H1 was written as a hypothesis with a numeric bar and tested as shipped. It came back <code>insufficient_evidence</code> rather than being quietly deleted.</td>
+    </tr>
+    <tr>
+      <td><b>Look-ahead bias is the deadliest sin</b></td>
+      <td>Point-in-time replay only; a signal may use nothing the decision moment did not have.</td>
+      <td>The promptness gate found the production pipeline was producing late verdicts — first measured as <b>24 of 45 (53 %)</b>, now <b>24 of 88 (27 %)</b> as the sample grows. A Sunday catch-up was judging Friday's session with weekend news. All were excluded <i>before</i> any forward label existed.<br><span class="srcline">docs/phase-5-plan.md, amendment 2; PROGRESS 2026-09-12</span></td>
+    </tr>
+    <tr>
+      <td><b>Costs decide</b></td>
+      <td>Fees and slippage are part of the strategy, not a footnote; high turnover is a strategy with a hole in it.</td>
+      <td>HK turnover 26.1× against <b>23 bp per side</b> ≈ <b>6.0 %/yr drag</b> — most of HK's −27 pp differential on its own. US: 30.9× at 5 bp ≈ 1.5 %/yr. An earlier version quoted the 46 bp round trip against turnover, which double-counts; the per-side convention is the corrected one.<br><span class="srcline">architecture-v1 §9; phase-4b-plan.md</span></td>
+    </tr>
+    <tr>
+      <td><b>Prefer plateaus to peaks</b></td>
+      <td>Seek stable regions, not historical optima; simple, stable, explainable beats optimal.</td>
+      <td>The nine-combo weight sweep is a smooth monotone plateau with no isolated spike — and the shipped weights rank 5/9 (US), 6/9 (HK). <b>It may not be used to change the parameters</b> without a new pre-registered test.</td>
+    </tr>
+    <tr>
+      <td><b>Stability &gt; a single high return</b></td>
+      <td>A factor worthy of research is stable across time, not strong once.</td>
+      <td>US IC was +0.0185 / +0.0316 / +0.0343 in 2023/24/25 but −0.0469 in 2022 and −0.0208 in 2026 — regime-dependent. That is the honest shape of the evidence.</td>
+    </tr>
+    <tr>
+      <td><b>Survive first, profit second</b></td>
+      <td>Three-layer risk control: per-trade risk, position limits, account-level brake. The risk model sets <i>state</i>, not signal.</td>
+      <td>Cost model and equity/drawdown metrics shipped. Live risk control is <b>per-name eligibility rejects on the signal path</b> (<code>volMax</code> 0.6, <code>mddMin</code> −0.5), not state: there is no account-level brake in the code. <b>This is the largest gap between principle and practice.</b></td>
+    </tr>
+    <tr>
+      <td><b>Diversification is about correlation</b></td>
+      <td>More strategies ≠ better diversification; weight determines risk exposure; concentration is the hidden killer.</td>
+      <td>Lane breadth is the binding constraint on evidence: post-gate eligible breadth is 180 (US) and 25 (HK) — and the trend filter, not liquidity, rejects first for 81.2 % of US rejections.</td>
+    </tr>
+    <tr>
+      <td><b>One variable at a time, decided in advance</b></td>
+      <td>Nuisance parameters may shape <i>design</i>; they may never set a bar.</td>
+      <td>Codified as an explicit firewall on the spent window (Phase 4c). The 0.02 Gate-1 bar's own power floor (US 0.0298 / HK 0.0493) exceeds the bar — a calibration defect found and relabelled, not re-barred.</td>
+    </tr>
+  </table>
+
+  <div class="warn">
+    <b>One more principle, earned here rather than inherited:</b> a descriptive number is not evidence. A top-N-vs-rest spread of +0.83 % at 20d on 60 % positive days was originally called "economically meaningful"; it is a point estimate with no interval, and 60 % over ~49 effectively independent days is a z of about 1.4. It was <b>retracted as stated</b>. This is now the standard applied to everything in the repo.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">4</span>The eight layers — plus the two this project added</h2>
+  <p class="subtitle">The layer model mapped to this repository, with the two project-specific layers it does not cover</p>
+
+  <div class="flow">
+    <div class="step" style="--accent:#1d4ed8"><div class="icon">🗄️</div><div class="name">L1 Data</div><div class="st">shipped</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#15803d"><div class="icon">🧮</div><div class="name">L2 Factors</div><div class="st">shipped</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#0f766e"><div class="icon">🧩</div><div class="name">L3 Model</div><div class="st">shipped</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#ea580c"><div class="icon">🎯</div><div class="name">L4 Strategy</div><div class="st">unvalidated</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#7e22ce"><div class="icon">⚖️</div><div class="name">L5 Portfolio</div><div class="st">partly falsified</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#dc2626"><div class="icon">🛡️</div><div class="name">L6 Risk</div><div class="st">designed</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#0369a1"><div class="icon">🏦</div><div class="name">L7 Broker</div><div class="st">out of v1</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="--accent:#3730a3"><div class="icon">📈</div><div class="name">L8 Performance</div><div class="st">shipped</div></div>
+  </div>
+
+  <table>
+    <tr><th>Layer</th><th>Job</th><th>Repo artifact</th><th>Status</th></tr>
+    <tr>
+      <td><b>L1 Market Data</b></td>
+      <td>Collect the raw material; raw OHLCV + corporate actions, adjusted series derived locally</td>
+      <td><code>apps/api/src/market-data</code>, <code>quant-core/adjustment.ts</code>, <code>calendars.ts</code>; Prisma <code>Bar</code>, <code>CorporateAction</code>, <code>VendorBar</code>, <code>SplitEvent</code></td>
+      <td><span class="pill p-ok">SHIPPED</span> Yahoo v8 primary; Databento vendor lane imported</td>
+    </tr>
+    <tr>
+      <td><b>L2 Factor Engine</b></td>
+      <td>Compute factors — indicators, momentum, volatility, drawdown</td>
+      <td><code>quant-core/indicators.ts</code> (incremental SMA), <code>data-quality.ts</code>, <code>ic.ts</code></td>
+      <td><span class="pill p-ok">SHIPPED</span> tested</td>
+    </tr>
+    <tr>
+      <td><b>L3 Factor Model</b></td>
+      <td>Combine factors into one comparable score, ranked</td>
+      <td><code>quant-core/screening.ts</code> — trend alignment, mom20/mom60, volume confirmation, volatility bounds</td>
+      <td><span class="pill p-ok">SHIPPED</span> weights frozen by pre-registration</td>
+    </tr>
+    <tr>
+      <td><b>L4 Strategy</b></td>
+      <td>When to buy, when to sell — the hypothesis in executable rules</td>
+      <td><code>runScreen</code> + <code>quant-core/replay.ts</code> (point-in-time replay), <code>backtest.ts</code></td>
+      <td><span class="pill p-no">NO VALIDATED EDGE</span> US IC +0.0145 (t 0.97), HK −0.0192 (t −0.78)</td>
+    </tr>
+    <tr>
+      <td><b>L5 Portfolio</b></td>
+      <td>What to buy, how much, how often — sizing and weights</td>
+      <td><code>quant-core/portfolio.ts</code>; <code>SCREEN_PARAMS.topN</code> 40/40 measurement, <code>displayTopN</code> 10/5</td>
+      <td><span class="pill p-no">HK RULE FALSIFIED</span> — but of a <b>15-name</b> portfolio (<code>PORTFOLIO_TOP_N</code>, an independent backtest constant), while the dashboard now displays 5 HK / 10 US. Re-testing at 5 is a new pre-registration. US: not falsified, lost to SPY.</td>
+    </tr>
+    <tr>
+      <td><b>L6 Risk Model</b></td>
+      <td>Volatility, drawdown, beta, exposure — intervene on state, not signal</td>
+      <td>Designed as a state machine; risk metrics exist as features (<code>vol60</code>, <code>mdd252</code>); no live state gate</td>
+      <td><span class="pill p-part">DESIGNED, NOT WIRED</span></td>
+    </tr>
+    <tr>
+      <td><b>L7 Broker / Execution</b></td>
+      <td>Turn intent into fills; fees, slippage, partial fills</td>
+      <td>Cost model in <code>portfolio.ts</code>; no broker integration (deliberate)</td>
+      <td><span class="pill p-unk">OUT OF V1</span> Futu/moomoo + IBKR are the later candidates</td>
+    </tr>
+    <tr>
+      <td><b>L8 Performance</b></td>
+      <td>Return, MDD, Sharpe — is the strategy worth continuing?</td>
+      <td><code>quant-core/backtest.ts</code>, <code>ic.ts</code>, <code>verdict-ic.ts</code>; <code>ops/health.ts</code>; dated artifacts + annotations</td>
+      <td><span class="pill p-ok">SHIPPED</span> Newey–West overlap correction, SE-stability guard</td>
+    </tr>
+    <tr>
+      <td><b>L9 Agent deep-dive</b><br><span class="srcline">project-specific</span></td>
+      <td>Beyond the layer model: news + fundamentals analysts → bull/bear debate → structured verdict with conviction ∈ [−1,1] and abstain tracked separately</td>
+      <td><code>packages/agents</code> (<code>pipeline.ts</code>, <code>verdict.ts</code>, <code>llm-client.ts</code>); Prisma <code>DeepDiveRun</code>, <code>DeepDiveReport</code>, <code>AgentDecision</code></td>
+      <td><span class="pill p-unk">NOT YET SCORED</span> — verdicts accrue nightly; <b>0 labelled</b>, so nothing is scorable yet (a 20d label must mature). Ad-hoc runs are now excluded from the sample. Readiness is reported as <code>days / daysNeeded</code> and the harness refuses to decide until a <i>measured</i> SE authorises it.</td>
+    </tr>
+    <tr>
+      <td><b>L10 Knowing</b><br><span class="srcline">project-specific</span></td>
+      <td>Beyond the layer model: the ability to trust the numbers — provenance, failure visibility, catch-up guarantees</td>
+      <td>six launchd jobs, <code>ops:health</code>, <code>sentinel.ts</code>, <code>ops-catchup.ts</code>, data-integrity + rule-provenance headers in the UI, <code>journal.ts</code></td>
+      <td><span class="pill p-ok">SHIPPED</span> HEALTHY, 497 + 1 skipped tests</td>
+    </tr>
+  </table>
+
+  <div class="takeaway">
+    <span class="star">★</span><b>The blueprint is complete and the machine runs. What is missing is not a layer — it is a verdict.</b>
+    Ten layers exist; zero of them carry a validated claim about an edge. That is precisely the state the rest of this document is about.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">5</span>Where we actually stand</h2>
+  <p class="subtitle">The evidence, stated with the numbers that produced it — including the ones that hurt</p>
+
+  <div class="warn">
+    <b>Read this section before believing anything else in this document.</b> The project's own standard is that a claim without an interval is not evidence. The same standard applies to the charter's optimism.
+  </div>
+
+  <h3>5.1 Scorecard</h3>
+  <table>
+    <tr><th>Claim</th><th>Measured</th><th>Verdict</th><th>Source</th></tr>
+    <tr>
+      <td>The screen ranks stocks with a usable edge</td>
+      <td class="num">US +0.0145 IC · t 0.97 · 983 d · breadth 180<br>HK −0.0192 IC · t −0.78 · 898 d · breadth 25</td>
+      <td><span class="pill p-unk">INSUFFICIENT EVIDENCE</span> both lanes. Not "no edge" — the 95 % intervals (−0.016…+0.045, −0.069…+0.030) contain both 0 <i>and</i> the pre-registered 0.02.</td>
+      <td><code>phase-4b-plan.md</code></td>
+    </tr>
+    <tr>
+      <td>The Gate-1 bar was correctly calibrated</td>
+      <td class="num">power floor US 0.0298 / HK 0.0493 vs bar 0.02</td>
+      <td><span class="pill p-no">DEFECT, CORRECTED</span> the floor exceeded the bar, so Gate 1 degenerated into a pure significance test. Re-labelled, not re-barred; fixing the calibration is a <i>new</i> pre-registration.</td>
+      <td><code>architecture-v1.md</code> §9</td>
+    </tr>
+    <tr>
+      <td>The portfolio rule adds value</td>
+      <td class="num">US +88.95 % vs EW benchmark +50.92 % vs <b>SPY +101.82 %</b><br>HK +12.65 % vs +40.10 %, −9.98 % at 2× costs</td>
+      <td><span class="pill p-no">FAILED IN HK</span> US survived 2× costs but <i>lost to simply holding the index</i>.</td>
+      <td><code>architecture-v1.md</code> §9</td>
+    </tr>
+    <tr>
+      <td>The LLM deep-dive layer adds information</td>
+      <td class="num">as of 2026-09-12: 10 runs · <b>87 awaiting</b> labels · 20 excluded as late · <b>8 excluded as ad-hoc</b> · readiness 0/157 d (controlled 0/159)<br>Spearman(screen rank, conviction) 0.319 on the 10-name runs, <b>0.174</b> on run 9's 40 names</td>
+      <td><span class="pill p-unk">NOT YET SCORED</span> No forward label has matured. The rank↔conviction correlation says the layer is <i>not</i> an echo of the screen — but shared variance means a raw IC alone could be rank leakage, which is why <code>IC | rank</code> decides H2.</td>
+      <td><code>phase-5-plan.md</code></td>
+    </tr>
+    <tr>
+      <td>Prospective accrual can rescue the screen question</td>
+      <td class="num">US 1,194 sessions at full supply → <b>~2,132 sessions ≈ 8.4 y</b> at the measured 56 % supply · HK ~18 y</td>
+      <td><span class="pill p-no">NO</span> Priced against measured slot supply. Both lanes are past the point where waiting is the answer at their breadth — which is why the vendor lane exists.</td>
+      <td><code>phase-4c-plan.md</code></td>
+    </tr>
+    <tr>
+      <td>Vendor data is clean enough to test on</td>
+      <td class="num">1,844 series / 1,490 symbols (939 unseen by the picker) · 394 jumps fully accounted: 152 registry + 2 split candidates + 240 repricing · dividends 92.5 % covered, TTM ≈ 1.48 %/yr</td>
+      <td><span class="pill p-ok">GO</span> residual unexplained-split risk ≈ 0; dividend bias shrinks to a disclosed ≤ ~0.1 %/yr.</td>
+      <td><code>phase-4c-plan.md</code>, PROGRESS 09-12</td>
+    </tr>
+    <tr>
+      <td>The screen was tested prospectively</td>
+      <td class="num"><code>SCREEN_PARAMS</code> designed Aug 2026 "by someone with knowledge of 2021–2026 market history"</td>
+      <td><span class="pill p-part">DISCLOSED LIMITATION</span> in-sample influence no split can remove — so Phase 4 was <i>not</i> a clean prospective test, and its FAIL is weaker evidence than it looks. Pre-registered as such.</td>
+      <td><code>phase-4-plan.md</code> §"What this test cannot claim"</td>
+    </tr>
+    <tr>
+      <td>The vendor universe is point-in-time clean</td>
+      <td class="num"><code>adv20</code> = mean(<code>close × volume</code>) over the last 20 sessions, computed <b>on 2026-09-11</b>, applied to a 2021-09→2026-09 window</td>
+      <td><span class="pill p-part">END-OF-SAMPLE FILTER, UNDISCLOSED</span> Survivorship is clean (delisting tail present) and venue distortion is disclosed — but liquidity is measured at the window's <i>end</i>, so a name illiquid in 2022 is admitted to 2022 on its 2026 volume. Phase 4 pre-registered the analogous limitation; the vendor scoping does not.</td>
+      <td><code>research-xnys-fresh-cross-section.md</code> §2, §4</td>
+    </tr>
+    <tr>
+      <td>The H2 sample contains only the intended verdicts</td>
+      <td class="num"><code>where: { market, status: "complete" }</code> — no <code>source</code> filter, though ad-hoc runs are labelled <code>source: "adhoc"</code></td>
+      <td><span class="pill p-no">OPEN DEFECT</span> Operator-selected <code>--symbol</code> runs can enter the sample that decides H2. Both the dashboard and <code>ops:health</code> were already fixed to require <code>source: "chain"</code>; the deciding statistic was not.</td>
+      <td><code>verdict-validate.ts:279</code>; <code>ops/health.ts:207</code></td>
+    </tr>
+    <tr>
+      <td>The operations layer is trustworthy</td>
+      <td class="num">6 launchd jobs · <code>ops:health</code> HEALTHY · api 521 + 1 skipped, quant-core 141, agents 43, web 107 · tsc clean</td>
+      <td><span class="pill p-ok">MET</span> the catch-up guard now also checks the verdict leg, not just the screen.</td>
+      <td>PROGRESS 09-12</td>
+    </tr>
+  </table>
+
+  <h3>5.2 The honest one-paragraph position</h3>
+  <div class="quote">
+    After roughly six months of building, this project has <b>no validated edge</b>, a <b>validated measurement machine</b>, and <b>one unmeasured differentiator</b>. That is not failure — it is the state that lets a future verdict be believed. The alternative, which most personal quant projects take, is to never build the measurement machine and therefore never learn anything except the backtest's opinion of itself.
+  </div>
+
+  <div class="compare">
+    <div class="panel bad">
+      <h4>What we know we do not have</h4>
+      <ul>
+        <li>A ranking rule with an edge that survives costs (L4).</li>
+        <li>A portfolio rule that beats holding the index (L5, US).</li>
+        <li>Any evidence at all about the LLM layer (L9).</li>
+        <li>A live risk gate that acts on drawdown (L6) — a principle held in design, not in code.</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h4>What we know we do have</h4>
+      <ul>
+        <li>The ability to replay production point-in-time and emit a verdict class with a Newey–West interval (L8).</li>
+        <li>Data clean enough that a verdict would mean something, in two independent feeds (L1).</li>
+        <li>An audit trail from every verdict back to the exact prompt and model that produced it (L9).</li>
+        <li>Operations that fail loudly and catch up after sleep (L10).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>5.3 Self-audit — where the project deviates from its own principles</h3>
+  <p class="subtitle" style="margin-bottom:12px">A three-pass read of <code>PROGRESS.md</code>, all twelve phase plans and the architecture doc against §3 and §8, run 2026-09-12. The point of publishing this is that a charter whose principles are never audited is decoration.</p>
+
+  <table>
+    <tr><th>Finding</th><th>Principle</th><th>Evidence</th><th>Severity / status</th></tr>
+    <tr>
+      <td><b>The deciding sample admits ad-hoc runs</b></td><td>P2, R2</td>
+      <td><code>verdict-validate.ts:279</code> selects <code>status: "complete"</code> with no <code>source</code> filter; <code>ops/health.ts:207</code> already requires <code>source: "chain"</code>.</td>
+      <td><span class="pill p-ok">CLOSED 2026-09-12</span> — a `source: "adhoc"` provenance gate now excludes and counts operator runs. On its first real run it caught <b>8 HK verdicts</b> that had been pooling as prospective observations.</td>
+    </tr>
+    <tr>
+      <td><b>Phase 5's bar was set from a plausible effect size</b></td><td>P8, R2</td>
+      <td>Phase 4b states the rule for the next pre-registration — "Set a bar from a power calculation on a design subset, never from a plausible effect size" — and Phase 5 Fork B does the inverse: fixes <code>IC_target = 0.10</code> and lets the clock follow.</td>
+      <td><span class="pill p-no">HIGH — NEEDS A DECISION</span> pre-registered before labels, so R1 holds</td>
+    </tr>
+    <tr>
+      <td><b>The verdict vocabulary drifted across phases</b></td><td>R4</td>
+      <td>Phase 4 used <code>h1_holds</code>/<code>h1_revised</code>; 4b introduced <code>insufficient_evidence</code>; Phase 5 coins <code>h2_holds</code>/<code>h2_falsified</code> — three vocabularies, while §8 asserts the set is fixed and reused.</td>
+      <td><span class="pill p-part">MEDIUM — LOW-COST FIX</span> map H2 outputs onto the five classes</td>
+    </tr>
+    <tr>
+      <td><b>The per-day SE approximation that failed was reused</b></td><td>R7</td>
+      <td>Phase 4b measured "the per-day approximation fails in both lanes" (2.16× US, 1.31× HK). Phase 4c's statistic revival and Phase 5's entire power table and breadth fork rest on that same 1/√(N−1) formula. Phase 4c absorbs it with the 0.03 cap and a design-half measurement; Phase 5 has nothing absorbing it for ~13 months.</td>
+      <td><span class="pill p-part">MEDIUM — OPEN</span> the readiness rule's "measured SE only" clause is the partial mitigation</td>
+    </tr>
+    <tr>
+      <td><b>A red coverage gate was shipped over twice</b></td><td>R11</td>
+      <td>"<code>test:coverage</code> failed at 75.05 % lines vs a 90 % <code>src/**</code> threshold, and had been red since the 3c ship" — reconciled by exempting <code>src/cli/**</code> and re-verifying the gate bites.</td>
+      <td><span class="pill p-ok">CLOSED</span> the gate now fails when it should</td>
+    </tr>
+    <tr>
+      <td><b>An operator run became the lane's authoritative view</b></td><td>R9, R13</td>
+      <td>HK's dashboard showed run 8 (a 3-name smoke) as the newest complete run. Fixed with <code>DeepDiveRun.source</code> (chain/adhoc) and picker labels — the same provenance class as the open H2 defect above.</td>
+      <td><span class="pill p-ok">CLOSED</span> in the UI only — the deciding statistic still leaks (row 1)</td>
+    </tr>
+    <tr>
+      <td><b>A retracted claim still stands un-annotated</b></td><td>R8</td>
+      <td>The 2026-09-10 entry heading reads "the pre-registered bar is <b>unpassable</b> as specified"; the later correction says that claim "is false". The retraction is published elsewhere, but that entry carries no inline <i>(Corrected …)</i> marker, unlike the practice used elsewhere in the same file.</td>
+      <td><span class="pill p-part">LOW — ONE LINE</span></td>
+    </tr>
+    <tr>
+      <td><b>Post-outcome relabelling moved in the claim's favour</b></td><td>R4, R5</td>
+      <td>The only verdict class changed after a print was <code>h1_revised</code> → <code>insufficient_evidence</code>. R5 fully sanctions it (detection floors 0.0298/0.0493 exceed the 0.02 bar, so a FAIL cannot falsify), but the direction of the single change favoured the hypothesis — worth naming, not hiding.</td>
+      <td><span class="pill p-unk">RECORDED</span> no action</td>
+    </tr>
+    <tr>
+      <td><b>No economic mechanism is written down</b></td><td>P1</td>
+      <td>P1 demands being able to say <i>why</i> you make money. No document states a mechanism for <code>mom20</code>/<code>mom60</code>/<code>sharpe252</code>/trend alignment — the hypothesis is statistical, not economic.</td>
+      <td><span class="pill p-part">MEDIUM</span> write one sentence per score component before the next pre-registration</td>
+    </tr>
+    <tr>
+      <td><b>Diversification is asserted but never measured</b></td><td>P7</td>
+      <td>The only correlation in the record is portfolio-vs-its-own-benchmark (ρ 0.717) — a proxy-quality number. No inter-lane, inter-name or inter-factor correlation exists, and the sector cap is unwired.</td>
+      <td><span class="pill p-part">MEDIUM</span> a correlation matrix over the persisted daily returns would settle it</td>
+    </tr>
+    <tr>
+      <td><b>Two architecture statements contradict each other</b></td><td>R13</td>
+      <td>R1 declares "stored raw is split-adjusted" universal while <code>VendorBar</code> is as-traded by design; and the routing table drops "any paid source in v1" while the Databento archive is imported. <code>ops-hardening-plan</code> W4a also specifies a <code>status: "complete"</code> health query that the code has since tightened to <code>source: "chain"</code>.</td>
+      <td><span class="pill p-part">LOW — DOC FIXES</span> three one-line corrections</td>
+    </tr>
+  </table>
+
+  <div class="takeaway">
+    <span class="star">★</span><b>No bar was ever loosened to reach <code>supported</code>, and no silent drop was found.</b> That is the audit's headline. The findings above are a provenance leak, a bar whose provenance is uncomfortably close to an effect size, a vocabulary drift, and gaps of omission — all findable precisely because the project keeps a log honest enough to contradict itself in public.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">6</span>Direction: what we head toward next</h2>
+  <p class="subtitle">Four stages, each with an entry gate and an exit gate — and no stage that can be entered by wanting it more</p>
+
+  <div class="quote">
+    The direction is not "find a winning strategy". It is: <b>spend the next period trying to kill the project's best remaining hypothesis, under pre-registered rules, and let the outcome choose the product.</b>
+    <span class="cn">方向不是「找到赚钱策略」，而是「用事先锁定的规则，去杀死自己最好的假设」，让结果决定产品形态。</span>
+  </div>
+
+  <div class="spec" style="--accent:#0369a1">
+    <h3><span class="tag">STAGE 1</span>Make the differentiator measurable <span class="pill p-part">NOW → ~13 MONTHS AT CURRENT SUPPLY</span></h3>
+    <p class="subtitle" style="margin-bottom:0">The only work that is allowed: work that shortens time-to-verdict or improves the read.</p>
+    <div class="cols">
+      <div class="io-box">
+        <b>Work in parallel</b>
+        <ul>
+          <li><b>Track A — vendor lane (deciding).</b> Build the loader, measure the design half, lock the bar numerically, spend the test half <b>once</b>. Pre-registered as H1-<i>generality</i>: fresh names on the spent regime — never "validated on fresh data".</li>
+          <li><b>Track B — prospective differential.</b> Keeps accruing in the background. No action, no decisions from it for years.</li>
+          <li><b>Phase 5 — H2, the LLM layer.</b> Deep-dive at 40 names/lane; <code>IC | rank</code> decides (not raw IC); readiness rule <code>SE(mean IC) ≤ IC_target / 2.487</code> at target 0.10; report <code>days / daysNeeded</code> until then.</li>
+          <li><b>Product work permitted:</b> anything that improves measurement or the read — breadth, cost tracking, the risk-model wiring (L6), UI provenance headers, and two <b>named defects from §5.3</b>: the missing <code>source: "chain"</code> filter on the deciding sample (do it now, while no label exists) and one written economic mechanism per score component.</li>
+          <li><b>Product work forbidden:</b> any change to factor weights, gate thresholds, universe rules, or the portfolio rule.</li>
+          <li><b>Open question Stage 1 must answer:</b> HK's post-gate breadth is ~25, so the 40/lane target is unreachable there and the pooled power arithmetic overshoots. Either accept a lower HK breadth and re-state the pooled projection honestly, or pre-register a different HK treatment — but it may not be papered over by a projection that assumes names the lane cannot supply.</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <b>Exit gate</b>
+        <ul>
+          <li>Track A emits a verdict class: <code>supported</code> · <code>falsified</code> · <code>insufficient_evidence</code> · <code>underpowered</code> · <code>inconclusive</code>.</li>
+          <li>Phase 5 reaches readiness for at least one lane, or the 1.5× SE-stability guard trips to <code>inconclusive</code>.</li>
+          <li><b>Cap discipline:</b> if the vendor lane's 0.8-power bar exceeds the 0.03 cap, it is declared <b>underpowered by design</b> — before any test-half number is computed. An underpowered lane cannot be rescued by quietly raising the claim.</li>
+        </ul>
+        <p style="margin-top:10px"><b>Why this shape:</b> the deep-dive is the part of the product that is not a commodity. A momentum/Sharpe ranking is reproducible by anyone; a grounded, risk-enumerating verdict is the thing this project built. The layer with zero evidence is the layer with the most value at stake.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec" style="--accent:#7e22ce">
+    <h3><span class="tag">STAGE 2</span>Let the verdict choose the product <span class="pill p-prop">GATED ON ≥ 1 VERDICT</span></h3>
+    <p class="subtitle" style="margin-bottom:0">The decision rule is written <b>now</b>, so that it cannot be written by disappointment or by hope later.</p>
+    <table>
+      <tr><th>Outcome</th><th>Reading</th><th>Pre-committed direction</th></tr>
+      <tr>
+        <td><code>h2_holds</code><br><span class="srcline">raw IC ≥ target, t ≥ 2 <b>and</b> IC&nbsp;|&nbsp;rank ≥ target, t ≥ 2</span></td>
+        <td>The deep-dive adds information beyond the screen</td>
+        <td><b>Promote it.</b> The screen becomes a pure filter with no alpha claim; the LLM verdict becomes the product; wire the Day-29 risk model as the position gate; then Stage 3.</td>
+      </tr>
+      <tr>
+        <td>raw IC holds, <b>IC&nbsp;|&nbsp;rank ≈ 0</b></td>
+        <td>The layer restates the screen — the raw IC was rank leakage</td>
+        <td><b>The agent layer is a communicator, not a signal.</b> Keep it as a research/explanation surface; do not count it as an edge; go to the "no edge" branch below.</td>
+      </tr>
+      <tr>
+        <td><code>falsified</code> on both the vendor lane and H2</td>
+        <td>Neither the ranking nor the verdict orders outcomes</td>
+        <td><b>Choose a different objective, not a different metric.</b> Three pre-approved options: (a) index-core plus this platform as a research and monitoring tool; (b) keep it as a discovery funnel with no alpha claim and no capital; (c) exactly one new pre-registered hypothesis, with a hard budget and a hard deadline (see K4).</td>
+      </tr>
+      <tr>
+        <td><code>insufficient_evidence</code> after readiness was met</td>
+        <td>The interval spans both 0 and the target</td>
+        <td><b>Do not extend the clock indefinitely.</b> This is the default reading and a legitimate resting state — but it triggers K4, not another round of patience.</td>
+      </tr>
+      <tr>
+        <td><code>underpowered</code> / <code>inconclusive</code></td>
+        <td>The design could not have detected the effect, or the regime shifted under it</td>
+        <td><b>Fix the design or stop asking the question.</b> Never re-bar after seeing outcomes. Never widen the universe purely to buy power.</td>
+      </tr>
+    </table>
+    <p class="srcline">The vocabulary and the leakage table are taken verbatim from <code>docs/phase-5-plan.md</code> (H2 amendments 1 and 2) and <code>docs/phase-4c-plan.md</code> (verdict classes).</p>
+  </div>
+
+  <div class="spec" style="--accent:#c2410c">
+    <h3><span class="tag">STAGE 3</span>Paper, then small real capital <span class="pill p-prop">GATED ON A SURVIVING VERDICT</span></h3>
+    <div class="cols">
+      <div class="io-box">
+        <b>Entry gate</b>
+        <ul>
+          <li>At least one layer carries a <code>supported</code> verdict at target power, <b>and</b> Gate-2 was not falsified at the costs actually paid.</li>
+          <li>The risk model (L6) is wired as a live state gate, not a feature: volatility ≤ 18 %, MDD ≤ 25 % → de-risk or pause, beta 0.8–1.2, cash ≥ 5 %, single name ≤ 5 %, sector ≤ 30 %.</li>
+          <li>Cost accounting is live and measured, not modelled: fee 0.03 %/side, slippage 0.02–0.10 %, because HK's falsification came from exactly this line.</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <b>Doing it in the right order</b>
+        <ul>
+          <li><b>Paper first</b> — same pipeline, same costs, no capital, minimum one full rebalance cycle.</li>
+          <li><b>Then small real capital</b>, manual execution, with the dashboard's provenance headers telling you which rules produced the list.</li>
+          <li><b>Attribution on every cycle:</b> which layer earned it, what the costs took, what the benchmark would have done instead. Losing to the index must be visible in the same view as winning.</li>
+          <li><b>Nothing about this stage involves leverage.</b> Leverage does not create skill.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec" style="--accent:#15803d">
+    <h3><span class="tag">STAGE 4</span>Automate execution — only if Stage 3 is boring <span class="pill p-unk">NOT BEFORE</span></h3>
+    <p>Broker integration (Futu/moomoo or IBKR, both covering HK and US) is explicitly out of v1 and should stay out until manual execution has been profitable, unremarkable, and fully attributable for several cycles. Automating an unvalidated edge multiplies the size of a mistake rather than the size of a return.</p>
+    <p class="srcline">architecture-v1 §2, §9 — broker choice recorded, integration deliberately deferred.</p>
+  </div>
+
+  <h3>What we will not do, at any stage</h3>
+  <div class="panel bad">
+    <ul>
+      <li><b>Not</b> tune <code>SCREEN_PARAMS</code> against a window a test has already printed. The plateau finding (shipped weights rank 5/9 US, 6/9 HK) exists precisely to make this temptation explicit.</li>
+      <li><b>Not</b> add new factors while the current ones remain unread — more hypotheses do not shorten time-to-verdict, they multiply it.</li>
+      <li><b>Not</b> re-bar after outcomes, loosen a cap, or raise a claim because a lane turned out underpowered.</li>
+      <li><b>Not</b> cite a descriptive spread as confirmation. No interval, no evidence.</li>
+      <li><b>Not</b> treat the vendor archive as fresh data. It is fresh <i>names</i> on a spent regime, and is pre-registered as that and nothing more.</li>
+      <li><b>Not</b> widen the <b>universe</b> to buy power — lowering a liquidity floor to admit more names is forbidden (that option was declined for HK: 18.1 y → ~8 y). Widening <b>measurement depth inside the existing universe</b> is a different act: Phase-5's 15 → 40 was user-locked, label-free, and disclosed. It is still a power purchase, and it is recorded as one rather than presented as a product decision.</li>
+      <li><b>Not</b> let the LLM layer touch authoritative state. Agents propose; the quant core disposes.</li>
+      <li><b>Not</b> start Stage 3 or 4 on the strength of a backtest alone.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">7</span>Decision gates &amp; kill criteria</h2>
+  <p class="subtitle">The part most personal projects never write down — and therefore never act on</p>
+
+  <div class="warn">
+    <b>Status: PROPOSED.</b> Unlike the phase plans, these kill criteria are not yet user-locked. They are drafted here so that "the project stops" becomes a decision with a trigger, rather than a mood that arrives gradually. Lock them or amend them — but before Stage 1's verdicts arrive, not after.
+  </div>
+
+  <table>
+    <tr><th>Gate</th><th>Trigger to enter</th><th>Exit / kill condition</th><th>Pre-committed action on failure</th></tr>
+    <tr>
+      <td><b>G1 — Vendor generality</b></td>
+      <td>Loader exists; design-half bar locked numerically and appended to the pre-registration</td>
+      <td>A verdict class is emitted from the test half, spent once</td>
+      <td><b>K1:</b> <code>falsified</code> or <code>underpowered</code> → the screen is retired as an alpha claim <b>permanently</b>, and no further tuning of it is permitted. It may survive only as a filter.</td>
+    </tr>
+    <tr>
+      <td><b>G2 — Deep-dive layer</b></td>
+      <td>Readiness met — only a <b>measured</b> SE may authorise a decision (<code>SE(mean IC) ≤ 0.10 / 2.487</code>); currently <b>0 / 157 days</b> (controlled 0 / 159) at breadth 40/lane</td>
+      <td><code>h2_holds</code> · <code>h2_falsified</code> · <code>insufficient_evidence</code> · SE guard trips</td>
+      <td><b>K2:</b> <code>h2_falsified</code>, or <code>inconclusive</code> twice under the 1.5× guard → the agent layer stops being a signal and becomes a research assistant. If <i>both</i> G1 and G2 fail, invoke <b>K5</b>.</td>
+    </tr>
+    <tr>
+      <td><b>G3 — Cost realism</b></td>
+      <td>Any layer claimed as supported</td>
+      <td>The claim survives 2× the modelled costs and the real turnover implied by the rule</td>
+      <td>If it dies at 2× costs, it dies. HK's −27 pp differential was mostly turnover × round trip — that is the base rate for this failure mode.</td>
+    </tr>
+    <tr>
+      <td><b>G4 — Paper trading</b></td>
+      <td>G1 or G2 supported <b>and</b> L6 wired as a live state gate</td>
+      <td>One full rebalance cycle with live costs, no capital at risk</td>
+      <td>Any mismatch between modelled and realised costs above the modelled slippage band stops the transition to real capital.</td>
+    </tr>
+    <tr>
+      <td><b>G5 — Real capital</b></td>
+      <td>G4 clean</td>
+      <td>Attribution shows the edge is the layer, not the market beta</td>
+      <td>Losing to the index over a full cycle is a stop-and-review, not a drawdown to sit through.</td>
+    </tr>
+    <tr>
+      <td><b>K3 — Budget</b></td>
+      <td>Continuous</td>
+      <td>Monthly token/compute spend stays inside the agreed cap</td>
+      <td>Exceeding the cap without a verdict emitted → stop spending and restructure the question. Cost is pennies-class and now measured rather than estimated: <b>7.7 calls and 15,602 tokens per name</b> (279 decisions / 624,085 tokens for 40 US names — an earlier 18k estimate was 13 % high). A discipline gate, not a financial one.</td>
+    </tr>
+    <tr>
+      <td><b>K4 — Time</b></td>
+      <td>Continuous</td>
+      <td>If neither layer has produced a verdict at target power within the pre-agreed horizon, the project is restructured rather than extended</td>
+      <td><b>Restructure the question, not the clock.</b> Default restructuring: reduce the objective to one layer, or switch to the index-core option. Rolling extensions are how a six-month project becomes a permanent hobby with no verdict.</td>
+    </tr>
+    <tr>
+      <td><b>K5 — Opportunity cost</b></td>
+      <td>Evaluated at every G1/G2 exit</td>
+      <td class="num">Is this platform's expected value greater than (a dull index portfolio) + (a written monthly watchlist)?</td>
+      <td>If not, <b>stop building and keep using it as a monitor.</b> This is a legitimate, successful end state — the system's value is that it can tell you this, which an unmeasured backtest never can.</td>
+    </tr>
+  </table>
+
+  <div class="takeaway">
+    <span class="star">★</span><b>A project without kill criteria is not ambitious, it is unfalsifiable.</b> The gates above exist so that the moment of honesty arrives on schedule rather than never.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">8</span>Working rules</h2>
+  <p class="subtitle">How this project makes claims — the discipline that is the actual product</p>
+
+  <div class="compare">
+    <div class="panel neutral">
+      <h4>Pre-registration</h4>
+      <ul>
+        <li>Forks are decided and written into a <code>phase-N-plan.md</code> <b>before</b> any outcome number exists. Dated amendments are allowed while no label exists; after labels, no.</li>
+        <li><b>Firewall:</b> the spent window's outcome statistics may inform <i>design</i> (nuisance parameters — SE, breadth, IR) but may never set, loosen, or justify a bar.</li>
+        <li><b>Caps exist to protect the claim:</b> the 0.03 bar cap and the 1.5× SE-stability guard both convert a weak design into an honest verdict class instead of an inflated one.</li>
+      </ul>
+    </div>
+    <div class="panel neutral">
+      <h4>Verdict vocabulary</h4>
+      <ul>
+        <li><code>supported</code> · <code>falsified</code> · <code>insufficient_evidence</code> · <code>underpowered</code> · <code>inconclusive</code> — fixed, and reused across rounds so results stay comparable.</li>
+        <li><b><code>insufficient_evidence</code> is the default reading, not a failure to explain.</b> Naming it correctly is the whole point of the vocabulary.</li>
+        <li>A FAIL cannot falsify an effect the lane could never have detected — that distinction is what separates <code>falsified</code> from <code>insufficient_evidence</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="panel purple">
+      <h4>Evidence hygiene</h4>
+      <ul>
+        <li><b>Point-in-time or it does not count.</b> The promptness gate is a permanent feature: a verdict formed later than the session it screened is not a prospective observation.</li>
+        <li><b>Descriptive is not evidence.</b> Point estimates need intervals; a t below 2 is suggestive at best, and saying so is the standard.</li>
+        <li><b>Publish the retraction.</b> Corrected errors stay in the record — the −27 pp HK figure, the "unpassable bar", the double-counted round trip, the "economically meaningful" spread. Corrections are the audit trail working.</li>
+        <li><b>Provenance in the read itself, and in anything that decides.</b> Every dashboard list carries a data-integrity header (screened/excluded/degraded, effective cutoff) and a rule-provenance line naming which unvalidated rules produced the ranking. The same pin applies to <b>deciding statistics</b>: a sample that admits operator-selected runs is a selection, not a sample — so the deep-dive sample requires <code>source: "chain"</code> and counts what it excludes. Learned the hard way twice, in the UI and then in the statistic.</li>
+      </ul>
+    </div>
+    <div class="panel purple">
+      <h4>Build discipline</h4>
+      <ul>
+        <li><b>Agents propose, the quant core disposes.</b> The LLM never touches authoritative state; structured outputs, pinned temperature, a persistent decision log keyed by prompt hash.</li>
+        <li><b>Fail visibly.</b> Typed outcomes rather than silent exclusion; two independent degraded triggers; <code>ops:health</code> as the post-condition of the two <b>daily chains</b> (the weekly sentinel and F10 jobs are covered only indirectly, through the artifact checks inside <code>computeHealth</code> — so "every job" would be an overstatement); catch-up that checks the verdict leg, not just the screen.</li>
+        <li><b>Model tiering:</b> deep tier with high thinking for design forks and measurement design; fast tier for execution once decisions are locked.<br><span class="srcline">AGENTS.md — switch models explicitly when the phase changes.</span></li>
+        <li><b>One writer, tested invariants.</b> Byte-deterministic prompt builders, W2's crashed-run invariant, 497 + 1 skipped tests.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="quote">
+    <strong>The rules are the asset.</strong> Any of the ten layers can be replaced — a better data feed, a different model, another factor. The one thing that must not be replaced is the habit of deciding what would count as evidence <i>before</i> looking, because that habit is what makes the next six months different from the last six.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="appendix">
+  <h2><span class="num">9</span>Appendix — source map</h2>
+  <p class="subtitle">Every factual claim in this document resolves to one of these</p>
+
+  <table>
+    <tr><th>Claim in this doc</th><th>Source</th></tr>
+    <tr><td>Mission, scope, manual trading, two lanes, tax reasoning, out-of-v1 list, agent layer design, UI status, daily pipeline, scheduling</td><td><code>docs/architecture-v1.md</code> §1, §2, §5, §5.1, §6, §7, §8, §9</td></tr>
+    <tr><td>Phase-4 measured IC, NW t, intervals, portfolio vs benchmark, cost-drag correction, gate calibration defect, weight sweep, retraction</td><td><code>docs/architecture-v1.md</code> §9; <code>docs/phase-4-plan.md</code>; <code>docs/phase-4b-plan.md</code></td></tr>
+    <tr><td>Vendor universe, split classification, dividend coverage and residual bias, bar derivation, cap, SE guard, verdict classes, firewall, execution order</td><td><code>docs/phase-4c-plan.md</code></td></tr>
+    <tr><td>H2 statistic, <code>IC | rank</code>, readiness rule, target IC 0.10, pooling, breadth 10 → 40, power table, promptness gate (24/45 excluded), SE-stability guard</td><td><code>docs/phase-5-plan.md</code></td></tr>
+    <tr><td>Layer model (§4), operating principles (§3), and the target allocations, risk caps and cost settings (§2.2)</td><td><b>This document</b> — the project's own working framework, not derived from an external reference</td></tr>
+    <tr><td>Ops status, test counts, catch-up guard fixing the verdict leg, dividend harvest results</td><td><code>PROGRESS.md</code> (2026-09-12 entries, and the log generally)</td></tr>
+    <tr><td>Model tiering policy</td><td><code>AGENTS.md</code></td></tr>
+    <tr><td>Slot supply 56 %, accrual re-pricing (8.4 y / 13.3 mo), the 15,602-tokens-per-name measurement, the 0.174 rank↔conviction figure</td><td><code>PROGRESS.md</code> 2026-09-11/12</td></tr>
+    <tr><td>§5.3 self-audit findings and the §5.1 open-defect row, including the missing <code>source</code> filter on the deciding sample</td><td><code>apps/api/src/cli/verdict-validate.ts</code>, <code>apps/api/src/ops/health.ts</code>, <code>packages/quant-core/src/screening.ts</code>, <code>journal.ts</code>, and a three-pass review of the log and plans run 2026-09-12</td></tr>
+    <tr><td>Kill criteria K1–K5, the Stage-2 decision table, the North Star metric, and the §5.3 self-audit</td><td><b>Proposed by this document</b> — not yet user-locked</td></tr>
+  </table>
+</section>
+
+<footer>
+  <b>agentic-trading · Objective &amp; Direction</b> · drafted 2026-09-12 · revised 2026-09-12 after a self-audit against the log, the phase plans and the code · status: <b>draft for user lock</b>.
+  Section 7's kill criteria are proposed and require an explicit decision; §5.3's two HIGH findings require one as well. Sections 1–6 describe the project as built and measured; if this document and a locked pre-registration disagree, the pre-registration wins until this document is revised.
+</footer>
+
+</div>
+</body>
+</html>

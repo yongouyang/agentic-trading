@@ -5,6 +5,57 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (charter written; a self-audit against it closed the ad-hoc provenance leak in the deciding statistic)
+
+**Charter.** `docs/project-direction.html` — objective, operating principles,
+the ten-layer blueprint, the measured position, and a four-stage direction with
+entry/exit gates plus proposed kill criteria K1–K5. Written from the built system,
+not from the source material: the principles are stated as this project's own and
+held to the same evidence standard as everything else (each carries the measured
+bill in its right-hand column).
+
+**A three-pass audit of the log, the twelve phase plans and the architecture doc
+against the charter found no loosened bar and no silent drop**, and eleven
+deviations worth recording. The two that mattered were acted on:
+
+1. **The deciding H2 sample was admitting ad-hoc runs.** `verdict:validate`
+   selected every `status: "complete"` `DeepDiveRun` and never looked at
+   `source`, while `ops/health.ts` had already been pinned to `source: "chain"`
+   after run 8 (a 3-name smoke) showed up as HK's authoritative view. A hand-picked
+   `--symbol` run scored as an observation is selection bias in the X variable.
+   Fixed with a provenance gate that **excludes and counts** (compared against
+   `"adhoc"` rather than `!== "chain"`, so the schema default and any pre-column
+   row still read as scheduled). First real run: **8 HK verdicts excluded** — they
+   had been pooling as prospective observations. `adhocExcluded` added to the
+   report and the rendered lines; +2 tests (api **521** + 1 skipped, tsc clean).
+   Pre-label, so legitimate by the project's own rule.
+2. **The charter's own numbers were stale** in five places — sample counts, the
+   token/name figure (measured 15,602, not ~18k), the "4.7 y" accrual (re-priced
+   to ~8.4 y at the measured 56 % slot supply), the schedule (installed 16:50 /
+   06:10, plus the 20:30 catch-up), and "no portfolio tracking" (manual
+   `journal:link` attribution exists). All corrected, and §5.3 now publishes the
+   audit's findings — including the two HIGH ones still open.
+
+**Doc corrections landed** (all pre-label, none touching a locked bar):
+`phase-4c-plan.md` gains the end-of-sample liquidity disclosure (the `adv20`
+floor is measured at the window's *end*, the same limitation class Phase 4
+pre-registered and the vendor scoping did not); `phase-5-plan.md` gains four
+dated amendments — HK cannot supply 40/lane so the pooled horizon overshoots,
+56 % measured slot supply, the `IC_target` provenance stated against 4b's own
+methodology rule, and the failed per-day SE approximation reused; its verdict
+vocabulary is mapped onto the fixed five-class set; `architecture-v1.md` gets
+four corrections (the out-of-v1 list, the two schedules, R1 scoped to the Yahoo
+store with `VendorBar` as the documented as-traded exception, and "any paid live
+feed" vs the one-off Databento purchase); `ops-hardening-plan.md` W4a gains the
+`source: "chain"` clause the code already enforces; and two superseded claims in
+this log now carry inline correction markers instead of standing un-annotated.
+
+**Next:** the `IC_target` provenance question is the one thing that needs a user
+decision (ratify 0.10 as a knowing departure from 4b's rule, or re-register);
+then vendor-lane design-half measurement → the bar locked numerically.
+
+---
+
 ## 2026-09-12 (vendor loader + CLI BUILT — pre-registration step 2; the test half is behind a firewall flag)
 
 Execution step 2 of `docs/phase-4c-plan.md`, fast tier. New
@@ -1041,6 +1092,19 @@ Built and ran the Phase-4 backtest (`packages/quant-core/src/{replay,ic,portfoli
 
 **Result: `h1_revised` on both lanes — H1 is not supported.**
 
+> ***(Corrected 2026-09-11, and the correction is the point of this entry.)***
+> The heading above and the class `h1_revised` are **superseded**: the phrase in
+> the heading, *"the pre-registered bar is unpassable as specified"*, is **false**.
+> The bar's power floor (US 0.0298, HK 0.0493) exceeds its own 0.02 magnitude
+> because it was calibrated against universe size (552/131) rather than the actual
+> post-gate **eligible** breadth (180/25) — so the bar is *passable* at IC 0.05
+> (US t 3.36, HK t 2.03), it simply degenerated into a pure significance test.
+> Phase 4b re-labelled both lanes **`insufficient_evidence`**, since a FAIL on a bar
+> the lane could never have detected cannot falsify the effect. The measured IC and
+> NW t below stand unchanged and are still the informative numbers; the verdict
+> word and the heading's claim do not. See `docs/phase-4b-plan.md` and
+> `2026-09-10.ANNOTATION.md`.
+
 | lane | mean 20d IC | NW t | days | breadth | power floor | Gate 1 | Gate 2 |
 |---|---|---|---|---|---|---|---|
 | US | **+0.0145** | 0.97 | 983 | 180 | 0.0298 | FAIL | not falsified |
@@ -1342,6 +1406,16 @@ gates (ranking power IC first, tradability sim second); tuning restricted to
 weights/topN/buffer-rank on an 81-combo coarse grid, gates fixed; success bar
 pre-registered before any run. Build order: quant-core `backtest` module →
 `backtest:screen` CLI → grid run + verdict.
+
+> ***(Superseded 2026-09-10 by the Phase-4 design lock.)*** The pre-lock design in
+> this entry — walk-forward folds and an 81-combo tuning grid as the *test* — did
+> not survive the lock: `docs/phase-4-plan.md` locked **Tuning: None** ("test the
+> shipped `SCREEN_PARAMS` as-is; the parameters *are* the hypothesis"), because the
+> whole OOS apparatus existed to control selection bias and with no tuning there is
+> no selection bias to control. The grid survives only as an explicitly
+> **descriptive** heatmap, barred from changing `SCREEN_PARAMS`. Tuning is deferred
+> to a separate pre-registered test, not cancelled. This entry is left as written
+> because it is a log; read it as the state of the design on 09-09, not on 09-10.
 
 **Next session**: user reviews/locks `docs/phase-4-plan.md` (esp. the
 success-bar thresholds and fold thinness), then execution = fast tier

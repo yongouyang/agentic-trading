@@ -37,7 +37,7 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 | Output | Interactive chat/session in a local web UI, with charts, tables, signals; plus a daily report view |
 | Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); either covers both markets for the future paper→live path |
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
-| Cadence | **Daily after close** — two runs: ~16:45 HKT (HK), ~06:00 HKT (post US close) |
+| Cadence | **Daily after close** — installed **16:50 HKT** (HK) and **06:10 HKT** (post US close), plus a guarded 20:30 HKT catch-up slot (§5.1) |
 | LLM providers | Kimi (Moonshot) as workhorse; budget/open models (DeepSeek/Qwen) optional for cheap summarization. OpenAI-compatible client, swappable via env vars |
 | Universe | **Large/liquid only (~800 tickers)**: S&P 500 + Nasdaq 100 + ~50 major US ETFs; HSI + HS Tech constituents + liquid HK ETFs |
 | Agent depth | **Lean pipeline** (~6–8 LLM calls/stock): News/Sentiment Analyst + Fundamentals Analyst → Bull vs Bear debate → structured verdict |
@@ -137,7 +137,9 @@ scale) — scans, screen scores, debate transcripts, verdicts, watchlists.
 
 Dropped as bulk fallbacks: **Alpha Vantage** (free tier ≈25 req/day — per-ticker
 rescue at best), **stooq** (PoW-gated, above), **TickDB** (no CA events, paid),
-and any paid source in v1. **tushare** stays excluded (key + credit points). The
+and any paid **live feed** in v1 (the Databento archive above is a one-off batch
+*purchase* — a backtest input, never a daily dependency, which is why it does not
+contradict this line). **tushare** stays excluded (key + credit points). The
 earlier "akshare (A-share scope excluded)" line was *wrong about scope* —
 measured 2026-09-02, akshare covers HK and US stocks and ETFs with history far
 deeper than Yahoo's; it is excluded because it is a Python wrapper (stack
@@ -193,6 +195,15 @@ HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
   only; if a future provider delivers split-unadjusted raw bars, that provider's
   loader must normalize before storage so the invariant "stored raw is
   split-adjusted" holds at the store boundary.
+
+  **Scope of that invariant (clarified 2026-09-12).** It binds the **Yahoo store**
+  (`Bar`). The vendor store is the documented exception: `VendorBar` holds
+  **as-traded** prices, because the Databento archive carries no corporate-action
+  columns and its reference endpoint is paywalled (§4.1), so its split factor is
+  applied at *read* time from the `SplitEvent` registry. The vendor store's
+  contract is therefore "as-traded **plus** a split registry", not "already
+  normalized" — and no code may ratio a vendor price against a split-adjusted one
+  (the same basis-mixing that produced the `SOXS` 645 %/yr artifact).
   No provider's convention is ever allowed into signal math; the series stays
   reproducible across provider history rewrites; dividend events are stored
   anyway for every lane that needs them; Phase 4 gets Day-17 total-return
@@ -295,7 +306,7 @@ same-provider for both lanes when it runs on US names).
 ## 5. Daily pipeline
 
 ```
-~16:45 HKT (HK close) / ~06:00 HKT (US close)
+16:50 HKT (HK close) / 06:10 HKT (US close)   ← installed times per §5.1
   1. Update **raw** OHLCV + corporate actions for ~800 tickers (Yahoo; rescue
      paths per §4.1) → re-derive the adjusted series locally (R1/R3)
   2. Data-quality gate (Day 17 checklist) → typed DataOutcome per ticker;
@@ -538,8 +549,20 @@ guarded LLM path (see status note above).*
 ## 9. Explicitly out of v1
 
 - Broker integration / order execution (manual trading)
-- Backtesting engine and portfolio tracking
 - Intraday/real-time data (daily bars only)
+
+*Carve-outs (2026-09-12).* Two entries were removed from this list because the code
+outgrew them, and the list is a scope claim rather than a history:
+
+- The **backtest engine** is no longer out of v1 — it shipped in Phase 4 (see the
+  status note below), which is why it is no longer a bullet here.
+- **"Portfolio tracking" excludes manual trade-journal attribution.** `journal:link`
+  (`packages/quant-core/src/journal.ts`) reads an operator-supplied CSV, matches
+  lots FIFO, marks open positions to market and reports each decision against the
+  list it came from. That is analytics over recorded trades — no orders, no broker,
+  no capital — so it does not open the execution line above. The distinction is
+  narrow and deliberate: the moment code can *place* something, it belongs back on
+  this list.
 
 **Phase 4 commitment:** per Days 15/23, the screening rules are a *hypothesis*.
 Once the picker has run for a while, backtest the screen itself and iterate —

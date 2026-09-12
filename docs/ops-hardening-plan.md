@@ -156,7 +156,12 @@ additive — an absent field renders exactly as today.
 **W4a shared module** `apps/api/src/ops/health.ts` — `computeHealth(prisma, now)`,
 pure over inputs, per lane (HK, US) plus the two weekly jobs:
 
-- newest **complete** `DeepDiveRun` (id, runAt) and newest `ScreenRun`
+- newest **complete** `DeepDiveRun` **with `source: "chain"`** (id, runAt), and
+  newest `ScreenRun`. The provenance clause is not optional: without it the newest
+  *complete* run can be an operator's `--symbol` smoke, which is exactly the defect
+  the 2026-09-12 review caught (health reported an ad-hoc run as HK's latest). The
+  shipped code pins it (`ops/health.ts`, `where: { market, status: "complete",
+  source: "chain" }`) — implement W4a to match, not to the earlier wording.
 - store `dataThrough` (W3b's query, reused)
 - `expectedRunsMissed`: **cadence-aware** — expected run-days derived from the
   plists (HK Mon–Fri, US Tue–Sat) at their scheduled local times, counted

@@ -65,6 +65,25 @@ already met:
 4. A symbol appearing under both vendor keys (≈ 354) is loaded from **one**
    feed (choose by bar count; record the choice) — never concatenated.
 
+**Carried limitation — the liquidity filter is end-of-sample** *(disclosed
+2026-09-12, pre-bar-lock; zero labels had matured, so no outcome informed this).*
+The `adv20 ≥ $20 M` gate is measured over the last 20 sessions as computed from
+`VendorBar` on 2026-09-12, then applied to a window that begins 2021-09. A name that
+was illiquid in 2022 but liquid in 2026 is therefore admitted to 2022 on its 2026
+volume. This is a universe-construction look-ahead of the same class Phase 4
+pre-registered — *"Survivorship / universe look-ahead — results are upper bounds and
+all claims are relative"* (`docs/phase-4-plan.md`) — and it is recorded here for the
+same reason.
+
+It is **not** survivorship: the archive carries a delisting tail by construction
+(`docs/research-xnys-fresh-cross-section.md` §3), and that claim stands. It is also
+not correctable within this lane, because the feed carries no point-in-time
+liquidity series. **The direction of the bias is deliberately unstated**, because it
+is not known: the filter selects on end-of-window liquidity, which correlates with
+size and trend but has no established sign for a 20-day rank IC. Any `supported`
+verdict is conditional on this limitation, and it travels with the artifact rather
+than staying in this document.
+
 **Deciding statistic (locked 2026-09-12, reversing D6's demotion on changed
 premise).** Mean 20d rank IC over the test half, Newey–West t with lag =
 horizon. D6 demoted rank IC *at picker-lane breadth*; the vendor lane's
