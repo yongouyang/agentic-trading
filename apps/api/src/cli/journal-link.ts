@@ -16,7 +16,11 @@
  * `trades` counts DECISIONS (buys + orphan sells), not executions.
  *
  * Usage:
- *   pnpm -C apps/api journal:link --file trades.csv [--json] [--top 10] [--lookback 5]
+ *   pnpm -C apps/api journal:link --file trades.csv [--json] [--top N] [--lookback 5]
+ *
+ * `--top N` sets the counterfactual basket size for BOTH markets; the default
+ * is per market from `SCREEN_PARAMS.displayTopN` (US 10, HK 5), so "the list
+ * you were looking at" matches the dashboard.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -25,7 +29,9 @@ import {
   buildForwardSeries,
   linkTrades,
   parseTradesCsv,
+  resolveTopN,
   summarizeJournal,
+  SCREEN_PARAMS,
   type Bar,
   type CorporateAction,
   type JournalSeries,
@@ -41,12 +47,17 @@ const PKG_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)), "..
 export interface JournalArgs {
   file: string;
   json: boolean;
-  topN: number;
+  topN: number | Partial<Record<string, number>>;
   lookbackSessions: number;
 }
 
 export function parseJournalArgs(argv: string[]): JournalArgs {
-  const out: JournalArgs = { file: "trades.csv", json: false, topN: 10, lookbackSessions: 5 };
+  const out: JournalArgs = {
+    file: "trades.csv",
+    json: false,
+    topN: { US: SCREEN_PARAMS.displayTopN.US, HK: SCREEN_PARAMS.displayTopN.HK },
+    lookbackSessions: 5,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--" || a === "--quiet") continue;
@@ -169,7 +180,7 @@ export async function runJournal(prisma: PrismaService, args: JournalArgs, csvTe
   const memberships = await loadMemberships(prisma);
   const traded = [...new Set(trades.map((t) => t.symbol))];
   // The counterfactual needs the list's own top-N prices, not just the traded ones.
-  const listSymbols = [...new Set(memberships.filter((m) => m.rank <= args.topN).map((m) => m.symbol))];
+  const listSymbols = [...new Set(memberships.filter((m) => m.rank <= resolveTopN(args.topN, m.market)).map((m) => m.symbol))];
   const seriesBySymbol = await loadSeries(prisma, [...new Set([...traded, ...listSymbols])]);
   const linked = linkTrades(trades, memberships, seriesBySymbol, {
     lookbackSessions: args.lookbackSessions,

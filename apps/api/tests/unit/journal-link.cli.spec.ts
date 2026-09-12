@@ -71,11 +71,18 @@ function stubPrisma() {
 
 describe("journal:link — arg surface", () => {
   it("parses flags and rejects junk", () => {
-    expect(parseJournalArgs([])).toEqual({ file: "trades.csv", json: false, topN: 10, lookbackSessions: 5 });
+    // Default counterfactual is per market from SCREEN_PARAMS.displayTopN —
+    // the shortlist the dashboard actually showed.
+    expect(parseJournalArgs([])).toEqual({
+      file: "trades.csv",
+      json: false,
+      topN: { US: 10, HK: 5 },
+      lookbackSessions: 5,
+    });
     expect(parseJournalArgs(["--", "--json", "--file", "t.csv", "--top", "5", "--lookback", "0"])).toEqual({
       file: "t.csv",
       json: true,
-      topN: 5,
+      topN: 5, // an explicit --top overrides BOTH markets
       lookbackSessions: 0,
     });
     expect(() => parseJournalArgs(["--top", "-1"])).toThrow(/non-negative integer/);

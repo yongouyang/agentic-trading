@@ -41,6 +41,13 @@ describe("journal — broker symbols to the store's convention", () => {
     expect(normalizeSymbol("hk.700")).toBe("00700.HK");
   });
 
+  it("passes SH/SZ codes through unchanged — the store covers US/HK only", () => {
+    // Mapping SH.600000 to 600000.HK invented a fake symbol; the honest mapping
+    // is none at all (parseTradesCsv rejects these rows with a reason).
+    expect(normalizeSymbol("SH.600000")).toBe("SH.600000");
+    expect(normalizeSymbol("sz.000001")).toBe("SZ.000001");
+  });
+
   it("passes through anything already in the store's form, so a hand-written file works", () => {
     expect(normalizeSymbol("AAPL")).toBe("AAPL");
     expect(normalizeSymbol("2269.HK")).toBe("2269.HK"); // no re-padding: already suffixed
@@ -89,6 +96,18 @@ describe("journal — parsing reports bad rows instead of dropping them", () => 
   it("returns empty on an empty file instead of throwing", () => {
     expect(parseTradesCsv("")).toEqual({ trades: [], skipped: [] });
   });
+
+  it("rejects SH/SZ codes visibly instead of mapping them to fake .HK symbols", () => {
+    const { trades, skipped } = parseTradesCsv(`date,symbol,side,quantity,price
+2026-09-14,SH.600000,buy,100,10.50
+2026-09-14,SZ.000001,buy,100,12.00
+2026-09-14,US.AAPL,buy,10,230.50`);
+    expect(trades).toHaveLength(1);
+    expect(trades[0]!.symbol).toBe("AAPL");
+    expect(skipped).toHaveLength(2);
+    expect(skipped[0]!.reason).toMatch(/SH\/SZ codes are not supported/);
+    expect(skipped.map((s) => s.raw).join(" ")).not.toMatch(/\.HK/);
+  });
 });
 
 describe("journal — the linkage", () => {
@@ -131,11 +150,12 @@ describe("journal — the linkage", () => {
     const linked = linkTrades(parsed, memberships, seriesBySymbol);
     const msft = linked.find((l) => l.trade.symbol === "MSFT")!;
     expect(msft.open).toBe(true);
-    expect(msft.exit).toBe("2026-09-18"); // last available session
+    expect(msft.exit).toBeNull(); // never sold — marked to market instead
     // Entry is the buy's OWN session (09-17, close 515), not the first bar: the
     // trade was made when it was made.
     expect(msft.entry).toBe("2026-09-17");
     expect(msft.realizedReturn).toBeCloseTo(518 / 515 - 1, 10);
+    expect(msft.holdSessions).toBe(1); // 09-17 -> 09-18
   });
 
   it("counts an off-list name as off-list, with no rank or conviction invented", () => {
@@ -162,6 +182,140 @@ describe("journal — the linkage", () => {
     expect(linked).toHaveLength(1);
     expect(linked[0]!.realizedReturn).toBeNull();
     expect(linked[0]!.onList).toBe(false);
+  });
+});
+
+describe("journal — quantity-aware FIFO", () => {
+  // XXX climbs 10/session from 100; list members YYY (+5/session) and ZZZ (+10/session).
+  const memberships: ListMembership[] = [
+    { market: "US", sessionDate: "2026-09-10", symbol: "XXX", rank: 1, conviction: 0.5 },
+    { market: "US", sessionDate: "2026-09-10", symbol: "YYY", rank: 2, conviction: null },
+    { market: "US", sessionDate: "2026-09-10", symbol: "ZZZ", rank: 3, conviction: null },
+  ];
+  const seriesBySymbol = new Map<string, JournalSeries>([
+    ["XXX", series("XXX", DATES, [100, 110, 120, 130, 140, 150, 160])],
+    ["YYY", series("YYY", DATES, [100, 105, 110, 115, 120, 125, 130])],
+    ["ZZZ", series("ZZZ", DATES, [50, 55, 60, 65, 70, 75, 80])],
+  ]);
+  const trades = (rows: string) => parseTradesCsv(`date,symbol,side,quantity,price\n${rows}`).trades;
+  const listWindow = (from: string, to: string, members: [string, number[]][] = []) => {
+    const all: [string, number[]][] = [
+      ["XXX", [100, 110, 120, 130, 140, 150, 160]],
+      ["YYY", [100, 105, 110, 115, 120, 125, 130]],
+      ["ZZZ", [50, 55, 60, 65, 70, 75, 80]],
+      ...members,
+    ];
+    const rs = all.map(([, closes]) => {
+      const i = DATES.indexOf(from);
+      const j = DATES.indexOf(to);
+      return closes[j]! / closes[i]! - 1;
+    });
+    return rs.reduce((a, b) => a + b, 0) / rs.length;
+  };
+
+  it("a partial sell keeps the row open: weighted realized piece + MTM remainder", () => {
+    const linked = linkTrades(trades("2026-09-11,US.XXX,buy,10,110\n2026-09-14,US.XXX,sell,4,120"), memberships, seriesBySymbol);
+    expect(linked).toHaveLength(1);
+    const row = linked[0]!;
+    expect(row.open).toBe(true);
+    expect(row.exit).toBe("2026-09-14"); // last partial-exit session
+    const expected = 0.4 * (120 / 110 - 1) + 0.6 * (160 / 110 - 1);
+    expect(row.realizedReturn).toBeCloseTo(expected, 10);
+    // The counterfactual uses the SAME weights over the SAME windows.
+    const listExpected = 0.4 * listWindow("2026-09-11", "2026-09-14") + 0.6 * listWindow("2026-09-11", "2026-09-18");
+    expect(row.listReturn).toBeCloseTo(listExpected, 10);
+    expect(row.delta).toBeCloseTo(expected - listExpected, 10);
+    expect(row.holdSessions).toBe(5); // still open: entry -> latest bar
+  });
+
+  it("a full scale-out in two sells is quantity-weighted (unequal pieces)", () => {
+    const linked = linkTrades(
+      trades("2026-09-10,US.XXX,buy,10,100\n2026-09-11,US.XXX,sell,3,110\n2026-09-14,US.XXX,sell,7,120"),
+      memberships,
+      seriesBySymbol,
+    );
+    expect(linked).toHaveLength(1);
+    const row = linked[0]!;
+    expect(row.open).toBe(false);
+    expect(row.exit).toBe("2026-09-14");
+    const expected = 0.3 * 0.1 + 0.7 * 0.2;
+    expect(row.realizedReturn).toBeCloseTo(expected, 10);
+    const listExpected = 0.3 * listWindow("2026-09-10", "2026-09-11") + 0.7 * listWindow("2026-09-10", "2026-09-14");
+    expect(row.listReturn).toBeCloseTo(listExpected, 10);
+    expect(row.holdSessions).toBe(2); // 09-10 -> 09-14
+  });
+
+  it("scaling in: buy 100, buy 100, sell 150 — lot 1 closes, lot 2 is half closed + half MTM", () => {
+    const linked = linkTrades(
+      trades("2026-09-10,US.XXX,buy,100,100\n2026-09-14,US.XXX,buy,100,120\n2026-09-16,US.XXX,sell,150,150"),
+      memberships,
+      seriesBySymbol,
+    );
+    expect(linked).toHaveLength(2);
+    const [lot1, lot2] = linked;
+    expect(lot1!.open).toBe(false);
+    expect(lot1!.exit).toBe("2026-09-16");
+    expect(lot1!.realizedReturn).toBeCloseTo(140 / 100 - 1, 10);
+    expect(lot2!.open).toBe(true);
+    expect(lot2!.exit).toBe("2026-09-16");
+    expect(lot2!.realizedReturn).toBeCloseTo(0.5 * (140 / 120 - 1) + 0.5 * (160 / 120 - 1), 10);
+  });
+
+  it("sell quantity beyond the open lots becomes a visible orphan row", () => {
+    const linked = linkTrades(trades("2026-09-10,US.XXX,buy,5,100\n2026-09-11,US.XXX,sell,8,110"), memberships, seriesBySymbol);
+    expect(linked).toHaveLength(2);
+    const buy = linked.find((l) => l.trade.side === "buy")!;
+    expect(buy.open).toBe(false);
+    expect(buy.realizedReturn).toBeCloseTo(0.1, 10);
+    const excess = linked.find((l) => l.trade.side === "sell")!;
+    expect(excess.realizedReturn).toBeNull();
+    expect(excess.onList).toBe(false);
+    expect(excess.open).toBe(false);
+  });
+
+  it("an unpriceable piece drops its weight from BOTH sides and renormalizes", () => {
+    // The 09-12 sell maps to session 09-11 == the entry, so that piece has no
+    // return; only the 09-14 piece may count, on either side.
+    const linked = linkTrades(
+      trades("2026-09-11,US.XXX,buy,10,110\n2026-09-12,US.XXX,sell,4,112\n2026-09-14,US.XXX,sell,6,120"),
+      memberships,
+      seriesBySymbol,
+    );
+    const row = linked[0]!;
+    expect(row.realizedReturn).toBeCloseTo(120 / 110 - 1, 10);
+    expect(row.listReturn).toBeCloseTo(listWindow("2026-09-11", "2026-09-14"), 10);
+    expect(row.delta).toBeCloseTo(row.realizedReturn! - row.listReturn!, 10);
+  });
+});
+
+describe("journal — per-market counterfactual topN", () => {
+  // HK list with 6 members: ranks 1-5 flat, rank 6 far better — so topN 5 vs
+  // 10 give measurably different counterfactuals.
+  const hkMembers: ListMembership[] = [1, 2, 3, 4, 5, 6].map((rank) => ({
+    market: "HK",
+    sessionDate: "2026-09-15",
+    symbol: `H${rank}.HK`,
+    rank,
+    conviction: null,
+  }));
+  const seriesBySymbol = new Map<string, JournalSeries>(
+    [1, 2, 3, 4, 5].map((n) => [`H${n}.HK`, series(`H${n}.HK`, DATES, [100, 100, 100, 100, 100, 100, 110])] as const),
+  );
+  seriesBySymbol.set("H6.HK", series("H6.HK", DATES, [100, 100, 100, 100, 100, 100, 140]));
+  seriesBySymbol.set("00001.HK", series("00001.HK", DATES, [100, 100, 100, 100, 100, 100, 110])); // the traded name
+  const buy = parseTradesCsv(`date,symbol,side,quantity,price\n2026-09-15,HK.00001,buy,10,100`).trades;
+
+  it("a per-market topN prices the HK counterfactual over the displayed 5, not 10", () => {
+    const perMarket = linkTrades(buy, hkMembers, seriesBySymbol, { topN: { US: 10, HK: 5 } });
+    expect(perMarket[0]!.listReturn).toBeCloseTo(0.1, 10); // H1..H5 only
+    const scalar = linkTrades(buy, hkMembers, seriesBySymbol, { topN: 10 });
+    expect(scalar[0]!.listReturn).toBeCloseTo((5 * 0.1 + 0.4) / 6, 10); // all six
+    expect(scalar[0]!.listReturn).not.toBeCloseTo(perMarket[0]!.listReturn!, 10);
+  });
+
+  it("a market with no entry in the record falls back to 10", () => {
+    const linked = linkTrades(buy, hkMembers, seriesBySymbol, { topN: { US: 3 } });
+    expect(linked[0]!.listReturn).toBeCloseTo((5 * 0.1 + 0.4) / 6, 10);
   });
 });
 

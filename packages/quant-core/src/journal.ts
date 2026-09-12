@@ -18,11 +18,26 @@
  *                  `lookbackSessions` before the trade?
  *   2. `listRank` / `conviction` — where, and what did the LLM think of it (null
  *                  when it was never deep-dived).
- *   3. `realizedReturn` — from the entry session to the paired sell (FIFO), or
- *                  marked to market at the latest bar when still open.
- *   4. `listReturn` — what the list's own top-N would have returned over the SAME
- *                  window, which is the counterfactual: not "did the trade make
- *                  money" but "did it beat the list it was chosen from".
+ *   3. `realizedReturn` — CLOSE-TO-CLOSE from the adjusted series, entry session
+ *                  to exit. FIFO matching is quantity-aware: a sell consumes
+ *                  open lots up to its quantity, each partial exit folds back
+ *                  into its buy row quantity-weighted, and whatever remains is
+ *                  marked to market at the latest bar while the row stays open.
+ *   4. `listReturn` — the SAME quantity weights over the SAME windows applied
+ *                  to the list's own top-N, which is the counterfactual: not
+ *                  "did the trade make money" but "did it beat the list it was
+ *                  chosen from".
+ *
+ * Returns basis is deliberately close-to-close only: the CSV's `price`/`fee`
+ * are parsed and recorded but NEVER used for returns. `delta` must stay a pure
+ * SELECTION measure comparable to `listReturn` (also close-to-close); execution
+ * prices and fees would conflate selection with execution quality, which is a
+ * different question.
+ *
+ * Rows are DECISIONS, not executions: one row per buy trade (partial exits fold
+ * into it), plus one visible all-null row per sell that exceeds every open lot
+ * (the excess, or an entirely unmatched sell) — an excess sell is kept visible
+ * rather than silently absorbed or invented into a position.
  */
 
 /** One execution, normalized. `side` is the direction of the trade. */
@@ -57,6 +72,8 @@ export interface LinkedTrade {
   trade: JournalTrade;
   /** The session the trade's date maps to (last session at or before it). */
   entry: string;
+  /** The last partial-exit session; null when the position was never sold
+   *  (an open row is marked to market instead). */
   exit: string | null;
   /** Still held at the end of the data — return is marked to market. */
   open: boolean;
@@ -66,9 +83,11 @@ export interface LinkedTrade {
   conviction: number | null;
   realizedReturn: number | null;
   holdSessions: number | null;
-  /** Equal-weight return of the list's top-N over the same entry→exit window. */
+  /** The list's top-N return over the same windows with the SAME quantity
+   *  weights as `realizedReturn`, so `delta` never mixes bases. */
   listReturn: number | null;
-  /** realizedReturn − listReturn: the value of the decision, not of the market. */
+  /** Quantity-weighted (realized − list) over the pieces that have BOTH sides:
+   *  the value of the decision, not of the market. */
   delta: number | null;
 }
 
@@ -94,7 +113,10 @@ export interface JournalSummary {
  * This is the one piece of broker knowledge worth implementing, because it is
  * stable and mechanical: Futu writes `US.AAPL` and `HK.02269`, the store writes
  * `AAPL` and `02269.HK`. Anything already in the store's form passes through
- * untouched, so the function is safe on a hand-written file.
+ * untouched, so the function is safe on a hand-written file. SH./SZ. codes pass
+ * through unchanged too — the store covers US/HK only, so there is no honest
+ * mapping (mapping them to .HK invented fake symbols); `parseTradesCsv` rejects
+ * them with a visible reason instead.
  */
 export function normalizeSymbol(raw: string): string {
   const s = raw.trim().toUpperCase();
@@ -102,9 +124,8 @@ export function normalizeSymbol(raw: string): string {
   if (!m) return s;
   const [, market, code] = m as unknown as [string, string, string];
   if (market === "US") return code;
-  // HK codes are zero-padded to 5 digits in the store ("02269.HK").
-  const padded = market === "HK" || market === "SH" || market === "SZ" ? code.padStart(5, "0") : code;
-  return `${padded}.${market === "SH" || market === "SZ" ? "HK" : market}`;
+  if (market === "HK") return `${code.padStart(5, "0")}.HK`; // zero-padded to 5 digits in the store
+  return s;
 }
 
 export interface ParsedTrades {
@@ -179,7 +200,11 @@ export function parseTradesCsv(text: string): ParsedTrades {
       skipped.push({ line: i + 1, reason: "empty symbol", raw });
       continue;
     }
-    // Accept both the store's convention and the broker's ("buy"/"BUY"/"买").
+    if (/^(SH|SZ)\./.test(symbolRaw.trim().toUpperCase())) {
+      skipped.push({ line: i + 1, reason: "SH/SZ codes are not supported (store covers US/HK only)", raw });
+      continue;
+    }
+    // Accept buy|b|sell|s (case-insensitive).
     const side = sideRaw === "buy" || sideRaw === "b" ? "buy" : sideRaw === "sell" || sideRaw === "s" ? "sell" : null;
     if (!side) {
       skipped.push({ line: i + 1, reason: `side must be buy|sell, got "${sideRaw}"`, raw });
@@ -228,13 +253,42 @@ function returnBetween(series: JournalSeries, from: string, to: string): number 
 export interface LinkOptions {
   /** How many sessions back a list still counts as "the list you were looking at". */
   lookbackSessions?: number;
-  /** The list's top-N used for the counterfactual (the displayed shortlist). */
-  topN?: number;
+  /** The list's top-N used for the counterfactual (the displayed shortlist):
+   *  one scalar for every market, or per market — a market with no entry falls
+   *  back to 10. */
+  topN?: number | Partial<Record<string, number>>;
+}
+
+/** The counterfactual top-N for one market (scalar, per-market, else 10). */
+export function resolveTopN(topN: LinkOptions["topN"], market: string): number {
+  if (typeof topN === "number") return topN;
+  return topN?.[market] ?? 10;
+}
+
+/** One FIFO-consumed piece of a buy lot: quantity and both window returns
+ *  (null when the window cannot be priced — dropped from BOTH sides). */
+interface LotPiece {
+  qty: number;
+  rR: number | null;
+  rL: number | null;
+}
+
+/** A buy lot's live matching state; its LinkedTrade row is `out[rowIdx]`. */
+interface OpenLot {
+  trade: JournalTrade;
+  rowIdx: number;
+  totalQty: number;
+  remaining: number;
+  pieces: LotPiece[];
+  lastExit: string | null;
 }
 
 /**
- * Pair buys to sells FIFO per symbol, then attach the list linkage and both
- * returns. Unmatched buys are marked to market at the latest session.
+ * Pair buys to sells quantity-aware FIFO per symbol, then attach the list
+ * linkage and both returns. Rows stay one per DECISION: a sell consumes open
+ * lots up to its quantity, each consumed piece accumulates into its buy row
+ * quantity-weighted, and any remainder is marked to market while the row stays
+ * open. Sell quantity beyond every open lot becomes a visible all-null row.
  */
 export function linkTrades(
   trades: JournalTrade[],
@@ -243,54 +297,63 @@ export function linkTrades(
   opts: LinkOptions = {},
 ): LinkedTrade[] {
   const lookback = opts.lookbackSessions ?? 5;
-  const topN = opts.topN ?? 10;
 
   const ordered = [...trades].sort((a, b) => a.date.localeCompare(b.date) || a.symbol.localeCompare(b.symbol));
   // Open lots per symbol, FIFO.
-  const lots = new Map<string, JournalTrade[]>();
+  const lots = new Map<string, OpenLot[]>();
+  const allLots: OpenLot[] = [];
   const out: LinkedTrade[] = [];
-  const lastSessionBySymbol = new Map<string, string | null>();
 
   for (const t of ordered) {
     const series = seriesBySymbol.get(t.symbol);
     const entry = series ? sessionAtOrBefore(series.dates, t.date) : null;
-    if (series) lastSessionBySymbol.set(t.symbol, series.dates[series.dates.length - 1] ?? null);
 
     if (t.side === "buy") {
-      const queue = lots.get(t.symbol) ?? [];
-      queue.push(t);
-      lots.set(t.symbol, queue);
-
       const membership = pickMembership(memberships, t.symbol, entry, lookback, series?.dates ?? []);
-      const exit = series?.dates[series.dates.length - 1] ?? null;
-      const realized = entry && exit && series ? returnBetween(series, entry, exit) : null;
-      const listReturn =
-        entry && exit && series
-          ? listWindowReturn(memberships, seriesBySymbol, pickMembershipMarket(memberships, t.symbol), entry, exit, topN)
-          : null;
+      const lot: OpenLot = { trade: t, rowIdx: out.length, totalQty: t.quantity, remaining: t.quantity, pieces: [], lastExit: null };
+      const queue = lots.get(t.symbol) ?? [];
+      queue.push(lot);
+      lots.set(t.symbol, queue);
+      allLots.push(lot);
       out.push({
         trade: t,
         entry: entry ?? t.date,
-        exit,
+        exit: null,
         open: true,
         onList: membership != null,
         listSession: membership?.sessionDate ?? null,
         listRank: membership?.rank ?? null,
         conviction: membership?.conviction ?? null,
-        realizedReturn: realized,
-        holdSessions: entry && exit && series ? sessionsBetween(series.dates, entry, exit) : null,
-        listReturn,
-        delta: realized != null && listReturn != null ? realized - listReturn : null,
+        realizedReturn: null,
+        holdSessions: null,
+        listReturn: null,
+        delta: null,
       });
       continue;
     }
 
-    // A sell closes the oldest open lot for that symbol.
+    // A sell consumes open lots FIFO up to its quantity.
+    const market = pickMembershipMarket(memberships, t.symbol);
+    const topN = resolveTopN(opts.topN, market);
+    const sellSession = series ? sessionAtOrBefore(series.dates, t.date) : null;
+    let q = t.quantity;
     const queue = lots.get(t.symbol) ?? [];
-    const lot = queue.shift();
-    lots.set(t.symbol, queue);
-    if (!lot) {
-      // A sell with no matching buy: keep it visible rather than inventing an entry.
+    while (q > 0 && queue.length > 0) {
+      const lot = queue[0]!;
+      const take = Math.min(lot.remaining, q);
+      lot.remaining -= take;
+      q -= take;
+      const from = out[lot.rowIdx]!.entry;
+      const rR = series && sellSession ? returnBetween(series, from, sellSession) : null;
+      const rL =
+        series && sellSession ? listWindowReturn(memberships, seriesBySymbol, market, from, sellSession, topN) : null;
+      lot.pieces.push({ qty: take, rR, rL });
+      if (sellSession) lot.lastExit = sellSession;
+      if (lot.remaining === 0) queue.shift();
+    }
+    if (q > 0) {
+      // Quantity beyond every open lot: keep it visible rather than inventing
+      // an entry — same philosophy as a wholly unmatched sell.
       out.push({
         trade: t,
         entry: t.date,
@@ -305,26 +368,40 @@ export function linkTrades(
         listReturn: null,
         delta: null,
       });
-      continue;
     }
-    const lotIdx = out.findIndex((x) => x.trade === lot);
-    const lotSeries = seriesBySymbol.get(t.symbol);
-    const from = lotIdx >= 0 ? out[lotIdx]!.entry : null;
-    const to = lotSeries ? sessionAtOrBefore(lotSeries.dates, t.date) : null;
-    const realized = lotSeries && from && to ? returnBetween(lotSeries, from, to) : null;
-    const listReturn =
-      lotSeries && from && to
-        ? listWindowReturn(memberships, seriesBySymbol, pickMembershipMarket(memberships, t.symbol), from, to, topN)
-        : null;
-    if (lotIdx >= 0) {
-      const row = out[lotIdx]!;
-      row.exit = to;
-      row.open = false;
-      row.realizedReturn = realized;
-      row.holdSessions = lotSeries && from && to ? sessionsBetween(lotSeries.dates, from, to) : null;
-      row.listReturn = listReturn;
-      row.delta = realized != null && listReturn != null ? realized - listReturn : null;
+  }
+
+  // Finalize each buy row: the remaining quantity is one more piece, marked to
+  // market, then every figure is quantity-weighted over the surviving pieces.
+  for (const lot of allLots) {
+    const row = out[lot.rowIdx]!;
+    const series = seriesBySymbol.get(lot.trade.symbol);
+    const lastSession = series?.dates[series.dates.length - 1] ?? null;
+    const pieces = [...lot.pieces];
+    if (lot.remaining > 0) {
+      const market = pickMembershipMarket(memberships, lot.trade.symbol);
+      const topN = resolveTopN(opts.topN, market);
+      const rR = series && lastSession ? returnBetween(series, row.entry, lastSession) : null;
+      const rL =
+        series && lastSession ? listWindowReturn(memberships, seriesBySymbol, market, row.entry, lastSession, topN) : null;
+      pieces.push({ qty: lot.remaining, rR, rL });
     }
+    const weight = (ps: LotPiece[]) => ps.reduce((a, p) => a + p.qty, 0);
+    // A piece whose own return is unpriceable drops out of BOTH sides and the
+    // weights renormalize — the comparison must never mix bases.
+    const scored = pieces.filter((p) => p.rR != null);
+    const both = pieces.filter((p) => p.rR != null && p.rL != null);
+    const realized = scored.length ? scored.reduce((a, p) => a + p.qty * p.rR!, 0) / weight(scored) : null;
+    const listReturn = both.length ? both.reduce((a, p) => a + p.qty * p.rL!, 0) / weight(both) : null;
+    const delta = both.length ? both.reduce((a, p) => a + p.qty * (p.rR! - p.rL!), 0) / weight(both) : null;
+    const open = lot.remaining > 0;
+    const to = open ? lastSession : lot.lastExit;
+    row.exit = lot.lastExit;
+    row.open = open;
+    row.realizedReturn = realized;
+    row.holdSessions = series && to ? sessionsBetween(series.dates, row.entry, to) : null;
+    row.listReturn = listReturn;
+    row.delta = delta;
   }
   return out;
 }

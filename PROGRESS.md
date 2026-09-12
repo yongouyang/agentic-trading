@@ -5,6 +5,59 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (independent review + #3 journal redesign) — the DeepSeek-Flash sessions cross-checked; 12 follow-ups shipped; journal linkage is now quantity-aware
+
+An independent multi-agent review of the 09-10→09-12 sessions (R0 → Phase 5,
+commits `ee9e04d..d529322`, ~11k insertions) cross-checked code, artifacts, and
+docs against this log. **Verdict: the work holds.** Every load-bearing claim
+re-derived exactly (tQuantile975 fix, SE triple, IC | rank formula, readiness
+rule, census shares, the 09-11 backtest artifact to the digit, 6 jobs ARMED,
+byte-identical plists, the 0.319 rank↔conviction ρ). No decision and no gated
+statistic was undermined. What it did find: 13 minor issues, two of them
+operational — `daily-catchup.sh` swallowed failure exit codes (launchd always
+saw 0, the exact class W1 was built to kill), and `computeHealth` didn't
+inherit the `source` provenance filter (health showed the ad-hoc run 8 as HK's
+last complete run). One mislabeled statistic in this log: "39 of 1,490 have any
+SplitEvent row" — 39 is the reverse-split-only count, 168 have any row
+(corrected inline). Fixes shipped in `a6562c0` (code) + `0543cc5` (docs).
+
+**#3 — journal linkage redesigned (deep tier, four forks user-locked, all as
+recommended):**
+
+1. **Returns stay close-to-close; price/fee are recorded but unused, by
+   design.** `listReturn` is also close-to-close, so `delta` is a pure
+   *selection* measure; execution prices or fees would conflate selection with
+   execution quality. Now documented in the `journal.ts` header.
+2. **Quantity-aware FIFO, one row per buy.** Was: any sell closed the whole
+   oldest lot, so a partial sell's remainder later surfaced as an "orphan
+   sell". Now: lots track remaining quantity; partial exits fold back into the
+   buy's single row as quantity-weighted pieces (partial exits + MTM
+   remainder), and `listReturn` applies the *same* weights over the same
+   windows so delta stays comparable. A piece with missing bars drops its
+   weight from **both** sides (never mixes bases). Excess sell quantity stays
+   visible as an orphan row. Scaling in/out now works naturally.
+3. **SH./SZ. codes are rejected with a reason** at parse time instead of being
+   mapped to a fake `.HK` symbol (`SH.600000` → `600000.HK` before).
+4. **Counterfactual top-N defaults to `SCREEN_PARAMS.displayTopN`** (US 10 /
+   HK 5) — "the list you were looking at" now matches the dashboard; `--top N`
+   still overrides both markets.
+
+Design detail pinned in implementation: `delta` is the quantity-weighted
+(rR − rL) over pieces having *both* sides, not `realizedReturn − listReturn` —
+identical when nothing is dropped, pure when a piece lacks a list window.
+
+**Tests:** quant-core 141 (+9: partial fills, weighted scale-out, scaling in,
+excess-orphan, both-sides drop, SH/SZ rejection, per-market topN), api 489 + 1
+skipped, web 107, tsc clean both packages.
+
+Next: Round 3 — LLM-layer prospective scoring continues to accrue (first
+prospective lane-days Mon 09-14 HK / Tue 09-15 US). Standing: D6's Phase-4c
+pre-registration skeleton; the XNYS/Databento universe as a data project (next
+step: P2/P3 detectors over the 1,844 liquid series from the DB); Databento R1
+baseline.
+
+---
+
 ## 2026-09-11 (Phase 4b EXECUTED) — verdicts re-labelled `insufficient_evidence`; Gate 2's power finally measured (IR 0.49, t 1.19); the trend filter — not liquidity — sets breadth
 
 Executed `docs/phase-4b-plan.md` D1–D5 after an adversarial review that produced
