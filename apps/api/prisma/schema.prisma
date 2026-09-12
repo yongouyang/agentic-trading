@@ -194,6 +194,10 @@ model DeepDiveRun {
   // DeepDiveReport rows are written. Read paths filter to "complete", so a
   // crashed run can never render as a report (docs/ops-hardening-plan.md).
   status       String   @default("complete")
+  // 'chain' = the scheduled pipeline; 'adhoc' = an operator run (--symbol, an
+  // explicit --top, or --as-of). The dashboard shows the newest COMPLETE 'chain'
+  // run, so an experiment cannot silently become the lane's view.
+  source       String   @default("chain")
 
   reports DeepDiveReport[]
 }

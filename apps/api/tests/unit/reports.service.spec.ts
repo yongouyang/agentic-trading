@@ -174,6 +174,9 @@ describe("ReportsService", () => {
         warnings: ["XYZ: fetch failed (http-429)"],
         // W3b: newest US bar in the store — the INDX fixture's last date.
         dataThrough: seededIndDates[seededIndDates.length - 1],
+        // The list's own session, distinct from the store cutoff in dataThrough.
+        // The fixture's ScreenRun predates the column, so it is null.
+        screenedSession: null,
         // Phase 4b item 6: rule provenance, alongside the data provenance.
         caveat: SCREEN_RULES_CAVEAT,
       });
@@ -465,5 +468,81 @@ describe("visibleRows — display breadth is narrower than measurement breadth",
     // A missing config entry is a gap; silently rendering an empty watchlist
     // would be the worse failure.
     expect(visibleRows(rows, "JP")).toHaveLength(40);
+  });
+});
+
+describe("provenance — an ad-hoc run must not become the lane's view", () => {
+  it("daily() prefers the newest CHAIN run over a newer ad-hoc one", async () => {
+    // The measured 2026-09-12 case: HK's dashboard showed a 3-name smoke test
+    // (run 8) because it was the newest complete run for the lane.
+    const seen: any[] = [];
+    const prisma = {
+      deepDiveRun: {
+        findFirst: async ({ where }: any) => {
+          seen.push(where);
+          if (where.source === "chain") return { id: 5, market: "HK", screenRunId: 14, runAt: new Date("2026-09-09T15:10:45Z"), status: "complete", topN: 10, llmCalls: 68, cacheHits: 0, failed: 0, warningsJson: "[]", source: "chain" };
+          return { id: 8, market: "HK", screenRunId: 17, runAt: new Date("2026-09-11T15:14:17Z"), status: "complete", topN: 3, llmCalls: 21, cacheHits: 0, failed: 0, warningsJson: "[]", source: "adhoc" };
+        },
+      },
+      screenRun: { findUnique: async () => ({ id: 14, market: "HK", sessionDate: "2026-09-09", universeSize: 131, ok: 131, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]" }) },
+      screenResult: { findMany: async () => [] },
+      deepDiveReport: { findMany: async () => [] },
+      bar: { findFirst: async () => ({ date: "2026-09-11" }) },
+    } as any;
+    const svc = new ReportsService(prisma);
+    const out = await svc.daily("HK");
+    expect(out.run.id).toBe(5); // the chain run, not the newer ad-hoc one
+    expect(seen[0]).toMatchObject({ source: "chain" });
+  });
+
+  it("falls back to any provenance when a lane has no chain run yet", async () => {
+    // A fresh install (or only experiments so far) must still render verdicts
+    // rather than "no run yet".
+    const prisma = {
+      deepDiveRun: {
+        findFirst: async ({ where }: any) =>
+          where.source === "chain"
+            ? null
+            : { id: 8, market: "HK", screenRunId: 17, runAt: new Date("2026-09-11T15:14:17Z"), status: "complete", topN: 3, llmCalls: 21, cacheHits: 0, failed: 0, warningsJson: "[]", source: "adhoc" },
+      },
+      screenRun: { findUnique: async () => ({ id: 17, market: "HK", sessionDate: "2026-09-11", universeSize: 131, ok: 131, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]" }) },
+      screenResult: { findMany: async () => [] },
+      deepDiveReport: { findMany: async () => [] },
+      bar: { findFirst: async () => ({ date: "2026-09-11" }) },
+    } as any;
+    const out = await new ReportsService(prisma).daily("HK");
+    expect(out.run.id).toBe(8); // better than nothing, and the picker labels it
+  });
+
+  it("an explicit runId still reaches an ad-hoc run", async () => {
+    // The picker must be able to show one; only the *default* is restricted.
+    const prisma = {
+      deepDiveRun: { findFirst: async ({ where }: any) => ({ id: where.id, market: "HK", screenRunId: 17, runAt: new Date("2026-09-11T15:14:17Z"), status: "complete", topN: 3, llmCalls: 21, cacheHits: 0, failed: 0, warningsJson: "[]", source: "adhoc" }) },
+      screenRun: { findUnique: async () => ({ id: 17, market: "HK", sessionDate: "2026-09-11", universeSize: 131, ok: 131, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]" }) },
+      screenResult: { findMany: async () => [] },
+      deepDiveReport: { findMany: async () => [] },
+      bar: { findFirst: async () => ({ date: "2026-09-11" }) },
+    } as any;
+    const out = await new ReportsService(prisma).daily("HK", 8);
+    expect(out.run.id).toBe(8);
+  });
+});
+
+describe("integrity — the list's own session, not just the store cutoff", () => {
+  it("carries screenedSession so a stale list is distinguishable from fresh data", async () => {
+    // After the provenance fix HK legitimately shows an OLDER chain run, so
+    // "data through 2026-09-11" alone would invite the reader to assume the
+    // ranking is that fresh. The two facts are different and both are now shown.
+    const prisma = {
+      deepDiveRun: { findFirst: async () => ({ id: 5, market: "HK", screenRunId: 14, runAt: new Date("2026-09-09T15:10:45Z"), status: "complete", topN: 10, llmCalls: 68, cacheHits: 0, failed: 0, warningsJson: "[]", source: "chain" }) },
+      screenRun: { findUnique: async () => ({ id: 14, market: "HK", sessionDate: "2026-09-09", universeSize: 131, ok: 131, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]" }) },
+      screenResult: { findMany: async () => [] },
+      deepDiveReport: { findMany: async () => [] },
+      bar: { findFirst: async () => ({ date: "2026-09-11" }) },
+    } as any;
+    const out = await new ReportsService(prisma).daily("HK");
+    expect(out.integrity.screenedSession).toBe("2026-09-09");
+    expect(out.integrity.dataThrough).toBe("2026-09-11");
+    expect(out.integrity.screenedSession).not.toBe(out.integrity.dataThrough);
   });
 });

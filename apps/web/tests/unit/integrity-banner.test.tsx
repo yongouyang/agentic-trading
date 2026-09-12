@@ -80,3 +80,16 @@ describe("IntegrityBanner", () => {
     expect(screen.queryByTestId("integrity-caveat")).not.toBeInTheDocument();
   });
 });
+
+describe("IntegrityBanner — the list's own session", () => {
+  it("renders the ranked-for session so a stale list is visible, not implied", () => {
+    render(<IntegrityBanner integrity={{ ...okIntegrity, dataThrough: "2026-09-11", screenedSession: "2026-09-09" }} />);
+    expect(screen.getByTestId("integrity-banner")).toHaveTextContent("data through 2026-09-11");
+    expect(screen.getByTestId("integrity-banner")).toHaveTextContent("list ranked for 2026-09-09");
+  });
+
+  it("renders exactly as before when the api omits it (additive field)", () => {
+    render(<IntegrityBanner integrity={{ ...okIntegrity, dataThrough: "2026-09-11" }} />);
+    expect(screen.getByTestId("integrity-banner")).not.toHaveTextContent(/list ranked for/);
+  });
+});

@@ -62,6 +62,10 @@ export interface IntegrityHeader {
    *  shortlist ranked from stale data — and a chain that never ran — which a
    *  screen-time value cannot (docs/ops-hardening-plan.md). */
   dataThrough: string | null;
+  /** The session the ranked list was built FOR (`ScreenRun.sessionDate`), as
+   *  distinct from `dataThrough`, the store's newest bar. Null when the run
+   *  predates the column. */
+  screenedSession?: string | null;
   /** Phase 4b item 6: the provenance of the *rules* that produced this list.
    *
    * The rest of this header describes the *data* — how much was screened, how
@@ -170,6 +174,9 @@ export interface RunSummary {
   llmCalls: number;
   cacheHits: number;
   failed: number;
+  /** 'chain' (scheduled pipeline) or 'adhoc' (an operator run). The picker labels
+   *  it so a glance at history cannot mistake an experiment for production. */
+  source: string;
 }
 
 export interface CompareSymbolRow {
@@ -287,9 +294,24 @@ export class ReportsService {
     }
     // W2: only "complete" runs are reports. A crashed run leaves a "running"
     // row, which must never surface as the latest report.
-    const run = runId === undefined
-      ? await this.prisma.deepDiveRun.findFirst({ where: { market, status: "complete" }, orderBy: { runAt: "desc" } })
-      : await this.prisma.deepDiveRun.findFirst({ where: { id: runId, status: "complete" } });
+    //
+    // Provenance: the dashboard shows the newest COMPLETE **chain** run, not the
+    // newest run of any kind. An operator run (`--symbol`, an explicit `--top`,
+    // `--as-of`, or a prompt experiment from a worktree) must not silently become
+    // the lane's view — measured 2026-09-12, when HK's dashboard showed a 3-name
+    // smoke test as its latest. Ad-hoc runs stay reachable through the run picker
+    // (`listRuns`) and by explicit `runId`.
+    const run =
+      runId === undefined
+        ? ((await this.prisma.deepDiveRun.findFirst({
+            where: { market, status: "complete", source: "chain" },
+            orderBy: { runAt: "desc" },
+          })) ??
+          // No chain run yet for this lane (a fresh install, or only experiments
+          // so far): fall back to the newest run of any provenance rather than
+          // rendering "no run yet" while verdicts exist.
+          (await this.prisma.deepDiveRun.findFirst({ where: { market, status: "complete" }, orderBy: { runAt: "desc" } })))
+        : await this.prisma.deepDiveRun.findFirst({ where: { id: runId, status: "complete" } });
     if (!run || run.market !== market) {
       throw new NotFoundException(
         runId === undefined
@@ -362,6 +384,11 @@ export class ReportsService {
         degraded: screenRun.degraded,
         warnings: parseJsonArray(screenRun.warningsJson),
         dataThrough: latestBar?.date ?? null,
+        // The session this LIST was ranked for — distinct from `dataThrough`, which
+        // is when the store's bars end. They differ whenever the newest screen run
+        // is older than the newest bar, which is exactly when a reader would
+        // otherwise assume the ranking is current. Null on pre-2026-09-11 rows.
+        screenedSession: screenRun.sessionDate || null,
         caveat: SCREEN_RULES_CAVEAT,
       },
       rows,
@@ -488,6 +515,7 @@ export class ReportsService {
       llmCalls: r.llmCalls,
       cacheHits: r.cacheHits,
       failed: r.failed,
+      source: (r as { source?: string }).source ?? "chain",
     }));
   }
 

@@ -656,6 +656,46 @@ while the newer 27-candidate list (screenRun 18) is invisible. This is exactly t
 documented ad-hoc-run footgun. Monday's HK chain heals it; the real fix is to stop
 an ad-hoc run from becoming the lane's latest.
 
+## 2026-09-12 (the ad-hoc-run bug FIXED, and a flaky test root-caused)
+
+**The bug I left, fixed.** The dashboard showed the newest *complete* run per lane,
+so an operator run became the lane's view — which is why HK rendered my 3-name smoke
+test (run 8) as its latest, showing 5 rows from a legacy 15-candidate list with only
+3 verdicts while the newer 27-candidate list was invisible. It also made the Phase-5
+prompt-experiment worktree hazardous, whose entire purpose is to run *without*
+becoming production.
+
+Fixed by recording provenance: `DeepDiveRun.source` = **`chain`** (the scheduled
+pipeline) or **`adhoc`** (`--symbol`, an explicit `--top`, or `--as-of` — none of
+which the chain ever passes). `daily()` now shows the newest complete **chain** run,
+falling back to any provenance only when a lane has no chain run at all (a fresh
+install must still render verdicts rather than "no run yet"). Ad-hoc runs stay
+reachable through the run picker and by explicit `runId`, and the picker now
+**labels** them `· ad-hoc` so history cannot be misread at a glance.
+
+Backfill used an explicit inference, recorded as such in the migration: the chain has
+never passed `--top` and every chain-era run deep-dived ≥10 names, so runs below 10
+are operator smokes → runs 1, 2, 6, 8 become `adhoc`, the rest `chain`.
+
+**Effect on the live dashboard:** US → run 9 (chain, 40 deep-dived, 10 displayed);
+HK → run 5 (chain, 09-09). HK is now *older* but *legitimate* — which exposed a
+second gap, so `IntegrityHeader.screenedSession` now reports the session the **list**
+was ranked for, distinct from `dataThrough` (when the store's bars end). Without it,
+"data through 2026-09-11" next to a 09-09 ranking invites exactly the wrong
+assumption. Rendered as `· list ranked for 2026-09-09`, and omitted when it would
+just repeat the cutoff.
+
+**A flaky test root-caused rather than re-run.** `tencent.provider.spec.ts` failed
+once with `expected 489.317626953125 to be >= 500` and passed on other runs. The
+implementation paces to a jittered **deadline** and sleeps only the REMAINING time
+(`lastRequestAt + jitter(base) − Date.now()`), so a sleep below `spacingMs` is
+**correct** whenever real time has already elapsed since the previous request — the
+assertion was wrong, not the code, and it was flaky because it depended on
+wall-clock elapsed time. Rewritten to freeze the clock and assert the property that
+actually holds (jittered *spacing* ≥ 500, sleep ≤ 750, first call unpaced), plus an
+inverted test so the fix cannot be mistaken for "always sleep nothing". Verified
+stable over 8 consecutive runs, where the old version failed roughly 1 in 10.
+
 Next: Round 3 — LLM-layer prospective scoring (fast tier). Standing: **D6's
 Phase-4c pre-registration skeleton** (now written — powered differential as the
 deciding gate, design-half bar at target power 0.8, SE-stability guard, primary

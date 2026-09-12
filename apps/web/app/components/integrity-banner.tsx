@@ -18,6 +18,9 @@ export function IntegrityBanner({ integrity }: { integrity: IntegrityHeader }) {
         screened {integrity.universeSize} · ok {integrity.ok} · excluded {excluded}
         {integrity.fetchFailed > 0 && ` (fetch failed ${integrity.fetchFailed})`}
         {integrity.dataThrough && ` · data through ${integrity.dataThrough}`}
+        {/* Only shown when it adds information: if the list is ranked for the same
+            session the data ends at, "data through" already said it. */}
+        {integrity.screenedSession && ` · list ranked for ${integrity.screenedSession}`}
       </p>
       {integrity.degraded && (
         <div className="banner-degraded" role="alert" data-testid="degraded-banner">

@@ -49,7 +49,10 @@ export function RunPicker({
       <option value="">latest run</option>
       {runs.map((r) => (
         <option key={r.id} value={r.id}>
-          {`run ${r.id} · ${new Date(r.runAt).toLocaleString("en-GB", { hour12: false })} · topN ${r.topN}`}
+          {`run ${r.id} · ${new Date(r.runAt).toLocaleString("en-GB", { hour12: false })} · topN ${r.topN}` +
+            // An operator run is labelled, because it is reachable here on purpose
+            // but is not what the lane shows by default.
+            (r.source === "adhoc" ? " · ad-hoc" : "")}
         </option>
       ))}
     </select>

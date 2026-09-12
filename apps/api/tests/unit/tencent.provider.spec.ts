@@ -148,7 +148,44 @@ describe("TencentKlineProvider — failure taxonomy (never throws)", () => {
 });
 
 describe("TencentKlineProvider — pacing (measured: 9 calls at 0.5–0.6s, no throttling)", () => {
-  it("first call unpaced, later calls wait jitter(500ms) ∈ [500, 750]", async () => {
+  it("paces the second call to >= jitter(500ms) since the first, deterministically", async () => {
+    // The property is the SPACING, not the sleep value. `throttle` sleeps only the
+    // REMAINING time to a jittered deadline, so a sleep below `spacingMs` is
+    // correct whenever real time has already elapsed since the previous request —
+    // which made the previous assertion (`sleep >= 500`) both wrong and flaky: it
+    // measured 489.3ms on a run where only ~20ms had elapsed. Freezing the clock and
+    // letting the injected sleep advance it tests the actual guarantee.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-12T00:00:00Z"));
+    const sleeps: number[] = [];
+    const body = { data: { hk00005: { qfqday: [row("2026-08-26")] } } };
+    const p = new TencentKlineProvider({
+      spacingMs: 500,
+      fetchImpl: vi.fn().mockResolvedValue(jsonResponse(200, body)),
+      sleep: async (ms: number) => {
+        sleeps.push(ms);
+        vi.setSystemTime(Date.now() + ms); // the injected sleep IS the wait
+      },
+    });
+    try {
+      await p.fetchSessionDates("0005.HK");
+      const afterFirst = Date.now();
+      await p.fetchSessionDates("0005.HK");
+      const spacing = Date.now() - afterFirst;
+      expect(sleeps).toHaveLength(1); // first call unpaced
+      expect(sleeps[0]!).toBeGreaterThan(0);
+      expect(spacing).toBeGreaterThanOrEqual(500); // the jittered minimum spacing
+      expect(sleeps[0]!).toBeLessThanOrEqual(750); // and never more than the cap
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never sleeps longer than the jitter cap, and never paces the FIRST call", async () => {
+    // The inverted property, so the fix above cannot be mistaken for "always sleep
+    // nothing": an unpaced first call and a bounded second one.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-12T00:00:00Z"));
     const sleeps: number[] = [];
     const body = { data: { hk00005: { qfqday: [row("2026-08-26")] } } };
     const p = new TencentKlineProvider({
@@ -158,10 +195,14 @@ describe("TencentKlineProvider — pacing (measured: 9 calls at 0.5–0.6s, no t
         sleeps.push(ms);
       },
     });
-    await p.fetchSessionDates("0005.HK");
-    await p.fetchSessionDates("0005.HK");
-    expect(sleeps).toHaveLength(1);
-    expect(sleeps[0]!).toBeGreaterThanOrEqual(500);
-    expect(sleeps[0]!).toBeLessThanOrEqual(750);
+    try {
+      await p.fetchSessionDates("0005.HK");
+      expect(sleeps).toHaveLength(0); // first call is never paced
+      await p.fetchSessionDates("0005.HK");
+      expect(sleeps).toHaveLength(1);
+      expect(sleeps[0]!).toBeLessThanOrEqual(750);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

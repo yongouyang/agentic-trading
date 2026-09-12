@@ -60,6 +60,10 @@ export interface DeepDiveCliArgs {
   symbols?: string[];
   maxCalls: number;
   asOf?: string;
+  /** An OPERATOR run rather than the scheduled pipeline: `--symbol`, an explicit
+   *  `--top`, or `--as-of`. Recorded on the run row so the dashboard can show the
+   *  newest chain run instead of whatever experiment ran last. */
+  adHoc?: boolean;
 }
 
 export function parseDeepDiveArgs(argv: string[]): DeepDiveCliArgs {
@@ -83,13 +87,16 @@ export function parseDeepDiveArgs(argv: string[]): DeepDiveCliArgs {
     } else if (arg === "--top") {
       args.top = Number(next());
       if (!Number.isInteger(args.top) || args.top < 1) throw new Error("--top must be a positive integer");
+      args.adHoc = true; // the chain never passes --top
     } else if (arg === "--max-calls") {
       args.maxCalls = Number(next());
       if (!Number.isInteger(args.maxCalls) || args.maxCalls < 1) throw new Error("--max-calls must be a positive integer");
     } else if (arg === "--as-of") {
       args.asOf = next();
+      args.adHoc = true;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(args.asOf)) throw new Error("--as-of must be YYYY-MM-DD");
     } else if (arg === "--symbol") {
+      args.adHoc = true;
       symbols.push(
         ...next()
           .split(",")
@@ -210,10 +217,11 @@ export async function selectTargets(
   prisma: PrismaService,
   args: DeepDiveCliArgs,
   dataDir: string,
-): Promise<{ lanes: { market: string; screenRunId: number; targets: DeepDiveTarget[] }[]; warnings: string[] }> {
+): Promise<{ lanes: { market: string; screenRunId: number; targets: DeepDiveTarget[]; source: "chain" | "adhoc" }[]; warnings: string[] }> {
   const universe = loadUniverses(dataDir);
   const warnings: string[] = [];
-  const lanes: { market: string; screenRunId: number; targets: DeepDiveTarget[] }[] = [];
+  const source = args.adHoc ? ("adhoc" as const) : ("chain" as const);
+  const lanes: { market: string; screenRunId: number; targets: DeepDiveTarget[]; source: "chain" | "adhoc" }[] = [];
 
   if (args.symbols?.length) {
     const byMarket = new Map<string, DeepDiveTarget[]>();
@@ -239,7 +247,7 @@ export async function selectTargets(
     }
     for (const [market, targets] of [...byMarket.entries()].sort()) {
       const run = await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } });
-      lanes.push({ market, screenRunId: run?.id ?? 0, targets });
+      lanes.push({ market, screenRunId: run?.id ?? 0, targets, source });
     }
     return { lanes, warnings };
   }
@@ -265,7 +273,7 @@ export async function selectTargets(
         metrics: JSON.parse(r.metricsJson) as Record<string, unknown>,
       };
     });
-    lanes.push({ market, screenRunId: run.id, targets });
+    lanes.push({ market, screenRunId: run.id, targets, source });
   }
   return { lanes, warnings };
 }
@@ -329,6 +337,7 @@ export async function runDeepDiveBatch(deps: DeepDiveBatchDeps, args: DeepDiveCl
         failed: 0,
         warningsJson: "[]",
         status: "running",
+        source: lane.source,
       },
     });
 

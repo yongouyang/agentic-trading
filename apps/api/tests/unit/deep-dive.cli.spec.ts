@@ -36,6 +36,7 @@ describe("parseDeepDiveArgs", () => {
       maxCalls: 50,
       asOf: "2026-09-05",
       symbols: ["0700.HK", "0005.HK"],
+      adHoc: true, // --top/--symbol/--as-of are all operator flags
     });
   });
   it("rejects bad values loudly", () => {
@@ -277,5 +278,24 @@ describe("runDeepDiveBatch", () => {
     expect(r!.reports.map((x) => x.status)).toEqual(["ok", "ok", "ok"]);
     expect(r!.llmCalls).toBe(0);
     expect(r!.cacheHits).toBe(21);
+  });
+});
+
+describe("run provenance — operator runs are marked, the scheduled chain is not", () => {
+  it("a bare invocation (what daily-chain.sh runs) is a CHAIN run", () => {
+    // The chain passes no --top/--symbol/--as-of, so a bare call must stay
+    // production. If this ever flips, the dashboard would show ad-hoc runs.
+    const a = parseDeepDiveArgs([]);
+    expect(a.adHoc).toBeUndefined();
+    expect(a.symbols).toBeUndefined();
+  });
+
+  it("marks --top, --symbol and --as-of as operator runs", () => {
+    // Each of these is something the scheduled chain never passes, so any of them
+    // means an experiment that must not become the lane's view.
+    expect(parseDeepDiveArgs(["--top", "3"]).adHoc).toBe(true);
+    expect(parseDeepDiveArgs(["--symbol", "AAPL"]).adHoc).toBe(true);
+    expect(parseDeepDiveArgs(["--as-of", "2026-09-01"]).adHoc).toBe(true);
+    expect(parseDeepDiveArgs(["--market", "us"]).adHoc).toBeUndefined();
   });
 });

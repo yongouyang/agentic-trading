@@ -16,6 +16,9 @@ export interface IntegrityHeader {
   /** W3b: newest bar date the store holds for this lane's market (yyyy-mm-dd).
    *  Optional so an older api response renders exactly as it did before. */
   dataThrough?: string | null;
+  /** The session the list was ranked FOR, when it differs from the store cutoff.
+   *  Optional so an older api response renders exactly as before. */
+  screenedSession?: string | null;
   /** Phase 4b item 6: provenance of the ranking rules. Optional for the same
    *  reason — an older api response renders exactly as it did before. */
   caveat?: string | null;
@@ -198,6 +201,9 @@ export interface FullTranscriptEntry extends TranscriptEntry {
 }
 
 export interface RunSummary {
+  /** 'chain' (scheduled pipeline) or 'adhoc' (an operator run). Optional so an
+   *  older api response renders exactly as before. */
+  source?: string;
   id: number;
   runAt: string;
   market: string;
