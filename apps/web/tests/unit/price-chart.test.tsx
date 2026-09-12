@@ -7,7 +7,7 @@ const fitContent = vi.fn();
 const priceScaleApply = vi.fn();
 const remove = vi.fn();
 const createSeriesMarkers = vi.fn();
-const createChart = vi.fn(() => ({
+const createChart = vi.fn((..._args: unknown[]) => ({
   addSeries,
   priceScale: vi.fn(() => ({ applyOptions: priceScaleApply })),
   applyOptions,
@@ -82,7 +82,7 @@ describe("PriceChart", () => {
     ]);
     expect(priceScaleApply).toHaveBeenCalledWith({ scaleMargins: { top: 0.85, bottom: 0 } });
 
-    const chartMarkers = createSeriesMarkers.mock.calls[0][1];
+    const chartMarkers = createSeriesMarkers.mock.calls[0]![1];
     expect(chartMarkers).toEqual([
       { time: "2026-09-01", position: "aboveBar", shape: "square", color: "#b45309", text: "S" },
       { time: "2026-09-02", position: "belowBar", shape: "circle", color: "#0969da", text: "D" },

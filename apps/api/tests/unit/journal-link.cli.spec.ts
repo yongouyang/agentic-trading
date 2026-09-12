@@ -33,15 +33,30 @@ function stubPrisma() {
       ],
     },
     deepDiveRun: {
-      findMany: async () => [
-        {
-          screenRunId: 18,
-          reports: [
-            { symbol: "0066.HK", verdictJson: JSON.stringify({ conviction: 0.4, abstain: false }) },
-            { symbol: "1113.HK", verdictJson: JSON.stringify({ conviction: 0.1, abstain: true }) },
-          ],
-        },
-      ],
+      // Faithful to the real query `where: { screenRunId: { in }, status:
+      // "complete", source: "chain" }` — an adhoc run must be filtered out by
+      // the query, which only works if the stub applies it too.
+      findMany: async ({ where }: any = {}) =>
+        [
+          {
+            screenRunId: 18,
+            status: "complete",
+            source: "chain",
+            reports: [
+              { symbol: "0066.HK", verdictJson: JSON.stringify({ conviction: 0.4, abstain: false }) },
+              { symbol: "1113.HK", verdictJson: JSON.stringify({ conviction: 0.1, abstain: true }) },
+            ],
+          },
+          // A later ad-hoc re-dive of the same screen run: its conviction must
+          // NEVER overwrite the chain run's — the journal measures decisions
+          // against the published list.
+          {
+            screenRunId: 18,
+            status: "complete",
+            source: "adhoc",
+            reports: [{ symbol: "0066.HK", verdictJson: JSON.stringify({ conviction: 0.99, abstain: false }) }],
+          },
+        ].filter((d) => (where?.source ? d.source === where.source : true) && (where?.status ? d.status === where.status : true)),
     },
     instrument: { findMany: async () => [{ id: 1, symbol: "0066.HK" }, { id: 2, symbol: "1113.HK" }] },
     bar: {
@@ -77,6 +92,13 @@ describe("journal:link — the store join", () => {
     expect(m[0]!.conviction).toBe(0.4);
     // An abstain carries no conviction, and must not be read as a 0.
     expect(m[1]!.conviction).toBeNull();
+  });
+
+  it("an adhoc run's report never overwrites the chain run's conviction", async () => {
+    const m = await loadMemberships(stubPrisma());
+    // The stub's adhoc run re-dives 0066.HK at conviction 0.99; the chain
+    // run's 0.4 must stand.
+    expect(m.find((x) => x.symbol === "0066.HK")!.conviction).toBe(0.4);
   });
 
   it("derives series through the same adjusted path the screen uses", async () => {

@@ -199,11 +199,17 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
   const lanes: LaneHealth[] = [];
 
   for (const market of ["HK", "US"] as const) {
-    const [run, screenRun, latestBar] = await Promise.all([
+    // Provenance (same policy as ReportsService.daily): "last complete run"
+    // means the newest complete **chain** run — an ad-hoc smoke run must not
+    // reset the missed-slot clock. Fall back to any provenance only when the
+    // lane has no chain run at all.
+    const [chainRun, anyRun, screenRun, latestBar] = await Promise.all([
+      prisma.deepDiveRun.findFirst({ where: { market, status: "complete", source: "chain" }, orderBy: { runAt: "desc" } }),
       prisma.deepDiveRun.findFirst({ where: { market, status: "complete" }, orderBy: { runAt: "desc" } }),
       prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } }),
       prisma.bar.findFirst({ where: { instrument: { market } }, orderBy: { date: "desc" }, select: { date: true } }),
     ]);
+    const run = chainRun ?? anyRun;
 
     const staleCutoff = new Date(now.getTime() - STALE_RUNNING_HOURS * 3600 * 1000);
     const stale = await prisma.deepDiveRun.findFirst({

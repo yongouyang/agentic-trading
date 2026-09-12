@@ -143,7 +143,9 @@ export function entryDate(barDates: string[], date: string): string | null {
 export interface LaneValidation {
   /** "POOLED" for the combined row, which is the primary read (Fork C). */
   market: Market | "POOLED";
-  /** Completed runs that contributed at least one scorable verdict. */
+  /** Complete runs scanned for the lane — including runs whose verdicts were
+   *  all excluded (late / version / failed), so this is a coverage figure, not
+   *  a sample-contributing count. */
   runs: number;
   /** Verdicts with a conviction and a computable forward return. */
   labelled: number;
@@ -157,6 +159,10 @@ export interface LaneValidation {
   /** Verdicts EXCLUDED for carrying a different `promptVersion` — a second
    *  treatment, not more data. Reported for the same reason as `lateExcluded`. */
   otherVersionExcluded: number;
+  /** Reports EXCLUDED because the deep-dive failed and `verdictJson` is null —
+   *  counted separately from `otherVersionExcluded`, which means an actual
+   *  prompt-version mismatch, not a missing verdict. */
+  failedExcluded: number;
   abstains: number;
   days: number;
   /** Raw conviction IC — "does conviction order outcomes?" (confounded). */
@@ -217,7 +223,15 @@ export function convictionOf(verdictJson: string | null): {
 async function loadMarket(
   prisma: PrismaService,
   market: Market,
-): Promise<{ obs: VerdictObservation[]; runs: number; abstains: number; pending: number; late: number; otherVersion: number }> {
+): Promise<{
+  obs: VerdictObservation[];
+  runs: number;
+  abstains: number;
+  pending: number;
+  late: number;
+  otherVersion: number;
+  noVerdict: number;
+}> {
   const instruments = await prisma.instrument.findMany({ where: { market } });
   const idToSymbol = new Map(instruments.map((i) => [i.id, i.symbol]));
   const ids = instruments.map((i) => i.id);
@@ -279,6 +293,7 @@ async function loadMarket(
   let pending = 0;
   let late = 0;
   let otherVersion = 0;
+  let noVerdict = 0;
   for (const run of runs) {
     const runDate = hktDate(run.runAt);
     const entry = entryDate(laneDates, runDate);
@@ -289,6 +304,13 @@ async function loadMarket(
       continue;
     }
     for (const rep of run.reports) {
+      // A FAILED deep-dive stores a report row with verdictJson null. That is
+      // not a prompt-version mismatch — count it separately so the version
+      // figure only ever means an actual different treatment.
+      if (rep.verdictJson == null) {
+        noVerdict++;
+        continue;
+      }
       const { conviction, abstain, promptVersion } = convictionOf(rep.verdictJson);
       // One treatment per sample: another prompt version is a different system,
       // not another observation of this one. An unattributable version is
@@ -311,7 +333,7 @@ async function loadMarket(
       obs.push({ date: entry, market, symbol: rep.symbol, conviction, rank, forwardReturn: r });
     }
   }
-  return { obs, runs: runs.length, abstains, pending, late, otherVersion };
+  return { obs, runs: runs.length, abstains, pending, late, otherVersion, noVerdict };
 }
 
 function laneValidation(
@@ -322,6 +344,7 @@ function laneValidation(
   pending: number,
   late: number,
   otherVersion: number,
+  noVerdict: number,
   targetIc: number,
   assumedBreadth = ASSUMED_BREADTH,
 ): LaneValidation {
@@ -340,6 +363,7 @@ function laneValidation(
     pendingLabel: pending,
     lateExcluded: late,
     otherVersionExcluded: otherVersion,
+    failedExcluded: noVerdict,
     abstains,
     days: points.length,
     meanIc: stats?.mean ?? null,
@@ -376,9 +400,10 @@ export function renderValidation(r: ValidationReport): string {
   );
   const row = (l: LaneValidation) => {
     lines.push(
-      `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs` +
+      `${l.market}: ${l.labelled} labelled verdicts over ${l.days} days · ${l.pendingLabel} awaiting a ${r.horizon}d label · ${l.abstains} abstains · ${l.runs} complete runs scanned` +
         `${l.lateExcluded > 0 ? ` · ${l.lateExcluded} EXCLUDED as late (look-ahead)` : ""}` +
-        `${l.otherVersionExcluded > 0 ? ` · ${l.otherVersionExcluded} EXCLUDED (different prompt version)` : ""}`,
+        `${l.otherVersionExcluded > 0 ? ` · ${l.otherVersionExcluded} EXCLUDED (different prompt version)` : ""}` +
+        `${l.failedExcluded > 0 ? ` · ${l.failedExcluded} EXCLUDED (deep-dive failed, no verdict)` : ""}`,
     );
     lines.push(
       `    raw IC ${l.meanIc == null ? "—" : l.meanIc.toFixed(4)} · ICIR ${l.icir == null ? "—" : l.icir.toFixed(3)} · NW t ${l.nwT == null ? "—" : l.nwT.toFixed(2)}` +
@@ -407,9 +432,11 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
   const lanes: LaneValidation[] = [];
   const allObs: VerdictObservation[] = [];
   for (const market of args.markets) {
-    const { obs, runs, abstains, pending, late, otherVersion } = await loadMarket(prisma, market);
+    const { obs, runs, abstains, pending, late, otherVersion, noVerdict } = await loadMarket(prisma, market);
     allObs.push(...obs);
-    lanes.push(laneValidation(market, obs, runs, abstains, pending, late, otherVersion, args.targetIc, SCREEN_PARAMS.topN[market]));
+    lanes.push(
+      laneValidation(market, obs, runs, abstains, pending, late, otherVersion, noVerdict, args.targetIc, SCREEN_PARAMS.topN[market]),
+    );
   }
   const pooled = laneValidation(
     "POOLED",
@@ -419,6 +446,7 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
     lanes.reduce((a, l) => a + l.pendingLabel, 0),
     lanes.reduce((a, l) => a + l.lateExcluded, 0),
     lanes.reduce((a, l) => a + l.otherVersionExcluded, 0),
+    lanes.reduce((a, l) => a + l.failedExcluded, 0),
     args.targetIc,
     ASSUMED_BREADTH * Math.max(1, args.markets.length),
   );

@@ -134,4 +134,18 @@ describe("accrual — the false 'missed' alarm that the first successful run exp
     expect(us.prospectiveSessions).toBe(0);
     expect(us.missedSessions).toBe(2); // both permanently lost
   });
+
+  it("counts the cutoff date itself on BOTH sides (>= PROSPECTIVE_FROM)", async () => {
+    // The Phase-4 window ends 09-11, so 2026-09-12 is prospective. A `>` on
+    // either side silently drops it and the two counts disagree by one.
+    const prisma = {
+      bar: { findMany: async () => [{ date: "2026-09-12" }] },
+      screenRun: { findMany: async () => [{ runAt: new Date("2026-09-12T22:14:00Z"), sessionDate: "2026-09-12" }] },
+    } as any;
+    const r = await runAccrual(prisma);
+    const us = r.lanes.find((l) => l.market === "US")!;
+    expect(us.expectedSessions).toBe(1);
+    expect(us.prospectiveSessions).toBe(1);
+    expect(us.missedSessions).toBe(0);
+  });
 });

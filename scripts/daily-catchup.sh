@@ -36,10 +36,16 @@ export PATH="$HOME/Library/pnpm/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 # ops-health.sh and weekly-maintenance.sh rather than a bespoke one — a second
 # resolver is a second thing to get wrong, which is exactly what happened.
 if ! command -v node >/dev/null 2>&1; then
-  NODE_BIN=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -t. -k1.2n -k2n -k3n | tail -1)
-  [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+  # sort -V on the version with the leading v stripped — the old field sort
+  # (-k1.2n) compared "24" as "4" and would pick v9.x over v24.x.
+  NODE_VER=$(ls "$HOME"/.nvm/versions/node 2>/dev/null | sed 's/^v//' | sort -V | tail -1)
+  [ -n "$NODE_VER" ] && export PATH="$HOME/.nvm/versions/node/v$NODE_VER/bin:$PATH"
 fi
 
+# Report the WORST outcome across lanes (mirroring daily-chain.sh's
+# worst-exit): a guard failure or a failed catch-up chain must not exit 0, or
+# launchd records a clean job for an evening that did nothing.
+RC=0
 for lane in hk us; do
   pnpm -C apps/api ops:catchup --lane "$lane"
   rc=$?
@@ -47,7 +53,12 @@ for lane in hk us; do
     0)  echo "$(date '+%F %T') $lane: up to date, nothing to do" ;;
     10) echo "$(date '+%F %T') $lane: session missing — running the chain"
         bash scripts/daily-chain.sh "$lane"
-        echo "$(date '+%F %T') $lane: catch-up chain exit=$?" ;;
-    *)  echo "$(date '+%F %T') $lane: GUARD FAILED rc=$rc — not running (a blind run could duplicate a session)" ;;
+        chain_rc=$?
+        echo "$(date '+%F %T') $lane: catch-up chain exit=$chain_rc"
+        [ "$chain_rc" -gt "$RC" ] && RC=$chain_rc ;;
+    *)  echo "$(date '+%F %T') $lane: GUARD FAILED rc=$rc — not running (a blind run could duplicate a session)"
+        [ "$rc" -gt "$RC" ] && RC=$rc ;;
   esac
 done
+echo "daily-catchup worst-exit=$RC"
+exit "$RC"

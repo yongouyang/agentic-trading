@@ -24,6 +24,8 @@ interface RunRow {
   id: number;
   market: string;
   runAt: Date;
+  /** DeepDiveRun provenance; undefined simulates a pre-column chain row. */
+  source?: "chain" | "adhoc";
 }
 interface ScreenRow {
   id: number;
@@ -42,6 +44,7 @@ function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Recor
         const pool = where.status === "running" ? running : runs;
         const match = pool
           .filter((r) => r.market === where.market)
+          .filter((r) => (where.source ? r.source === where.source : true))
           .filter((r) => (where.runAt?.lt ? r.runAt.getTime() < where.runAt.lt.getTime() : true))
           .sort((a, b) => b.runAt.getTime() - a.runAt.getTime());
         return match[0] ?? null;
@@ -138,6 +141,41 @@ describe("computeHealth — lane cadence", () => {
     expect(us.level).toBe("alert");
     expect(us.lastCompleteRunId).toBeNull();
     expect(us.reasons.join(" ")).toMatch(/no complete deep-dive run/);
+  });
+});
+
+describe("computeHealth — run provenance", () => {
+  // Measured 2026-09-12: HK's "last complete run" was an ad-hoc 3-name smoke
+  // run, which reset the missed-slot clock. The newest complete **chain** run
+  // is the lane's truth (same policy as ReportsService.daily).
+  it("a newer adhoc run does not replace the older chain run as lastComplete", async () => {
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [
+          { id: 6, market: "HK", runAt: hkt("2026-09-10T16:55:00"), source: "chain" },
+          { id: 8, market: "HK", runAt: hkt("2026-09-12T15:00:00"), source: "adhoc" },
+        ],
+      }),
+      { now: hkt("2026-09-12T20:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.lastCompleteRunId).toBe(6);
+    // Judged against the chain run: Fri 09-11 16:50 passed beyond grace.
+    expect(hk.expectedRunsMissed).toBe(1);
+    expect(hk.level).toBe("warn");
+  });
+
+  it("falls back to any provenance only when the lane has no chain run at all", async () => {
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 8, market: "HK", runAt: hkt("2026-09-12T15:00:00"), source: "adhoc" }],
+      }),
+      { now: hkt("2026-09-12T20:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.lastCompleteRunId).toBe(8);
+    expect(hk.expectedRunsMissed).toBe(0);
+    expect(hk.level).toBe("healthy");
   });
 });
 

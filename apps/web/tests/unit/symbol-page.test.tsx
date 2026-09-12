@@ -114,8 +114,8 @@ describe("symbol detail page", () => {
     expect(entries[0]).toHaveTextContent("14+9 tokens");
     // verdict agent response expanded by default, others collapsed
     const responses = screen.getAllByTestId("response-text");
-    expect(responses[1].closest("details")).toHaveAttribute("open");
-    expect(responses[0].closest("details")).not.toHaveAttribute("open");
+    expect(responses[1]!.closest("details")).toHaveAttribute("open");
+    expect(responses[0]!.closest("details")).not.toHaveAttribute("open");
   });
 
   it("renders a chart placeholder when price history 404s, keeping the rest", async () => {

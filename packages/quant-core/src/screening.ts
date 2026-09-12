@@ -11,7 +11,8 @@
  *   close > SMA50 AND SMA50 > SMA200; mom60 > 0; sharpe252 > 0.
  * Score: per-market cross-sectional z-scores over the day's eligible set,
  *   score = 0.50·z(mom60) + 0.25·z(mom20) + 0.25·z(sharpe252).
- * Rank descending, top 15 per market, ties broken by higher adv20.
+ * Rank descending, per-market `topN` (40 US / 40 HK measurement breadth —
+ * the dashboard presents `displayTopN`), ties broken by higher adv20.
  */
 import { Bar } from "./types.js";
 import { advDollar, annualizedVol, maxDrawdown, momentum, sharpe, sma } from "./indicators.js";

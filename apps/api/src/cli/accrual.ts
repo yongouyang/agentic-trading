@@ -25,8 +25,9 @@ import { PrismaService } from "../prisma.service.js";
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 const BACKTEST_DIR = path.join(PKG_ROOT, "reports", "backtest");
 
-/** Sessions after this date are prospective. The Phase-4 window ends 2026-09-11
- *  (US) / 2026-09-11 (HK), so anything strictly after it was never looked at. */
+/** Sessions on or after this date are prospective. The Phase-4 window ends
+ *  2026-09-11 (US) / 2026-09-11 (HK), so anything from 2026-09-12 on was never
+ *  looked at. */
 export const PROSPECTIVE_FROM = "2026-09-12";
 
 /** The pre-registered Gate 1 bar and its significance requirement: the target SE
@@ -155,7 +156,7 @@ export function renderAccrual(r: AccrualReport): string {
   for (const l of r.lanes) {
     lines.push(
       `${l.market}: ${l.prospectiveSessions}/${l.expectedSessions} prospective lane-days collected` +
-        `${l.missedSessions > 0 ? ` — **${l.missedSessions} slots missed** (each is a permanently lost observation)` : ""}` +
+        `${l.missedSessions > 0 ? ` — **${l.missedSessions} sessions missed** (each is a permanently lost observation)` : ""}` +
         ` · ${l.labelled20} already carry a 20d label · store data through ${l.latestBar ?? "—"}`,
     );
     if (l.observedNwSe == null) {
@@ -216,7 +217,7 @@ export async function runAccrual(prisma: PrismaService): Promise<AccrualReport> 
     // "1 slot missed" for a run that worked. A session whose bars backfill but
     // which was never screened still counts as expected and not collected, which
     // is the miss this metric exists to show.
-    const expectedSessions = sessions.filter((d) => d > PROSPECTIVE_FROM).length;
+    const expectedSessions = sessions.filter((d) => d >= PROSPECTIVE_FROM).length;
     // A prospective session carries a 20d label once 20 lane sessions exist after it.
     const labelled20 = prospective.filter((d) => sessions.filter((s) => s > d).length >= 20).length;
     lanes.push(

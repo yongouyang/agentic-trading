@@ -394,7 +394,7 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
       );
       notes.push(
         `SE triple: naive ${power.naiveSe.toFixed(5)} · heuristic ${power.heuristicSe.toFixed(5)} · realized NW ${gate1.nwSe.toFixed(5)}` +
-          ` (df ${power.df.toFixed(1)}) · 95% CI on mean IC [${gate1.ciLo.toFixed(4)}, ${gate1.ciHi.toFixed(4)}] (approx: NW + normal)`,
+          ` (df ${power.df.toFixed(1)}) · 95% CI on mean IC [${gate1.ciLo.toFixed(4)}, ${gate1.ciHi.toFixed(4)}] (NW SE · t-quantile from icPower)`,
       );
     }
     if (!falsified) {

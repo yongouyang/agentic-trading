@@ -25,7 +25,7 @@
  * skipped silently, but when names will actually be processed and any
  * required var is still unset the CLI FAILS LOUD naming every missing var.
  *
- * --max-calls (default 200) is a hard budget checked BEFORE each name: when
+ * --max-calls (default 800) is a hard budget checked BEFORE each name: when
  * the next name could push the run past the cap (7 calls/stock, 6/ETF
  * worst case), the run stops queueing and remaining names are recorded
  * failed:budget-exceeded — a loud abort, never a silent bill.

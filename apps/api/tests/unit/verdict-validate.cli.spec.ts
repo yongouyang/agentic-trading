@@ -138,4 +138,33 @@ describe("treatment gate — one prompt version per sample", () => {
     expect(r.lanes[0]!.otherVersionExcluded).toBe(1);
     expect(r.lanes[0]!.pendingLabel).toBe(1); // only the v1 verdict is even a candidate
   });
+
+  it("counts a FAILED deep-dive (verdictJson null) separately, not as a version mismatch", async () => {
+    // convictionOf(null).promptVersion is null, and null !== "v1" — without a
+    // separate counter a failed run is reported as "EXCLUDED (different prompt
+    // version)", which it is not.
+    const prisma = {
+      instrument: { findMany: async () => [{ id: 1, symbol: "AAA" }] },
+      bar: { findMany: async () => [{ instrumentId: 1, date: "2026-09-10", open: 1, high: 1, low: 1, close: 1, volume: 1 }] },
+      corporateAction: { findMany: async () => [] },
+      screenResult: { findMany: async () => [{ symbol: "AAA", rank: 1 }] },
+      deepDiveRun: {
+        findMany: async () => [
+          {
+            id: 1,
+            market: "US",
+            runAt: new Date("2026-09-10T22:10:00Z"),
+            reports: [
+              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }) },
+              { symbol: "AAA", verdictJson: null },
+            ],
+          },
+        ],
+      },
+    } as any;
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.failedExcluded).toBe(1);
+    expect(r.lanes[0]!.otherVersionExcluded).toBe(0);
+    expect(renderValidation(r)).toMatch(/EXCLUDED \(deep-dive failed, no verdict\)/);
+  });
 });

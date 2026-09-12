@@ -85,7 +85,16 @@ export async function loadMemberships(prisma: PrismaService): Promise<ListMember
   if (runs.length === 0) return [];
   const runIds = runs.map((r) => r.id);
   const results = await prisma.screenResult.findMany({ where: { runId: { in: runIds } } });
-  const deepDives = await prisma.deepDiveRun.findMany({ where: { screenRunId: { in: runIds } }, include: { reports: true } });
+  // Chain-complete runs only, NO any-provenance fallback (stricter than the
+  // dashboard's policy): the journal measures decisions against the PUBLISHED
+  // list, so an ad-hoc run must never overwrite a chain conviction. Querying
+  // only chain runs also makes the `${screenRunId}:${symbol}` key
+  // deterministic — one chain deep-dive per screen run.
+  const deepDives = await prisma.deepDiveRun.findMany({
+    where: { screenRunId: { in: runIds }, status: "complete", source: "chain" },
+    orderBy: { runAt: "asc" },
+    include: { reports: true },
+  });
 
   // conviction is read from verdictJson — DeepDiveReport has no such column.
   const conviction = new Map<string, number>();

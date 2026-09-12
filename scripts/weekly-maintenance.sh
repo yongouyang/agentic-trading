@@ -15,8 +15,10 @@ cd "$ROOT"
 # (same fix as daily-chain.sh, failed run 2026-09-10).
 export PATH="$HOME/Library/pnpm/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 if ! command -v node >/dev/null 2>&1; then
-  NODE_BIN=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -t. -k1.2n -k2n -k3n | tail -1)
-  [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
+  # sort -V on the version with the leading v stripped — the old field sort
+  # (-k1.2n) compared "24" as "4" and would pick v9.x over v24.x.
+  NODE_VER=$(ls "$HOME"/.nvm/versions/node 2>/dev/null | sed 's/^v//' | sort -V | tail -1)
+  [ -n "$NODE_VER" ] && export PATH="$HOME/.nvm/versions/node/v$NODE_VER/bin:$PATH"
 fi
 echo "== weekly-maintenance ${1:?usage: weekly-maintenance.sh sentinel|f10} $(date '+%Y-%m-%d %H:%M:%S %Z') =="
 
