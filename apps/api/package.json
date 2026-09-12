@@ -28,7 +28,8 @@
     "phase4c:accrual": "tsx src/cli/accrual.ts",
     "verdict:validate": "tsx src/cli/verdict-validate.ts",
     "ops:catchup": "tsx src/cli/ops-catchup.ts",
-    "journal:link": "tsx src/cli/journal-link.ts"
+    "journal:link": "tsx src/cli/journal-link.ts",
+    "backtest:vendor": "tsx src/cli/backtest-vendor.ts"
   },
   "dependencies": {
     "@agentic-trading/agents": "workspace:*",

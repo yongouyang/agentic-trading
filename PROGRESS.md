@@ -5,6 +5,45 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (vendor loader + CLI BUILT — pre-registration step 2; the test half is behind a firewall flag)
+
+Execution step 2 of `docs/phase-4c-plan.md`, fast tier. New
+`apps/api/src/cli/vendor-loader.ts` + `backtest:vendor` CLI
+(`apps/api/src/cli/backtest-vendor.ts`); smoke artifact
+`apps/api/reports/backtest/vendor-2026-09-12.{json,txt}` (84 design-half
+sessions, end-to-end proof only).
+
+**Loader manifest (the locked rules, applied):** 1,490 symbols / 1,844
+survivor series → **1,469 series / 1,722,824 bars** loaded; **27 quarantined**
+gap series excluded; **348 dual-feed** symbols collapsed to one feed by bar
+count (choice recorded); **208 split events / 163 symbols** applied (SplitEvent
+registry + the CDTX 1:19 and QXO 16:3 detector rows, registry wins on
+collision) as backward adjustments anchored at the latest bar; **17,249
+dividend events / 904 symbols** through the picker's own `deriveAdjustedBars`
+path, amounts scaled to the split basis so D and price share a basis; **111
+residual symbols** on disclosed price returns. PIT safety proven by test:
+whole-history split/dividend adjustment cannot change day-T replay output
+(scale-invariance + ex-date slicing).
+
+**CLI:** `--from`/`--to` window options; default window = the design half
+(split at the replay-calendar midpoint, test starts 2024-09-03); the test half
+requires an explicit `--spend-test-half` flag and prints a firewall warning —
+it cannot be spent casually. `SCREEN_PARAMS` untouched; truncation lifted
+exactly as the picker backtest does.
+
+**Two bugs caught in the smoke:** a stack overflow spreading ~400k-row chunks
+(loop-push fix), and the loader pulling every feed of a survivor symbol (833
+false "dual") instead of the locked series universe — fixed, regression test.
+
+**Tests:** +22 (`vendor-loader.spec.ts`) — api **519** + 1 skipped, quant-core
+141, tsc clean both.
+
+**Next (the deep-tier moment):** full design-half run → breadth + NW SE →
+**the bar, locked numerically and appended to `docs/phase-4c-plan.md`** — the
+last pre-outcome decision. Then the test half is spent once.
+
+---
+
 ## 2026-09-12 (Phase-4c pre-registration LOCKED — vendor lane decides, rank IC revived with a capped bar; dividends harvested at 92.5 %; catch-up guards the verdict leg)
 
 Three items from the "next round" review, all landed.
