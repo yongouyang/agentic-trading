@@ -5,6 +5,47 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-12 (A3 decided: the target IC is ratified as a knowing departure; the 0.03 cap is scoped; the sd projection is now watched)
+
+User decision on the audit's last open item, taken with the arithmetic on the table.
+
+**1. `IC_target = 0.10` ratified** as a knowing departure from phase-4b's rule
+("set a bar from a power calculation on a design subset, never from a plausible
+effect size"), with the three reasons written into `docs/phase-5-plan.md` A3:
+4b's rule presupposes a retrospective design half that a prospective lane with
+`labelled: 0` does not have; the departure runs toward the *harder* test (0.10 vs
+the 0.0145 the project has actually measured, and vs the plan's own "easy bar"
+0.15); and because readiness forces `SE ≤ target/2.4865`, a mean at the target
+implies `t ≥ 2.4865` — so `IC_target` *is* the bar, it is not merely a scheduling
+parameter. That last point is why the provenance is now written down instead of
+living in a fork table.
+
+**2. The 0.03 cap scoped.** It binds the vendor lane's *derived* bar and is not a
+project-wide ceiling on magnitudes: applying it to H2 gives `daysNeeded ≈ 3,520
+days` — ~25 y at measured supply — so the lane could never decide. Recorded in both
+`phase-4c` (where the cap lives) and `phase-5` A3, rather than left as a silence
+between them.
+
+**3. The projection is now watched, in code.** `daysNeeded ∝ sd²`, and 4b measured
+the assumed per-day sd to be 1.31×–2.16× too small — so the assumed sd is the one
+number that decides whether the projected horizon is a floor or a fiction. It
+becomes measurable at 20 days, long before the test decides. `daysNeeded` was
+already rescaling itself silently to the measured sd; that rescaling is now
+**printed**: a `projection watch` line giving the observed sd, the assumed value and
+the ratio, with a warning at ≥ 1.5×, plus the pre-agreed response (change breadth or
+target then, while still unlabelled). Implemented as an exported
+`theoreticalSdDay(breadth, controls)` in quant-core — one formula, one place — and
+surfaced as `sdDay`/`sdTheory` on the lane report. First real run correctly prints
+nothing: `seSource` is still `theoretical` at 0 labelled days.
+
++1 test (api **522** + 1 skipped, quant-core 141, tsc clean).
+
+**Next:** the watch fires at 20 accrued days — that is the first point Stage 1 can
+learn something, and it lands ~a year before the test could decide. Standing: vendor
+loader built, design-half measurement is the next blocking step to the bar lock.
+
+---
+
 ## 2026-09-12 (charter written; a self-audit against it closed the ad-hoc provenance leak in the deciding statistic)
 
 **Charter.** `docs/project-direction.html` — objective, operating principles,

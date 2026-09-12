@@ -103,6 +103,12 @@ half. **Cap: 0.03.** If the 0.8-power bar exceeds 0.03, the lane is declared
 **underpowered by design** — before any test-half number is computed. The cap
 exists so an underpowered lane cannot be rescued by quietly raising the claim.
 
+*Scope (2026-09-12): this cap binds **this lane's derived bar**, not bar magnitudes
+project-wide.* It exists because a *derived* bar can drift upward on a design half.
+Phase 5's prospective `IC_target` (0.10) is governed by its own rule and its
+provenance is recorded in `docs/phase-5-plan.md` amendment A3; applying 0.03 to that
+lane would need ≈ 3,520 days (≈ 25 y at measured supply) and it could never decide.
+
 **SE-stability guard (1.5×, locked).** If the test-half realized SE exceeds the
 design-half's by more than 1.5×, the lane is **inconclusive**, not failed —
 the design half cannot fail a lane for a regime it never saw (amendment R4).

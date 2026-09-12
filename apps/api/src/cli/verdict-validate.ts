@@ -30,6 +30,7 @@ import {
   verdictFor,
   verdictIcSeries,
   verdictIcSeriesControlled,
+  theoreticalSdDay,
   type Market,
   type VerdictObservation,
 } from "@agentic-trading/quant-core";
@@ -192,6 +193,13 @@ export interface LaneValidation {
   splitMean: number | null;
   splitNwT: number | null;
   readiness: { days: number; daysNeeded: number; decidable: boolean; seSource: string; reason: string };
+  /** Measured per-day IC sd, and the theoretical value the projection assumed.
+   *  Printed as a ratio when the sample is long enough to measure (see the
+   *  projection-watch line in `renderValidation`) — Phase 4b found the assumed
+   *  value off by 1.31–2.16×, and `daysNeeded ∝ sd²`, so this ratio is the
+   *  earliest signal that the projected horizon is wrong. */
+  sdDay: number | null;
+  sdTheory: number | null;
   verdict: string;
 }
 
@@ -414,6 +422,8 @@ function laneValidation(
       seSource: readiness.seSource,
       reason: readiness.reason,
     },
+    sdDay: readiness.sdDay,
+    sdTheory: theoreticalSdDay(assumedBreadth, 0),
     verdict,
   };
 }
@@ -444,6 +454,21 @@ export function renderValidation(r: ValidationReport): string {
     );
     lines.push(`    readiness (raw): ${l.readiness.reason}`);
     lines.push(`    readiness (|rank): ${l.readinessControlled.reason}`);
+    // The projection watch. `daysNeeded` already self-corrects to the measured sd
+    // the moment 20 days exist, but the RESCALING was invisible, and it is the
+    // number that says whether the projected horizon is a floor or a fantasy:
+    // Phase 4b measured the assumed cross-sectional sd to be 1.31× (HK) to
+    // 2.16× (US) too small, and daysNeeded ∝ sd².
+    if (l.readiness.seSource === "measured" && l.sdDay != null && l.sdTheory != null && l.sdTheory > 0) {
+      const factor = l.sdDay / l.sdTheory;
+      lines.push(
+        `    projection watch: per-day IC sd ${l.sdDay.toFixed(4)} vs assumed ${l.sdTheory.toFixed(4)} = ${factor.toFixed(2)}x` +
+          ` · daysNeeded rescaled to ${l.readiness.daysNeeded}` +
+          (factor >= 1.5
+            ? `  !! the 4b cross-sectional factor ran 1.31-2.16x; at ~${(l.readiness.daysNeeded).toFixed(0)} days the horizon is ~${(factor * factor).toFixed(1)}x the full-supply projection`
+            : ""),
+      );
+    }
     lines.push(`    VERDICT ${l.market}: ${l.verdictControlled} (attribution) / ${l.verdict} (raw)`);
   };
   for (const l of r.lanes) row(l);

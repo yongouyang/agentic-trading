@@ -43,18 +43,46 @@ sessions ≈ **13.3 months**, and Phase 4c's US screen clock from 1,194 to ~2,13
 sessions ≈ 8.4 y. Both clocks are quoted at measured supply from here on; the
 full-supply figures are projections, not schedules.
 
-**A3 — the target IC's provenance, stated plainly, because 4b set a rule for it.**
-`docs/phase-4b-plan.md` §"Methodology rule to carry forward" requires: *"Set a bar
-from a power calculation on a design subset, never from a plausible effect size."*
-Fork B does the inverse — it fixes `IC_target = 0.10` on product grounds ("roughly
-the smallest edge that would change which names you act on") and lets the clock
-follow. The plan's own gloss — "No magic threshold is invented" — is true of the
-*readiness* rule and not of `IC_target` itself. This is recorded as a **knowing
-departure from the stated rule**, not an oversight, and it is legitimate only
-because it was pre-registered before any label existed; it may not be re-set now
-that labels are accruing. If the cap in Phase 4c (0.03) is meant to scope H2 as
-well, that must be said explicitly rather than inferred — 0.10 sits 3.3× above it,
-and the two documents currently disagree by silence.
+**A3 — the target IC's provenance: a knowing departure from 4b's rule, RATIFIED by
+the user 2026-09-12.** `docs/phase-4b-plan.md` §"Methodology rule to carry
+forward" requires: *"Set a bar from a power calculation on a design subset, never
+from a plausible effect size."* Fork B does the inverse — it fixes
+`IC_target = 0.10` on product grounds ("roughly the smallest edge that would change
+which names you act on") and lets the clock follow. The plan's own gloss — "No magic
+threshold is invented" — is true of the *readiness* rule and not of `IC_target`
+itself.
+
+Three reasons it stands, recorded so the ratification is a decision rather than a
+preference:
+
+1. **The rule presupposes a design subset that does not exist here.** 4b wrote it
+   for a retrospective test on a spent window; Phase 5 is prospective and has
+   `labelled: 0` — there is no half to derive from. The only pre-data substitute is
+   the theoretical `1/√(N−1)` formula that 4b itself measured as biased (2.16× US,
+   1.31× HK), so literal compliance was unavailable, not merely inconvenient.
+2. **The departure runs toward the harder test, not the easier one.** The dangerous
+   version of this error is a *large* target, which makes the bar easy and the test
+   short — this plan labelled 0.15 "an easy bar" (141 d) and 0.05 "ambitious"
+   (1,269 d). 0.10 is ~7× the only IC this project has ever measured (the screen's
+   0.0145). A bar from a plausible effect size reproduces the Phase-4 failure only
+   when it lands *below* what the design can detect.
+3. **`t ≥ 2` is redundant at readiness, so `IC_target` *is* the bar.** Readiness
+   requires `SE(mean) ≤ target/2.4865`, so a mean reaching the target implies
+   `t ≥ 2.4865`. That is why its provenance is written down here instead of being
+   left in a fork table.
+
+**It may not be re-set now that labels are accruing.** The default lives in
+`DEFAULT_TARGET_IC` and every artifact stamps the `targetIc` it computed against,
+so a non-default run is self-identifying — a safeguard, not a licence.
+
+**Cap scoping, stated rather than inferred.** Phase 4c's **0.03 cap governs the
+vendor lane's derived bar** — a retrospective archive lane, where the derivation
+itself could drift upward and an underpowered lane could otherwise be rescued by
+quietly raising the claim. It is **not a project-wide ceiling on bar magnitudes**.
+Applying it here would give `daysNeeded = 20 · (0.1601 / (0.03/2.4865))² ≈ 3,520
+days` — roughly **25 years at the measured 56 % supply** — so the lane could never
+decide, which is the opposite of what a cap is for. The two documents disagreed by
+silence; they do not now.
 
 **A4 — the readiness projection's SE depends on a formula 4b measured as failing.**
 Phase 4b Finding 1 measured the per-day `1/√(N−1)` approximation to be off by
@@ -65,6 +93,17 @@ The readiness rule's insistence that *only a measured SE may authorise a decisio
 is the mitigation and it is the right one — but until enough days accrue to measure
 it, `daysNeeded` is a projection computed from a formula already known to be biased,
 and the run report must say so (it does: `seSource: "theoretical"`).
+
+**The watch (user-locked 2026-09-12).** Because `daysNeeded ∝ sd²`, the assumed sd
+is the one number that decides whether the projected horizon is a floor or a fiction,
+and it becomes **measurable at 20 days** — long before the test can decide anything.
+The run report therefore prints a **projection-watch** line the moment `seSource`
+flips to `measured`: the observed per-day IC sd, the assumed value, and the ratio,
+with a warning at ≥ 1.5× (4b's observed range was 1.31–2.16×). The reading is
+pre-agreed: ratio near 1 → proceed; ratio near or above the 4b range → change
+breadth or target **then**, while the sample is still unlabelled, rather than
+discover it in a decade. `daysNeeded` already rescales itself to the measured sd;
+the watch line exists so that rescaling is *seen* rather than inferred.
 
 ## Why this round
 

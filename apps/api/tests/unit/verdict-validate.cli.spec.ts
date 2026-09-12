@@ -169,6 +169,44 @@ describe("treatment gate — one prompt version per sample", () => {
   });
 });
 
+describe("projection watch — the assumed sd is the number that says whether the horizon is real", () => {
+  const stub = () =>
+    ({
+      instrument: { findMany: async () => [] },
+      bar: { findMany: async () => [] },
+      corporateAction: { findMany: async () => [] },
+      deepDiveRun: { findMany: async () => [] },
+    }) as any;
+
+  it("says nothing while the sd is theoretical, then prints the measured/assumed ratio", async () => {
+    // Phase 4b measured the assumed cross-sectional sd to be 1.31x (HK) to 2.16x
+    // (US) too small, and daysNeeded is proportional to sd^2. daysNeeded already
+    // rescales itself silently once 20 days exist; that rescaling is exactly what
+    // a reader needs to see, so it is printed.
+    const r = await runValidation(stub(), { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.readiness.seSource).toBe("theoretical");
+    expect(lane.sdTheory).toBeCloseTo(1 / Math.sqrt(39), 6); // breadth 40
+    expect(renderValidation(r)).not.toMatch(/projection watch/);
+
+    // 20+ days accrued: the harness now measures, so the ratio is printable.
+    const theory = lane.sdTheory!;
+    lane.readiness = { ...lane.readiness, seSource: "measured", daysNeeded: 546 };
+    lane.sdDay = theory * 1.31;
+    let text = renderValidation(r);
+    expect(text).toMatch(/projection watch: per-day IC sd/);
+    expect(text).toMatch(/1\.31x/);
+    expect(text).toMatch(/daysNeeded rescaled to 546/);
+    expect(text).not.toMatch(/!!/); // 1.31 is inside the observed 4b range
+
+    // At the US lane's measured 2.16x the warning fires: the horizon is ~4.7x.
+    lane.sdDay = theory * 2.16;
+    text = renderValidation(r);
+    expect(text).toMatch(/2\.16x/);
+    expect(text).toMatch(/!!/);
+  });
+});
+
 describe("provenance gate — an operator run is not a prospective observation", () => {
   it("excludes and counts an ad-hoc run, and keeps the scheduled one", async () => {
     // The defect this pins: verdict:validate selected every `status: "complete"`

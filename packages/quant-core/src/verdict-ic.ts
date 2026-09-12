@@ -173,6 +173,19 @@ export interface Readiness {
   reason: string;
 }
 
+/**
+ * The per-day IC sd the projection *assumes* before the series can measure its
+ * own: `1/√(breadth − 1 − controls)`. Exported so a report can print the
+ * measured/theoretical ratio — Phase 4b measured that factor at 1.31× (HK) and
+ * 2.16× (US), and because `daysNeeded ∝ sd²` a factor of 2 stretches the horizon
+ * roughly 4×. The ratio is the number worth watching, so it is made visible
+ * rather than implied.
+ */
+export function theoreticalSdDay(assumedBreadth: number, controls = 0): number | null {
+  const df = assumedBreadth - 1 - controls;
+  return df > 0 ? 1 / Math.sqrt(df) : null;
+}
+
 export interface ReadinessOptions {
   /** Breadth assumed before there is a measured sd (mean verdicts/day). */
   assumedBreadth?: number;
@@ -211,8 +224,8 @@ export function verdictReadiness(
   const sdDay = days >= 2 ? sampleSd(xs) : null;
   const measuredSe = days >= minDays ? neweyWestT(xs, horizon)?.se ?? null : null;
 
-  const theoreticalSdDay = assumedBreadth - 1 - controls > 0 ? 1 / Math.sqrt(assumedBreadth - 1 - controls) : null;
-  const sdForProjection = measuredSe != null ? sdDay : theoreticalSdDay;
+  const theoreticalSd = theoreticalSdDay(assumedBreadth, controls);
+  const sdForProjection = measuredSe != null ? sdDay : theoreticalSd;
   const seSource: Readiness["seSource"] = measuredSe != null ? "measured" : "theoretical";
 
   // T needed so that SE(mean) ≈ sdDay·√(h/T) falls to seMax.

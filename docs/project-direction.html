@@ -533,7 +533,17 @@
     <tr>
       <td><b>Phase 5's bar was set from a plausible effect size</b></td><td>P8, R2</td>
       <td>Phase 4b states the rule for the next pre-registration — "Set a bar from a power calculation on a design subset, never from a plausible effect size" — and Phase 5 Fork B does the inverse: fixes <code>IC_target = 0.10</code> and lets the clock follow.</td>
-      <td><span class="pill p-no">HIGH — NEEDS A DECISION</span> pre-registered before labels, so R1 holds</td>
+      <td><span class="pill p-ok">RATIFIED 2026-09-12</span> 4b's rule presupposes a retrospective design subset; Phase 5 is prospective with <code>labelled: 0</code>, so literal compliance was unavailable. The departure runs toward the <i>harder</i> test (0.10 vs the 0.015 the project has actually measured), and it may not be re-set now that labels accrue.</td>
+    </tr>
+    <tr>
+      <td><b>A cap whose scope was undefined</b></td><td>R3</td>
+      <td>Phase 4c's 0.03 bar cap and Phase 5's 0.10 target coexisted without either document saying whether the cap governs both. Applying it to H2 would need ≈ 3,520 days (≈ 25 y at measured supply) — the lane could never decide.</td>
+      <td><span class="pill p-ok">SCOPED 2026-09-12</span> the cap binds the vendor lane's <i>derived</i> bar only; H2's target is governed by its own recorded rule.</td>
+    </tr>
+    <tr>
+      <td><b>The projection's SE could be wrong by 2× and nothing said so</b></td><td>R7</td>
+      <td>4b measured the assumed per-day sd to be 1.31×–2.16× too small, and <code>daysNeeded ∝ sd²</code>. <code>daysNeeded</code> rescaled itself silently once measurable, so the reader could not see that the horizon had moved.</td>
+      <td><span class="pill p-ok">CLOSED 2026-09-12</span> a <b>projection-watch</b> line now prints the measured/assumed sd ratio at 20 days, warning at ≥ 1.5×, with the response pre-agreed while the sample is still unlabelled.</td>
     </tr>
     <tr>
       <td><b>The verdict vocabulary drifted across phases</b></td><td>R4</td>
@@ -617,6 +627,7 @@
         <ul>
           <li>Track A emits a verdict class: <code>supported</code> · <code>falsified</code> · <code>insufficient_evidence</code> · <code>underpowered</code> · <code>inconclusive</code>.</li>
           <li>Phase 5 reaches readiness for at least one lane, or the 1.5× SE-stability guard trips to <code>inconclusive</code>.</li>
+          <li><b>The earliest decision point, and it is not the verdict:</b> at <b>20 days</b> the harness stops assuming the per-day sd and measures it. The report's <b>projection-watch</b> line prints the observed/assumed ratio. Pre-agreed reading — ratio near 1 → proceed; ratio ≥ 1.5× (4b's range was 1.31–2.16×) → <b>change breadth or target then</b>, while the sample is still unlabelled, rather than spend the horizon discovering it. This is the first moment Stage 1 can learn something useful, and it arrives roughly a year before the test could decide.</li>
           <li><b>Cap discipline:</b> if the vendor lane's 0.8-power bar exceeds the 0.03 cap, it is declared <b>underpowered by design</b> — before any test-half number is computed. An underpowered lane cannot be rescued by quietly raising the claim.</li>
         </ul>
         <p style="margin-top:10px"><b>Why this shape:</b> the deep-dive is the part of the product that is not a commodity. A momentum/Sharpe ranking is reproducible by anyone; a grounded, risk-enumerating verdict is the thing this project built. The layer with zero evidence is the layer with the most value at stake.</p>
