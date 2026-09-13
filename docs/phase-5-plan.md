@@ -141,6 +141,49 @@ Re-read the projection-watch line as usual. Three additions (`0100`, `2513`,
 `9903`) have < 252 sessions and will screen as `INSUFFICIENT_HISTORY` until roughly
 2027-01 — expected, not a defect.
 
+### Amendment of 2026-09-13 (pre-label — the verified `labelled` count is 0)
+
+**A6 — the treatment's model stack is frozen into the sample contract and gated.**
+Until now the sample pinned the prompt (`SAMPLE_PROMPT_VERSION`) but not the
+model: `Verdict` carried no model identity, so a model change — a Kimi CLI bump,
+a tier or provider switch — would have pooled a different treatment into the
+deciding sample silently, the exact defect class the promptVersion gate exists
+to prevent. `Verdict` now carries
+`models: { analyst, debate, verdict }`, and `verdict:validate` gates on it with
+the same exclude-and-count doctrine: the frozen stack is **k3-256k on all three
+roles** (`SAMPLE_MODEL_STACK`), a mismatch on any role is excluded and counted
+as `otherModelExcluded`, and the match is an exact string — whether a future
+model is "the same treatment" is a decision for the moment it appears, never
+the gate's call. There is **no write-side refusal**: an experiment keeps
+writing rows and is excluded at read time, exactly as v2-prompt verdicts are
+today.
+
+**Legacy rule (Fork A, user-locked): the accrued pre-gate verdicts are verified,
+not defaulted.** The 64 accrued verdicts predate the field, so each is resolved
+through `DeepDiveReport.decisionHashesJson → AgentDecision.model`: every hash
+present must resolve to a frozen-stack model, in which case the verdict is
+accepted and counted as `legacyModelVerified`; anything unresolvable or
+mismatched is excluded as `legacyModelUnverifiable`. ETF names legitimately
+lack the fundamentals-analyst hash, so the rule is "every hash *present*
+verifies", never "every role is present". (Fork B — strict exclusion of all
+legacy rows — was offered and declined.)
+
+**One-time verification over the store (2026-09-13), the evidence the freeze
+stands on:**
+
+| scope | count | model |
+|---|---|---|
+| `AgentDecision` rows, all roles | **838** (news-analyst 121, fundamentals-analyst 115, bull 238, bear 235, verdict 127, chat 2) | 838 / 838 `k3-256k` |
+| `DeepDiveReport` rows with `verdictJson` | 115 (all pre-gate: none carries `models`) | — |
+| decision-hash references in those 115 reports | 810 (796 distinct) | 810 / 810 resolve to `k3-256k`, **0 unresolved** |
+| hashes per report | 7 × 100 (stock) · 6 × 5 (ETF, no fundamentals hash) · 8 × 10 (stock + 1 repair round) | — |
+
+So the freeze changes nothing about the accrued sample — every stored verdict
+verifies against the frozen stack — and from here on a model change surfaces as
+a jump in `otherModelExcluded`, never as silent pooling. Consequence, stated
+once as it was for prompts: **switching a role's model resets this clock**,
+because the accrued verdicts stop counting.
+
 ## Why this round
 
 Phases 4 and 4b established that the **deterministic screen is not resolvable**

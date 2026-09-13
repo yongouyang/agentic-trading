@@ -84,6 +84,7 @@ describe("runDeepDive — happy path", () => {
         invalidationConditions: ["growth stalls"],
         asOf: "2026-09-05",
         promptVersion: "v1",
+        models: MODELS,
       });
     }
     expect(log.recorded).toBe(7);

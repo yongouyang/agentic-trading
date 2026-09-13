@@ -542,6 +542,11 @@ with byte-deterministic prompt builders as a tested invariant; reports =
 CLI over the latest ScreenRun, per-name failure isolation, `--max-calls`
 budget guard.)*
 
+*Amended 2026-09-13 (Phase-5 A6): `Verdict` also carries the model stack
+(`models: { analyst, debate, verdict }`); the Phase-5 sample gate pins it
+(k3-256k ×3, exact match) exactly as it pins `PROMPT_VERSION` — one treatment
+per sample in model identity too.*
+
 ## 8. UI (apps/web)
 
 *Status 2026-09-09: **3c shipped.** Historical-run browsing + indicator

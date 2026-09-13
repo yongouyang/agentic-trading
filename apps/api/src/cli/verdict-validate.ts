@@ -80,6 +80,24 @@ export const MAX_PROMPT_LAG_DAYS = 1;
  */
 export const SAMPLE_PROMPT_VERSION = "v1";
 
+/**
+ * The sample must be ONE treatment in model identity exactly as in prompt
+ * identity (Phase-5 amendment A6, 2026-09-13, pre-label): the deciding sample
+ * is pinned to the frozen stack k3-256k on all three roles. A verdict produced
+ * by any other model is excluded and counted, never pooled — a model change
+ * shows up as a jump in `otherModelExcluded`, not as a silent treatment swap.
+ *
+ * Exact string match, deliberately: whether a new model is "the same
+ * treatment" is a decision for the moment it appears, never the gate's call.
+ *
+ * Verified against the store at freeze time: all 838 AgentDecision rows across
+ * every role are "k3-256k" (see the one-time verification table in A6), so
+ * pre-gate verdicts lacking the field are *verified* against their recorded
+ * AgentDecision hashes, not defaulted — anything unresolvable or mismatched is
+ * excluded as `legacyModelUnverifiable`.
+ */
+export const SAMPLE_MODEL_STACK = { analyst: "k3-256k", debate: "k3-256k", verdict: "k3-256k" } as const;
+
 /** Calendar-day difference between two ISO dates (b − a). */
 export function daysBetweenIso(a: string, b: string): number {
   const [ay, am, ad] = a.split("-").map(Number) as [number, number, number];
@@ -172,6 +190,16 @@ export interface LaneValidation {
   /** Verdicts EXCLUDED for carrying a different `promptVersion` — a second
    *  treatment, not more data. Reported for the same reason as `lateExcluded`. */
   otherVersionExcluded: number;
+  /** Verdicts EXCLUDED for carrying a `models` stack that does not exactly
+   *  match `SAMPLE_MODEL_STACK` (Phase-5 A6) — a second treatment in model
+   *  identity. Reported for the same reason as `otherVersionExcluded`. */
+  otherModelExcluded: number;
+  /** Pre-gate verdicts (no `models` field) whose recorded AgentDecision rows
+   *  all resolve to the frozen stack — verified, not defaulted (A6, Fork A). */
+  legacyModelVerified: number;
+  /** Pre-gate verdicts whose `decisionHashesJson` could not be fully resolved
+   *  to frozen-stack AgentDecision rows — excluded, never assumed. */
+  legacyModelUnverifiable: number;
   /** Reports EXCLUDED because the deep-dive failed and `verdictJson` is null —
    *  counted separately from `otherVersionExcluded`, which means an actual
    *  prompt-version mismatch, not a missing verdict. */
@@ -224,19 +252,39 @@ export interface ValidationReport {
  * A verdict with no readable version cannot be attributed to a treatment, so it
  * is excluded from the sample and counted, never defaulted to "current".
  */
+export interface VerdictModels {
+  analyst: string;
+  debate: string;
+  verdict: string;
+}
+
 export function convictionOf(verdictJson: string | null): {
   conviction: number | null;
   abstain: boolean;
   promptVersion: string | null;
+  models: VerdictModels | null;
 } {
-  if (!verdictJson) return { conviction: null, abstain: false, promptVersion: null };
+  if (!verdictJson) return { conviction: null, abstain: false, promptVersion: null, models: null };
   try {
-    const v = JSON.parse(verdictJson) as { conviction?: number; abstain?: boolean; promptVersion?: string };
+    const v = JSON.parse(verdictJson) as {
+      conviction?: number;
+      abstain?: boolean;
+      promptVersion?: string;
+      models?: { analyst?: unknown; debate?: unknown; verdict?: unknown };
+    };
     const promptVersion = typeof v.promptVersion === "string" ? v.promptVersion : null;
-    if (v.abstain) return { conviction: null, abstain: true, promptVersion };
-    return { conviction: typeof v.conviction === "number" ? v.conviction : null, abstain: false, promptVersion };
+    // The model stack is attributable only when all three roles are recorded
+    // as strings — a partial blob is treated as absent (legacy path), never
+    // as a partial match.
+    const m = v.models;
+    const models: VerdictModels | null =
+      m && typeof m.analyst === "string" && typeof m.debate === "string" && typeof m.verdict === "string"
+        ? { analyst: m.analyst, debate: m.debate, verdict: m.verdict }
+        : null;
+    if (v.abstain) return { conviction: null, abstain: true, promptVersion, models };
+    return { conviction: typeof v.conviction === "number" ? v.conviction : null, abstain: false, promptVersion, models };
   } catch {
-    return { conviction: null, abstain: false, promptVersion: null };
+    return { conviction: null, abstain: false, promptVersion: null, models: null };
   }
 }
 
@@ -251,6 +299,9 @@ async function loadMarket(
   late: number;
   adhoc: number;
   otherVersion: number;
+  otherModel: number;
+  legacyVerified: number;
+  legacyUnverifiable: number;
   noVerdict: number;
 }> {
   const instruments = await prisma.instrument.findMany({ where: { market } });
@@ -315,7 +366,38 @@ async function loadMarket(
   let late = 0;
   let adhoc = 0;
   let otherVersion = 0;
+  let otherModel = 0;
+  let legacyVerified = 0;
+  let legacyUnverifiable = 0;
   let noVerdict = 0;
+  // AgentDecision hash → model, loaded lazily on the first legacy verdict (a
+  // verdict whose blob carries no `models`). The whole table is a few hundred
+  // rows, so one bulk fetch beats a query per report.
+  let modelByHash: Map<string, string> | null = null;
+  const FROZEN_MODELS = new Set<string>(Object.values(SAMPLE_MODEL_STACK));
+  /** Legacy rule (Phase-5 A6, Fork A): a pre-gate verdict is verified, not
+   *  defaulted — every recorded decision hash must resolve to a frozen-stack
+   *  model. ETF names legitimately lack the fundamentals-analyst hash, so the
+   *  rule is "every hash PRESENT verifies", not "every role is present". Any
+   *  unresolvable hash or off-stack model ⇒ unverifiable. */
+  async function legacyModelOk(decisionHashesJson: string | null): Promise<boolean> {
+    if (!decisionHashesJson) return false;
+    let hashes: unknown;
+    try {
+      hashes = JSON.parse(decisionHashesJson);
+    } catch {
+      return false;
+    }
+    if (!Array.isArray(hashes) || hashes.length === 0 || hashes.some((h) => typeof h !== "string")) return false;
+    if (modelByHash === null) {
+      const rows = await prisma.agentDecision.findMany({ select: { hash: true, model: true } });
+      modelByHash = new Map(rows.map((r) => [r.hash as string, r.model as string]));
+    }
+    return hashes.every((h) => {
+      const model = modelByHash!.get(h as string);
+      return model !== undefined && FROZEN_MODELS.has(model);
+    });
+  }
   for (const run of runs) {
     // Provenance gate: an operator run is not a prospective observation.
     // Checked BEFORE the promptness gate because "this was never a sample
@@ -343,12 +425,32 @@ async function loadMarket(
         noVerdict++;
         continue;
       }
-      const { conviction, abstain, promptVersion } = convictionOf(rep.verdictJson);
+      const { conviction, abstain, promptVersion, models } = convictionOf(rep.verdictJson);
       // One treatment per sample: another prompt version is a different system,
       // not another observation of this one. An unattributable version is
       // excluded rather than assumed to be current.
       if (promptVersion !== SAMPLE_PROMPT_VERSION) {
         otherVersion++;
+        continue;
+      }
+      // One treatment per sample in model identity too (Phase-5 A6): exact
+      // match on all three roles, same exclude-and-count doctrine as the
+      // promptVersion gate. Pre-gate verdicts carry no `models` field — they
+      // are verified against their recorded AgentDecision rows, never
+      // defaulted to the current stack.
+      if (models !== null) {
+        if (
+          models.analyst !== SAMPLE_MODEL_STACK.analyst ||
+          models.debate !== SAMPLE_MODEL_STACK.debate ||
+          models.verdict !== SAMPLE_MODEL_STACK.verdict
+        ) {
+          otherModel++;
+          continue;
+        }
+      } else if (await legacyModelOk(rep.decisionHashesJson)) {
+        legacyVerified++;
+      } else {
+        legacyUnverifiable++;
         continue;
       }
       if (abstain) {
@@ -365,7 +467,7 @@ async function loadMarket(
       obs.push({ date: entry, market, symbol: rep.symbol, conviction, rank, forwardReturn: r });
     }
   }
-  return { obs, runs: runs.length, abstains, pending, late, adhoc, otherVersion, noVerdict };
+  return { obs, runs: runs.length, abstains, pending, late, adhoc, otherVersion, otherModel, legacyVerified, legacyUnverifiable, noVerdict };
 }
 
 function laneValidation(
@@ -377,6 +479,9 @@ function laneValidation(
   late: number,
   adhoc: number,
   otherVersion: number,
+  otherModel: number,
+  legacyVerified: number,
+  legacyUnverifiable: number,
   noVerdict: number,
   targetIc: number,
   assumedBreadth = ASSUMED_BREADTH,
@@ -397,6 +502,9 @@ function laneValidation(
     lateExcluded: late,
     adhocExcluded: adhoc,
     otherVersionExcluded: otherVersion,
+    otherModelExcluded: otherModel,
+    legacyModelVerified: legacyVerified,
+    legacyModelUnverifiable: legacyUnverifiable,
     failedExcluded: noVerdict,
     abstains,
     days: points.length,
@@ -440,6 +548,9 @@ export function renderValidation(r: ValidationReport): string {
         `${l.lateExcluded > 0 ? ` · ${l.lateExcluded} EXCLUDED as late (look-ahead)` : ""}` +
         `${l.adhocExcluded > 0 ? ` · ${l.adhocExcluded} EXCLUDED (ad-hoc operator run, not a prospective sample)` : ""}` +
         `${l.otherVersionExcluded > 0 ? ` · ${l.otherVersionExcluded} EXCLUDED (different prompt version)` : ""}` +
+        `${l.otherModelExcluded > 0 ? ` · ${l.otherModelExcluded} EXCLUDED (different model stack)` : ""}` +
+        `${l.legacyModelVerified > 0 ? ` · ${l.legacyModelVerified} legacy verdicts VERIFIED against the frozen model stack (pre-gate, via decision hashes)` : ""}` +
+        `${l.legacyModelUnverifiable > 0 ? ` · ${l.legacyModelUnverifiable} EXCLUDED (legacy verdict, model stack unverifiable)` : ""}` +
         `${l.failedExcluded > 0 ? ` · ${l.failedExcluded} EXCLUDED (deep-dive failed, no verdict)` : ""}`,
     );
     lines.push(
@@ -484,10 +595,26 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
   const lanes: LaneValidation[] = [];
   const allObs: VerdictObservation[] = [];
   for (const market of args.markets) {
-    const { obs, runs, abstains, pending, late, adhoc, otherVersion, noVerdict } = await loadMarket(prisma, market);
+    const { obs, runs, abstains, pending, late, adhoc, otherVersion, otherModel, legacyVerified, legacyUnverifiable, noVerdict } =
+      await loadMarket(prisma, market);
     allObs.push(...obs);
     lanes.push(
-      laneValidation(market, obs, runs, abstains, pending, late, adhoc, otherVersion, noVerdict, args.targetIc, SCREEN_PARAMS.topN[market]),
+      laneValidation(
+        market,
+        obs,
+        runs,
+        abstains,
+        pending,
+        late,
+        adhoc,
+        otherVersion,
+        otherModel,
+        legacyVerified,
+        legacyUnverifiable,
+        noVerdict,
+        args.targetIc,
+        SCREEN_PARAMS.topN[market],
+      ),
     );
   }
   const pooled = laneValidation(
@@ -499,6 +626,9 @@ export async function runValidation(prisma: PrismaService, args: ValidateArgs): 
     lanes.reduce((a, l) => a + l.lateExcluded, 0),
     lanes.reduce((a, l) => a + l.adhocExcluded, 0),
     lanes.reduce((a, l) => a + l.otherVersionExcluded, 0),
+    lanes.reduce((a, l) => a + l.otherModelExcluded, 0),
+    lanes.reduce((a, l) => a + l.legacyModelVerified, 0),
+    lanes.reduce((a, l) => a + l.legacyModelUnverifiable, 0),
     lanes.reduce((a, l) => a + l.failedExcluded, 0),
     args.targetIc,
     ASSUMED_BREADTH * Math.max(1, args.markets.length),

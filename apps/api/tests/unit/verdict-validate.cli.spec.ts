@@ -8,6 +8,7 @@ import {
   convictionOf,
   daysBetweenIso,
   MAX_PROMPT_LAG_DAYS,
+  SAMPLE_MODEL_STACK,
   SAMPLE_PROMPT_VERSION,
   entryDate,
   hktDate,
@@ -42,9 +43,9 @@ describe("verdict:validate — surfaces", () => {
 
   it("reads conviction, and treats an abstain as a non-opinion rather than a 0", () => {
     expect(convictionOf('{"conviction":0.45}').conviction).toBe(0.45);
-    expect(convictionOf('{"abstain":true,"conviction":0}')).toEqual({ conviction: null, abstain: true, promptVersion: null });
-    expect(convictionOf("not json")).toEqual({ conviction: null, abstain: false, promptVersion: null });
-    expect(convictionOf(null)).toEqual({ conviction: null, abstain: false, promptVersion: null });
+    expect(convictionOf('{"abstain":true,"conviction":0}')).toEqual({ conviction: null, abstain: true, promptVersion: null, models: null });
+    expect(convictionOf("not json")).toEqual({ conviction: null, abstain: false, promptVersion: null, models: null });
+    expect(convictionOf(null)).toEqual({ conviction: null, abstain: false, promptVersion: null, models: null });
   });
 
   it("reports both lanes and a pooled row against a stub store", async () => {
@@ -99,7 +100,7 @@ describe("treatment gate — one prompt version per sample", () => {
     // (which does not exist) would exclude EVERY verdict, emptying the sample
     // without an error — so this is pinned rather than assumed.
     const v = convictionOf(JSON.stringify({ conviction: 0.4, abstain: false, promptVersion: "v1" }));
-    expect(v).toEqual({ conviction: 0.4, abstain: false, promptVersion: "v1" });
+    expect(v).toEqual({ conviction: 0.4, abstain: false, promptVersion: "v1", models: null });
     expect(convictionOf(JSON.stringify({ conviction: 0.4, abstain: false })).promptVersion).toBeNull();
   });
 
@@ -127,7 +128,7 @@ describe("treatment gate — one prompt version per sample", () => {
             market: "US",
             runAt: new Date("2026-09-10T22:10:00Z"),
             reports: [
-              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }) },
+              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1", models: SAMPLE_MODEL_STACK }) },
               { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v2" }) },
             ],
           },
@@ -155,7 +156,7 @@ describe("treatment gate — one prompt version per sample", () => {
             market: "US",
             runAt: new Date("2026-09-10T22:10:00Z"),
             reports: [
-              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }) },
+              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1", models: SAMPLE_MODEL_STACK }) },
               { symbol: "AAA", verdictJson: null },
             ],
           },
@@ -218,7 +219,9 @@ describe("provenance gate — an operator run is not a prospective observation",
       market: "US",
       runAt: new Date("2026-09-10T22:10:00Z"),
       source,
-      reports: [{ symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }) }],
+      reports: [
+        { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1", models: SAMPLE_MODEL_STACK }) },
+      ],
     });
     const prisma = {
       instrument: { findMany: async () => [{ id: 1, symbol: "AAA" }] },
@@ -245,7 +248,9 @@ describe("provenance gate — an operator run is not a prospective observation",
             id: 1,
             market: "US",
             runAt: new Date("2026-09-10T22:10:00Z"),
-            reports: [{ symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, promptVersion: "v1" }) }],
+            reports: [
+              { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, promptVersion: "v1", models: SAMPLE_MODEL_STACK }) },
+            ],
           },
         ],
       },
@@ -253,5 +258,115 @@ describe("provenance gate — an operator run is not a prospective observation",
     const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
     expect(r.lanes[0]!.adhocExcluded).toBe(0);
     expect(r.lanes[0]!.pendingLabel).toBe(1);
+  });
+});
+
+
+describe("treatment gate — one model stack per sample (Phase-5 A6)", () => {
+  const FROZEN = { analyst: "k3-256k", debate: "k3-256k", verdict: "k3-256k" };
+
+  it("pins the frozen stack to k3-256k on all three roles", () => {
+    expect(SAMPLE_MODEL_STACK).toEqual(FROZEN);
+  });
+
+  it("reads the model stack from the verdict blob; a partial stack reads as absent", () => {
+    const v = convictionOf(JSON.stringify({ conviction: 0.4, promptVersion: "v1", models: FROZEN }));
+    expect(v.models).toEqual(FROZEN);
+    expect(convictionOf(JSON.stringify({ conviction: 0.4, promptVersion: "v1", models: { analyst: "k3-256k" } })).models).toBeNull();
+  });
+
+  const stubWith = (reports: unknown[], decisions: { hash: string; model: string }[] = []) =>
+    ({
+      instrument: { findMany: async () => [{ id: 1, symbol: "AAA" }] },
+      bar: { findMany: async () => [{ instrumentId: 1, date: "2026-09-10", open: 1, high: 1, low: 1, close: 1, volume: 1 }] },
+      corporateAction: { findMany: async () => [] },
+      screenResult: { findMany: async () => [{ symbol: "AAA", rank: 1 }] },
+      agentDecision: { findMany: async () => decisions },
+      deepDiveRun: {
+        findMany: async () => [{ id: 1, market: "US", runAt: new Date("2026-09-10T22:10:00Z"), reports }],
+      },
+    }) as any;
+
+  const legacyVerdict = (decisionHashesJson: string | null) => ({
+    symbol: "AAA",
+    verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1" }),
+    decisionHashesJson,
+  });
+
+  it("accepts a verdict carrying the frozen stack without touching the legacy path", async () => {
+    const prisma = stubWith([
+      { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1", models: FROZEN }) },
+    ]);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.pendingLabel).toBe(1);
+    expect(lane.otherModelExcluded).toBe(0);
+    expect(lane.legacyModelVerified).toBe(0);
+    expect(lane.legacyModelUnverifiable).toBe(0);
+  });
+
+  it("excludes and counts a verdict whose model stack differs on any role", async () => {
+    const prisma = stubWith([
+      {
+        symbol: "AAA",
+        verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1", models: { ...FROZEN, verdict: "k4" } }),
+      },
+    ]);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.otherModelExcluded).toBe(1);
+    expect(lane.pendingLabel).toBe(0);
+    expect(renderValidation(r)).toMatch(/EXCLUDED \(different model stack\)/);
+  });
+
+  it("verifies a pre-gate verdict against its AgentDecision rows and counts it legacyModelVerified", async () => {
+    // 7 hashes = the full non-ETF call set; every one resolves to k3-256k.
+    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6", "h7"].map((hash) => ({ hash, model: "k3-256k" }));
+    const prisma = stubWith([legacyVerdict(JSON.stringify(decisions.map((d) => d.hash)))], decisions);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.legacyModelVerified).toBe(1);
+    expect(lane.legacyModelUnverifiable).toBe(0);
+    expect(lane.pendingLabel).toBe(1);
+    expect(renderValidation(r)).toMatch(/VERIFIED against the frozen model stack/);
+  });
+
+  it("verifies an ETF legacy verdict on the subset of roles present (no fundamentals hash)", async () => {
+    // ETFs skip the fundamentals analyst, so the rule is "every hash PRESENT
+    // verifies", never "every role is present".
+    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6"].map((hash) => ({ hash, model: "k3-256k" }));
+    const prisma = stubWith([legacyVerdict(JSON.stringify(decisions.map((d) => d.hash)))], decisions);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.legacyModelVerified).toBe(1);
+    expect(r.lanes[0]!.pendingLabel).toBe(1);
+  });
+
+  it("excludes a legacy verdict with an unresolvable hash rather than defaulting it", async () => {
+    const decisions = [{ hash: "h1", model: "k3-256k" }];
+    const prisma = stubWith([legacyVerdict(JSON.stringify(["h1", "h-missing"]))], decisions);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.legacyModelUnverifiable).toBe(1);
+    expect(lane.legacyModelVerified).toBe(0);
+    expect(lane.pendingLabel).toBe(0);
+    expect(renderValidation(r)).toMatch(/EXCLUDED \(legacy verdict, model stack unverifiable\)/);
+  });
+
+  it("excludes a legacy verdict whose recorded model is off the frozen stack", async () => {
+    const decisions = [
+      { hash: "h1", model: "k3-256k" },
+      { hash: "h2", model: "k3" }, // exact match only — no equivalence rules
+    ];
+    const prisma = stubWith([legacyVerdict(JSON.stringify(["h1", "h2"]))], decisions);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.legacyModelUnverifiable).toBe(1);
+    expect(r.lanes[0]!.pendingLabel).toBe(0);
+  });
+
+  it("excludes a legacy verdict with no decisionHashesJson at all", async () => {
+    const prisma = stubWith([legacyVerdict(null)]);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    expect(r.lanes[0]!.legacyModelUnverifiable).toBe(1);
+    expect(r.lanes[0]!.pendingLabel).toBe(0);
   });
 });

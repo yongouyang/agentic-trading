@@ -26,7 +26,12 @@ import {
   type PromptPair,
 } from "./prompts.js";
 import { VERDICT_SCHEMA_HINT, buildRepairMessage, parseVerdict, type VerdictPayload } from "./verdict.js";
-import type { Verdict } from "./index.js";
+import type { DeepDiveModels, Verdict } from "./index.js";
+
+// DeepDiveModels lives in index.ts beside Verdict (index imports pipeline, so
+// defining it here would be circular); re-exported so existing importers of
+// pipeline.js keep working.
+export type { DeepDiveModels };
 
 export type AgentRole = "news-analyst" | "fundamentals-analyst" | "bull" | "bear" | "verdict";
 
@@ -48,12 +53,6 @@ export interface DecisionLog {
     responseText: string;
     usage: LlmUsage | null;
   }): Promise<void>;
-}
-
-export interface DeepDiveModels {
-  analyst: string;
-  debate: string;
-  verdict: string;
 }
 
 export interface DeepDiveDeps {
@@ -163,6 +162,7 @@ export async function runDeepDive(deps: DeepDiveDeps, ctx: DeepDiveContext, opts
       invalidationConditions: payload.invalidationConditions,
       asOf: ctx.asOf,
       promptVersion: PROMPT_VERSION,
+      models: { ...models },
     };
     return { ok: true, verdict, hashes, calls, cacheHits };
   } catch (err) {

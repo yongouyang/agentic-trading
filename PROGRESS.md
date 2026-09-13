@@ -5,6 +5,50 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (the model stack joins the sample contract — Phase-5 amendment A6, enforced by the gate)
+
+**The gap.** `verdict:validate` gated the deciding sample on `promptVersion`
+only, and `Verdict`/`verdictJson` carried no model identity — so a model
+change (CLI bump, tier switch, a future deploy) would have pooled a different
+treatment into the Phase-5 sample silently and uncountably. Surfaced during
+the deploy discussion (§7's "Kimi local, DeepSeek on deploy" made it live);
+the deploy was declined, but the harness gap was real regardless.
+
+**The fix (planned and locked pre-label — `labelled` is 0).** `Verdict` now
+carries `models: { analyst, debate, verdict }` (DeepDiveModels moved to
+`agents/index.ts` to break the circular import; pipeline populates it).
+`verdict:validate` pins `SAMPLE_MODEL_STACK = k3-256k ×3` — **exact string
+match, no equivalence rules** — with the same exclude-and-count doctrine as
+promptVersion: a mismatch is `otherModelExcluded`, reported, never silently
+pooled. No write-side refusal: the experiment worktree keeps composing with
+the gate exactly as it does for prompt versions.
+
+**Legacy rule (user-locked Fork A — verify, don't default).** The 87 accrued
+pre-gate verdicts lack the field, but each report's `decisionHashesJson` joins
+to `AgentDecision` rows that record the model per call — provenance by lookup,
+not inference. The validator resolves that join: every recorded call on the
+frozen stack ⇒ accepted, counted as `legacyModelVerified`; anything
+unresolvable or off-stack ⇒ `legacyModelUnverifiable` (ETF names legitimately
+carry the 6-hash subset — no fundamentals leg). One-time verification for the
+amendment: **838/838 AgentDecision rows across all roles are k3-256k; 810/810
+hash references from the 115 stored verdicts resolve, all k3-256k.** First
+live gated run: 87/87 legacy verdicts verified, `otherModelExcluded` 0,
+readiness unchanged (pooled 0/157).
+
+**Tests:** agents 43 (tsc clean), api 525 → **534** + 1 skipped (+9: frozen-pin,
+blob parsing, any-role mismatch, legacy verify, ETF subset, unresolvable hash,
+off-stack `k3` excluded, missing hashes excluded). Docs: `phase-5-plan.md` A6
+with the verification table; architecture §7 one-liner.
+
+**Next:** tonight's 20:30 catch-up screens the Monday HK session (lag 0) and
+upserts the 14 new universe names; tomorrow evening the US Monday session
+(lag 1). First verdicts carrying the field land then. Standing: PIT re-screen
+capability (re-rated up for travel gaps — the only tool that recovers *screen*
+observations from multi-day outages); picker-lane marginal census run
+(optional descriptive); `journal:link` awaiting a Futu/Moomoo CSV.
+
+---
+
 ## 2026-09-13 (the 20:30 catch-up becomes the primary slot — and the user's 23:00 question exposed a partial-session hazard bigger than the slot)
 
 **The decision (user).** No VPS deploy, no architecture change: the Mac is
