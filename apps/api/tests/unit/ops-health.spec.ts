@@ -426,6 +426,7 @@ describe("computeHealth — weekly jobs", () => {
 
   it("a missing reports dir is handled, not thrown", async () => {
     const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
     try {
       for (const label of ["com.agentic-trading.weekly-sentinel", "com.agentic-trading.weekly-f10"]) {
         plistInstalledAt(la, label, hkt("2026-09-06T09:17:00"));
@@ -433,11 +434,13 @@ describe("computeHealth — weekly jobs", () => {
       const r = await computeHealth(stubPrisma(), {
         now: hkt("2026-09-14T09:00:00"),
         reportsDir: "/nonexistent/ops-health-test",
+        logsDir: logs,
         launchAgentsDir: la,
       });
       expect(r.jobs.every((j) => j.level === "alert")).toBe(true);
     } finally {
       rmSync(la, { recursive: true, force: true });
+      rmSync(logs, { recursive: true, force: true });
     }
   });
 });
@@ -530,6 +533,146 @@ describe("computeHealth — a weekly job must be due before it can be late", () 
   });
 });
 
+describe("computeHealth — the weekly validation digest job", () => {
+  // Same due-ness rules as f10 (install-anchored), but the artifact is
+  // logs/validation-digest-<date>.json at the repo root, not apps/api/reports.
+  const label = "com.agentic-trading.weekly-validation";
+
+  it("is HEALTHY (not yet due) before its first Sunday slot", async () => {
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
+    try {
+      // Installed Sun 09-13 10:00 — after that morning's 09:47 slot, so the
+      // first due slot is Sun 09-20 09:47.
+      plistInstalledAt(la, label, hkt("2026-09-13T10:00:00"));
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-13T20:00:00"),
+        reportsDir,
+        logsDir: logs,
+        launchAgentsDir: la,
+      });
+      const v = r.jobs.find((j) => j.job === "validation")!;
+      expect(v.level).toBe("healthy");
+      expect(v.lastArtifactDate).toBeNull();
+      expect(v.reasons.join(" ")).toMatch(/not yet due/);
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("is ALERT once a Sunday slot has passed with no digest", async () => {
+    const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
+    try {
+      plistInstalledAt(la, label, hkt("2026-09-10T23:21:00"));
+      // Sun 09-13 09:47 has passed (1 slot); the 6h grace is long gone.
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir,
+        logsDir: logs,
+        launchAgentsDir: la,
+      });
+      const v = r.jobs.find((j) => j.job === "validation")!;
+      expect(v.level).toBe("alert");
+      expect(v.reasons.join(" ")).toMatch(/cannot confirm/);
+      expect(v.reasons.join(" ")).toMatch(/1 scheduled slot/);
+    } finally {
+      rmSync(la, { recursive: true, force: true });
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("a digest artifact in logs/ is judged by age, like the other weekly jobs", async () => {
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
+    try {
+      writeFileSync(path.join(logs, "validation-digest-2026-09-13.json"), digestJson(null, 0.02));
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir,
+        logsDir: logs,
+      });
+      const v = r.jobs.find((j) => j.job === "validation")!;
+      expect(v.level).toBe("healthy");
+      expect(v.lastArtifactDate).toBe("2026-09-13");
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("computeHealth — the projection watch (Phase-5 A3)", () => {
+  it("sd ratio >= 1.5 is a WARN with the A3 re-pricing reason — never an alert", async () => {
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
+    try {
+      writeFileSync(path.join(logs, "validation-digest-2026-09-13.json"), digestJson(0.032, 0.02));
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir,
+        logsDir: logs,
+      });
+      const v = r.jobs.find((j) => j.job === "validation")!;
+      expect(v.level).toBe("warn");
+      expect(v.reasons.join(" ")).toContain(
+        "projection watch: measured per-day IC sd is 1.6x the assumed value — " +
+          "Phase-5 A3's re-pricing decision is due while still unlabelled",
+      );
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("null sd fields are silent — the sd is unmeasurable for months", async () => {
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
+    try {
+      writeFileSync(path.join(logs, "validation-digest-2026-09-13.json"), digestJson(null, 0.02));
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir,
+        logsDir: logs,
+      });
+      const v = r.jobs.find((j) => j.job === "validation")!;
+      expect(v.level).toBe("healthy");
+      expect(v.reasons.join(" ")).not.toMatch(/projection watch/);
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("a ratio below 1.5 is silent", async () => {
+    const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
+    try {
+      writeFileSync(path.join(logs, "validation-digest-2026-09-13.json"), digestJson(0.024, 0.02));
+      const r = await computeHealth(stubPrisma(), {
+        now: hkt("2026-09-14T09:00:00"),
+        reportsDir,
+        logsDir: logs,
+      });
+      const v = r.jobs.find((j) => j.job === "validation")!;
+      expect(v.level).toBe("healthy");
+      expect(v.reasons.join(" ")).not.toMatch(/projection watch/);
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+});
+
+/** The shape scripts/weekly-validation.sh writes to
+ *  logs/validation-digest-<date>.json — pinned so the script and the health
+ *  check cannot drift apart silently. */
+function digestJson(sdDay: number | null, sdTheory: number | null): string {
+  return JSON.stringify({
+    date: "2026-09-13",
+    verdictValidateExit: 0,
+    phase4cAccrualExit: 0,
+    pooled: { labelled: 12, days: 3, daysNeeded: 812, sdDay, sdTheory },
+    lanes: {
+      HK: { labelled: 6, days: 2, daysNeeded: 812, sdDay, sdTheory },
+      US: { labelled: 6, days: 2, daysNeeded: 812, sdDay, sdTheory },
+    },
+  });
+}
+
 /** A plist whose *mtime* dates the install — install.sh copies, so mtime is
  *  the install instant and the anchor for "has it been due yet?". */
 function plistInstalledAt(dir: string, label: string, at: Date): void {
@@ -555,6 +698,7 @@ describe("ops-health CLI surface", () => {
     expect(text).toMatch(/^US: /m);
     expect(text).toMatch(/^sentinel: /m);
     expect(text).toMatch(/^f10: /m);
+    expect(text).toMatch(/^validation: /m);
   });
 
   it("todayHkt is the HKT calendar date, not UTC's", () => {

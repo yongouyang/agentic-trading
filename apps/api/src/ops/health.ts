@@ -30,7 +30,7 @@
  * 2+ = alert. HKT has had no DST since 1979, so the fixed +08:00 offset below
  * is exact rather than an approximation.
  */
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,20 +75,37 @@ export const LANE_CADENCE: Record<"HK" | "US", { weekdays: number[] }> = {
   US: { weekdays: [2, 3, 4, 5, 6] },
 };
 
-export const WEEKLY_JOBS = ["sentinel", "f10"] as const;
+export const WEEKLY_JOBS = ["sentinel", "f10", "validation"] as const;
 export type WeeklyJob = (typeof WEEKLY_JOBS)[number];
 
 /** Where launchd installs the jobs; the plist's mtime dates the install. */
 const DEFAULT_LAUNCH_AGENTS_DIR = path.join(homedir(), "Library", "LaunchAgents");
 
-/** Weekly jobs run Sunday morning (HKT), staggered so the two eastmoney hosts
- *  are not hit back-to-back. Mirrors scripts/launchd/*.plist — and the plist
- *  name matters, because its mtime is the only record of when the job was
+/** Repo-root logs/ — where the weekly validation digest is written
+ *  (logs/validation-digest-<date>.json). */
+const DEFAULT_LOGS_DIR = path.join(PKG_ROOT, "..", "..", "logs");
+
+/** Weekly jobs run Sunday morning (HKT). Sentinel and f10 are staggered so the
+ *  two eastmoney hosts are not hit back-to-back; the validation digest runs
+ *  last, after both. Mirrors scripts/launchd/*.plist — and the plist name
+ *  matters, because its mtime is the only record of when the job was
  *  installed. */
 export const WEEKLY_CADENCE: Record<WeeklyJob, { label: string; weekday: number; hour: number; minute: number }> = {
   sentinel: { label: "com.agentic-trading.weekly-sentinel", weekday: 0, hour: 8, minute: 47 },
   f10: { label: "com.agentic-trading.weekly-f10", weekday: 0, hour: 9, minute: 17 },
+  validation: { label: "com.agentic-trading.weekly-validation", weekday: 0, hour: 9, minute: 47 },
 };
+
+/** The per-job artifact prefix, and which directory the artifact lives in. */
+export const WEEKLY_ARTIFACT: Record<WeeklyJob, { prefix: string; dir: "reports" | "logs" }> = {
+  sentinel: { prefix: "sentinel", dir: "reports" },
+  f10: { prefix: "f10-refresh", dir: "reports" },
+  validation: { prefix: "validation-digest", dir: "logs" },
+};
+
+/** Phase-5 amendment A3's pre-agreed re-pricing signal: the measured per-day
+ *  IC sd running at least this multiple of the assumed one. */
+export const PROJECTION_WATCH_RATIO = 1.5;
 
 export type HealthLevel = "healthy" | "warn" | "alert";
 
@@ -130,6 +147,8 @@ export interface HealthOptions {
   now?: Date;
   /** Defaults to apps/api/reports — where the sentinel and f10 jobs write. */
   reportsDir?: string;
+  /** Defaults to repo-root logs/ — where the validation digest is written. */
+  logsDir?: string;
   /** Defaults to ~/Library/LaunchAgents — where the plist mtimes live. */
   launchAgentsDir?: string;
 }
@@ -256,6 +275,33 @@ function installedAt(dir: string, label: string): Date | null {
   }
 }
 
+/**
+ * The projection watch (Phase-5 amendment A3), read off the newest validation
+ * digest. Returns the WARN reason when the pooled per-day IC sd is measurable
+ * and runs at >= PROJECTION_WATCH_RATIO times the assumed value; null while
+ * the sd is unmeasurable (null fields — the expected state for months) or the
+ * digest cannot be parsed. Lane-independent by design: it reads the POOLED
+ * row, the primary read, and it is a warn, never an alert — the decision A3
+ * asks for is a re-pricing, not an incident.
+ */
+function projectionWatchReason(logsDir: string, artifactDate: string): string | null {
+  let digest: any;
+  try {
+    digest = JSON.parse(readFileSync(path.join(logsDir, `validation-digest-${artifactDate}.json`), "utf8"));
+  } catch {
+    return null;
+  }
+  const sdDay = digest?.pooled?.sdDay;
+  const sdTheory = digest?.pooled?.sdTheory;
+  if (typeof sdDay !== "number" || typeof sdTheory !== "number" || !(sdTheory > 0)) return null;
+  const ratio = sdDay / sdTheory;
+  if (ratio < PROJECTION_WATCH_RATIO) return null;
+  return (
+    `projection watch: measured per-day IC sd is ${ratio.toFixed(1)}x the assumed value — ` +
+    `Phase-5 A3's re-pricing decision is due while still unlabelled`
+  );
+}
+
 function daysBetween(fromDate: string, now: Date): number {
   const [y, m, d] = fromDate.split("-").map(Number);
   const from = Date.UTC(y!, m! - 1, d!);
@@ -270,6 +316,7 @@ function daysBetween(fromDate: string, now: Date): number {
 export async function computeHealth(prisma: PrismaService, opts: HealthOptions = {}): Promise<HealthReport> {
   const now = opts.now ?? new Date();
   const reportsDir = opts.reportsDir ?? path.join(PKG_ROOT, "reports");
+  const logsDir = opts.logsDir ?? DEFAULT_LOGS_DIR;
   const launchAgentsDir = opts.launchAgentsDir ?? DEFAULT_LAUNCH_AGENTS_DIR;
   const lanes: LaneHealth[] = [];
 
@@ -377,9 +424,11 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
   }
 
   const jobs: JobHealth[] = WEEKLY_JOBS.map((job) => {
-    const prefix = job === "sentinel" ? "sentinel" : "f10-refresh";
+    const artifact = WEEKLY_ARTIFACT[job];
+    const prefix = artifact.prefix;
+    const artifactDir = artifact.dir === "logs" ? logsDir : reportsDir;
     const cadence = WEEKLY_CADENCE[job];
-    const last = latestArtifactDate(reportsDir, prefix);
+    const last = latestArtifactDate(artifactDir, prefix);
     const reasons: string[] = [];
     let level: HealthLevel = "healthy";
 
@@ -388,6 +437,16 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
       if (age > WEEKLY_OVERDUE_DAYS) {
         level = "alert";
         reasons.push(`last artifact ${last} is ${age} days old (weekly job overdue past ${WEEKLY_OVERDUE_DAYS}d)`);
+      }
+      // Content-aware, validation only: the digest's pooled sd ratio is A3's
+      // re-pricing signal. A warn, never an alert, and silent while the sd is
+      // unmeasurable (nulls) — which is the expected state for months.
+      if (job === "validation") {
+        const watch = projectionWatchReason(logsDir, last);
+        if (watch) {
+          if (level === "healthy") level = "warn";
+          reasons.push(watch);
+        }
       }
     } else {
       const anchor = installedAt(launchAgentsDir, cadence.label);

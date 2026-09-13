@@ -360,7 +360,7 @@ for debate + verdict.
 
 ### 5.1 Scheduling (launchd, installed 2026-09-06)
 
-Six user LaunchAgents (`scripts/launchd/`, installed into
+Seven user LaunchAgents (`scripts/launchd/`, installed into
 `~/Library/LaunchAgents` by `scripts/launchd/install.sh`; stdout/stderr →
 `logs/` at the repo root). launchd, not cron, because macOS cron silently
 skips jobs missed while asleep; StartCalendarInterval catches up after wake.
@@ -442,6 +442,7 @@ enters the store — so the guard screens the previous **completed** US session
 | `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
 | `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
 | `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
+| `weekly-validation` | `scripts/weekly-validation.sh` — the two validation clocks, `verdict:validate` (Phase-5 readiness + projection watch) and `phase4c:accrual`, as a weekly artifact (`logs/validation-digest-<date>.json`) so the Phase-5 A3 re-pricing signal cannot accrue unnoticed | Sun 09:47 |
 | `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`) | **20:30 + 23:03 daily** |
 | `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 07:15, 17:30 daily |
 
@@ -480,8 +481,11 @@ sessions due the same evening, US the following one — with **no**
 market-holiday calendar. 1 missed evening is **warn** (runs are
 catch-up-on-wake by design, so "late" must not read as "broken") and 2+, a
 stale `running` row, or an overdue weekly job is **alert**. Weekly jobs are
-judged from dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`),
-and when no artifact exists yet the check is anchored on **when the job was
+judged from dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`,
+`validation-digest-<date>.json`), and the validation digest carries one
+content-aware rule: a pooled `sdDay/sdTheory` ratio ≥ 1.5 (Phase-5 A3's
+re-pricing signal) is a **warn** — silent while the sd is unmeasurable. When no
+artifact exists yet the check is anchored on **when the job was
 installed** — read from the plist's mtime, which `install.sh`'s `cp` makes the
 install instant. Without that anchor "no artifact" cannot be told apart from
 "has never been due": on 2026-09-11 the f10 job (installed 09-10 23:21, first

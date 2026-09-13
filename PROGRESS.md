@@ -5,6 +5,43 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (weekly validation digest — the clocks now watch themselves; housekeeping swept)
+
+**The gap.** `verdict:validate` and `phase4c:accrual` were manual CLIs — the
+projection watch (Phase-5 A3's pre-agreed re-pricing signal: measured per-day
+sd ≥ 1.5× assumed, first measurable at ~20 accrued days) would only fire into
+a terminal nobody was watching.
+
+**Built.** Seventh launchd job `com.agentic-trading.weekly-validation`
+(Sundays 09:47 HKT, clear of sentinel 08:47 / f10 09:17):
+`scripts/weekly-validation.sh` runs both readout CLIs with `--json`
+(verdict-validate already had it), logs to `logs/weekly-validation.log`, and
+writes `logs/validation-digest-<date>.json` — both exit codes plus pooled and
+per-lane `labelled` / `days` / `daysNeeded` / `sdDay` / `sdTheory`. Non-zero
+from either CLI is recorded and fails the script. Health tracks it exactly
+like f10 (install-anchored due-ness, missing artifact past the first due
+Sunday = alert) **plus one content-aware rule**: when the newest digest has
+measurable sd with ratio ≥ 1.5×, a WARN fires — "projection watch: measured
+per-day IC sd is N.Nx the assumed — Phase-5 A3's re-pricing decision is due
+while still unlabelled" — null-silent until measurable, never overrides an
+alert. All 7 jobs verified ARMED; first scheduled slot Sun 09-20, and today's
+manual run already wrote a healthy artifact (both exits 0, sdDay null as
+expected at 0 labelled).
+
+**Housekeeping (thrice-flagged, finally swept):** `.env.local.swp` deleted,
+`*.swp` added to `.gitignore`.
+
+**Tests:** api 558 → **564** + 1 skipped (+6: due-ness ×3, watch warn/silent
+×3), quant-core 156, tsc clean; web untouched (JobHealth shape unchanged).
+
+**Next (all passive):** tonight's 20:30 catch-up (Monday HK session + the 14
+new universe names, first verdicts carrying the `models` field); tomorrow
+evening the US Monday session. Standing: picker-lane marginal census run
+(optional descriptive); `journal:link` awaiting a Futu/Moomoo CSV; product-side
+deferred list (chat 3b, prompt v2 experiment track) available on request.
+
+---
+
 ## 2026-09-13 (PIT re-screen capability — the travel-gap tool, plus a full audit of "which session is current" reads)
 
 **Why now.** With the 20:30-catch-up schedule, a multi-day outage (travel)

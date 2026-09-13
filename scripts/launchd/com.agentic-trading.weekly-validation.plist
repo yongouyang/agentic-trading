@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Weekly validation digest (2026-09-13): Sun 09:47 HKT — after f10 (09:17).
+     Runs the two read-only validation clocks (verdict:validate, phase4c:accrual)
+     and writes logs/validation-digest-<date>.json so the projection watch
+     (Phase-5 A3's re-pricing signal) cannot accrue unnoticed. Both CLIs exit 0
+     by design; a non-zero exit is a real failure and the script propagates it.
+     Power-off caveat: launchd does not replay slots missed while shut down. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agentic-trading.weekly-validation</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/yongouyang/projects/agentic-trading/scripts/weekly-validation.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>47</integer></dict>
+  <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-validation.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-validation.err.log</string>
+</dict>
+</plist>
