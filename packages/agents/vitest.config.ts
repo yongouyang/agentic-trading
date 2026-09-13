@@ -5,11 +5,11 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**"],
-      // Pure re-export barrel — nothing to measure.
+      // Pure re-export barrel + type declarations — nothing to measure.
       exclude: ["src/index.ts"],
       thresholds: {
-        // Measured 2026-09-01: 96.8% lines / 81.7% branches.
-        "src/**": { lines: 95, branches: 80 },
+        // Measured 2026-09-13: 97.9% lines / 87.4% branches.
+        "src/**": { lines: 95, branches: 84 },
       },
     },
   },

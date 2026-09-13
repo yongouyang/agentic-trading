@@ -66,6 +66,43 @@ describe("deriveAdjustedCloses — R1 convention (measured 2026-08-31)", () => {
     const adj = deriveAdjustedCloses(bars, [div("2020-01-01", 5)]);
     expect(adj.get("2025-01-02")).toBe(100);
   });
+
+  it("skips a dividend whose ex-date falls between bars (no prev close for it)", () => {
+    // Ex-date 2025-01-04 is a Saturday: there is no bar on it, so there is no
+    // previous-session close keyed to that date and the event cannot be priced.
+    const bars = [bar("2025-01-02", 100), bar("2025-01-03", 100), bar("2025-01-06", 100)];
+    const adj = deriveAdjustedCloses(bars, [div("2025-01-04", 5)]);
+    expect(adj.get("2025-01-02")).toBe(100);
+    expect(adj.get("2025-01-03")).toBe(100);
+  });
+
+  it("compounds multiple dividend events multiplicatively", () => {
+    const bars = [bar("2025-01-02", 100), bar("2025-01-03", 50), bar("2025-01-06", 25)];
+    const adj = deriveAdjustedCloses(bars, [div("2025-01-03", 5), div("2025-01-06", 2.5)]);
+    // prev closes: 100 for the 01-03 ex-date, 50 for the 01-06 ex-date.
+    expect(adj.get("2025-01-02")).toBeCloseTo(100 * (1 - 5 / 100) * (1 - 2.5 / 50), 10);
+    expect(adj.get("2025-01-03")).toBeCloseTo(50 * (1 - 2.5 / 50), 10);
+    expect(adj.get("2025-01-06")).toBe(25);
+  });
+
+  it("ignores non-DIVIDEND corporate actions", () => {
+    const split = { date: "2025-01-06", type: "SPLIT", amount: 10, currency: "USD" } as unknown as CorporateAction;
+    const bars = [bar("2025-01-02", 100), bar("2025-01-03", 100), bar("2025-01-06", 100)];
+    const adj = deriveAdjustedCloses(bars, [split]);
+    expect(adj.get("2025-01-02")).toBe(100);
+  });
+
+  it("skips bars with a null close", () => {
+    const bars = [bar("2025-01-02", 100), { ...bar("2025-01-03", 0), close: null }, bar("2025-01-06", 102)];
+    const adj = deriveAdjustedCloses(bars, []);
+    expect(adj.has("2025-01-03")).toBe(false);
+    expect(adj.get("2025-01-06")).toBe(102);
+  });
+
+  it("returns an empty map for empty input", () => {
+    expect(deriveAdjustedCloses([], []).size).toBe(0);
+    expect(deriveAdjustedBars([], [])).toEqual([]);
+  });
 });
 
 describe("deriveAdjustedBars", () => {
@@ -78,5 +115,26 @@ describe("deriveAdjustedBars", () => {
     expect(out[0]!.high).toBeCloseTo(101 * f, 10);
     expect(out[0]!.low).toBeCloseTo(98 * f, 10);
     expect(out[0]!.adjustedClose).toBeCloseTo(out[0]!.close!, 12);
+  });
+
+  it("preserves null OHLC legs instead of fabricating prices", () => {
+    const bars: Bar[] = [
+      { date: "2025-01-02", open: null, high: null, low: null, close: 100, volume: null },
+      bar("2025-01-03", 100),
+    ];
+    const out = deriveAdjustedBars(bars, [div("2025-01-03", 2)]);
+    expect(out).toHaveLength(2);
+    expect(out[0]!.open).toBeNull();
+    expect(out[0]!.high).toBeNull();
+    expect(out[0]!.low).toBeNull();
+    expect(out[0]!.close).toBeCloseTo(100 * (1 - 2 / 100), 10);
+  });
+
+  it("drops bars with a null close entirely", () => {
+    const bars: Bar[] = [
+      bar("2025-01-02", 100),
+      { date: "2025-01-03", open: null, high: null, low: null, close: null, volume: null },
+    ];
+    expect(deriveAdjustedBars(bars, [])).toHaveLength(1);
   });
 });

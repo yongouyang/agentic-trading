@@ -5,6 +5,49 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (coverage follow-through — agents instrumented, money-math branches bought)
+
+From the morning's coverage review, the agreed small round landed:
+
+**(a) packages/agents coverage tooling.** Added `@vitest/coverage-v8` +
+`test:coverage` script + `vitest.config.ts` (v8, barrel `src/index.ts`
+excluded). Measured **97.9% lines / 87.4% branches** out of the box —
+thresholds pinned at 95/84 with dated comment so it can't silently regress.
+The Phase-5 front door (prompt building + verdict parsing) is no longer
+flying blind. ⚠️ pnpm created a broken symlink for the new provider
+(peer-suffix store mismatch); manually repointed — a future `pnpm install`
+may recreate the bad link, lockfile peer resolution worth a look.
+
+**(b) Targeted branch tests for the money math.** New
+`tests/portfolio.test.ts` (20 tests: fill fallbacks, final-bar close-out
+failures, no-leverage guard, buffer-rank hysteresis, degenerate
+`portfolioMetrics`/`benchmarkReturns` inputs) and +7 tests in
+`tests/adjustment.test.ts` (ex-date between bars, dividend compounding,
+null-OHLC legs). Branch coverage: **portfolio.ts 71.8 → 92.7%,
+adjustment.ts 72.2 → 91.3%**; quant-core all-file branches now 90.5%.
+Remaining gaps are defensive/dead code, not test gaps. New tests surfaced
+one source wart (not fixed, flagged): `simulatePortfolio` final-bar
+close-out with null final close silently evaporates the position's value
+from equity (`portfolio.ts:235-258`) rather than carrying the last known
+mark. **Follow-up (same day):** root-caused both flags. The wart's three
+drop paths are all unreachable on the real data path — `replay.ts:202`
+drops null-close bars when building `ForwardSeries` (`closes: number[]`),
+and a holding's series/entry bar must exist — so it is defensive dead
+code, not a live bug; left as-is. The pnpm broken symlink was a lockfile
+artifact: `pnpm add --filter` had written a peer-less resolution for
+agents' `@vitest/coverage-v8` while quant-core's carried the peer-suffixed
+one; hand-aligned the importer entry + specifier (`^3.2.4`) with
+quant-core's, verified clean across `pnpm install --force` relink and
+`--frozen-lockfile`.
+
+**(c) Barrel exclusion.** `quant-core/src/index.ts` excluded from coverage
+include — cosmetic 0% gone.
+
+**Tests:** quant-core 156 → **187**, agents 43 (now gated), both suites
+green; existing 95/80 thresholds untouched.
+
+---
+
 ## 2026-09-13 (weekly validation digest — the clocks now watch themselves; housekeeping swept)
 
 **The gap.** `verdict:validate` and `phase4c:accrual` were manual CLIs — the
