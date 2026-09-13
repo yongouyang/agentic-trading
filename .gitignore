@@ -28,6 +28,9 @@ coverage/
 # harness task state (background runs)
 .pi/
 
+# slide image archives (extracted docs live in docs/)
+knowledge-base/
+
 # Phase 1 daily-screen report artifacts
 apps/api/reports/
 __pycache__/
