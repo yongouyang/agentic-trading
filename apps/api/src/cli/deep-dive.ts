@@ -211,8 +211,25 @@ function loadUniverses(dataDir: string): Map<string, UniverseMeta> {
   return map;
 }
 
+/** The screen run of the lane's CURRENT session: MAX sessionDate, tie-break
+ *  runAt — never runAt alone (2026-09-13): after a screen:rescreen the
+ *  newest-by-runAt row can be an OLD session's rescreen row, and a deep-dive
+ *  would attach to (and spend LLM calls on) the wrong session. Rows predating
+ *  the sessionDate column carry '', which sorts lowest; when nothing records a
+ *  session, fall back to the newest run of any kind — the ops:catchup
+ *  convention (unknown ⇒ answer with what we have, never silently skip). */
+async function latestScreenRunBySession(prisma: PrismaService, market: string) {
+  return (
+    (await prisma.screenRun.findFirst({
+      where: { market, sessionDate: { not: "" } },
+      orderBy: [{ sessionDate: "desc" }, { runAt: "desc" }],
+    })) ?? (await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } }))
+  );
+}
+
 /** Latest ScreenRun per lane + top-N targets by rank. --symbol names bypass
- *  the shortlist: latest metrics from any run, rank/score 0 when absent. */
+ *  the shortlist: latest metrics from any run, rank/score 0 when absent.
+ *  "Latest" is by SESSION (see latestScreenRunBySession), not runAt. */
 export async function selectTargets(
   prisma: PrismaService,
   args: DeepDiveCliArgs,
@@ -246,7 +263,7 @@ export async function selectTargets(
       void latestRun;
     }
     for (const [market, targets] of [...byMarket.entries()].sort()) {
-      const run = await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } });
+      const run = await latestScreenRunBySession(prisma, market);
       lanes.push({ market, screenRunId: run?.id ?? 0, targets, source });
     }
     return { lanes, warnings };
@@ -255,7 +272,7 @@ export async function selectTargets(
   const laneArgs: LaneArg[] = args.market === "all" ? ["us", "hk"] : [args.market];
   for (const lane of laneArgs) {
     const market = lane.toUpperCase();
-    const run = await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } });
+    const run = await latestScreenRunBySession(prisma, market);
     if (!run) {
       warnings.push(`${market}: no ScreenRun yet — run screen:daily first, lane skipped`);
       continue;

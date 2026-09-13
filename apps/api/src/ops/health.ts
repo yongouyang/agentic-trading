@@ -34,6 +34,8 @@ import { readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { sessionClosed } from "@agentic-trading/quant-core";
+import { PROSPECTIVE_FROM } from "../cli/accrual.js";
 import type { PrismaService } from "../prisma.service.js";
 
 export const HKT_OFFSET_MS = 8 * 3600 * 1000;
@@ -102,6 +104,12 @@ export interface LaneHealth {
   /** Guarded evening catch-ups missed: evenings whose last slot (+ grace)
    *  passed with the lane still behind on a completed unscreened session. */
   expectedRunsMissed: number;  staleRunning: { id: number; runAt: string } | null;
+  /** INFORMATIONAL ONLY (2026-09-13): completed store sessions >=
+   *  PROSPECTIVE_FROM with no ScreenRun, excluding the currently-pending
+   *  session tonight's catch-up will screen. Recoverable via
+   *  `screen:rescreen --market <lane> --holes` — holes never change the level
+   *  (the level system is for action-needed-now). */
+  rescreenableHoles: number;
 }
 
 export interface JobHealth {
@@ -270,14 +278,22 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     // means the newest complete **chain** run — an ad-hoc smoke run must not
     // reset the missed-slot clock. Fall back to any provenance only when the
     // lane has no chain run at all.
-    const [chainRun, anyRun, screenRun, latestBar] = await Promise.all([
+    const [chainRun, anyRun, screenRun, latestBar, laneBarDates, laneScreened] = await Promise.all([
       prisma.deepDiveRun.findFirst({ where: { market, status: "complete", source: "chain" }, orderBy: { runAt: "desc" } }),
       prisma.deepDiveRun.findFirst({ where: { market, status: "complete" }, orderBy: { runAt: "desc" } }),
       // The newest run *that records its session* — rows predating the column
-      // carry '' and cannot answer the cadence question (same rule as
-      // ops:catchup).
-      prisma.screenRun.findFirst({ where: { market, sessionDate: { not: "" } }, orderBy: { runAt: "desc" } }),
+      // carry '' and cannot answer the cadence question. Order by SESSION DATE,
+      // not runAt (same rule as ops:catchup): a screen:rescreen row has a fresh
+      // runAt and an OLD sessionDate, and must not read as the newest session —
+      // neither for the screen leg nor for the verdict leg below, where the
+      // newest SESSION's screen run is the one that must carry a complete
+      // chain deep-dive.
+      prisma.screenRun.findFirst({ where: { market, sessionDate: { not: "" } }, orderBy: [{ sessionDate: "desc" }, { runAt: "desc" }] }),
       prisma.bar.findFirst({ where: { instrument: { market } }, orderBy: { date: "desc" }, select: { date: true } }),
+      // Hole visibility (informational): distinct store sessions + screened
+      // sessionDates, so rescreenable holes can be counted without a second pass.
+      prisma.bar.findMany({ where: { instrument: { market } }, distinct: ["date"], orderBy: { date: "asc" }, select: { date: true } }),
+      prisma.screenRun.findMany({ where: { market, sessionDate: { not: "" } }, select: { sessionDate: true } }),
     ]);
     const run = chainRun ?? anyRun;
     // Verdict leg: the newest screen must carry a COMPLETE chain-source
@@ -315,6 +331,17 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     if (lastScreened && !chainDeepDive) pending.add(expectedEvening(market, lastScreened));
     const missed = missedEvenings(market, [...pending], now);
 
+    // Rescreenable holes (INFORMATIONAL ONLY — never a reason, never a level):
+    // completed store sessions in the prospective window nobody screened. The
+    // newest unscreened session is excluded — it is tonight's catch-up's job,
+    // not a hole. The recovery is `screen:rescreen --market <lane> --holes`.
+    const screenedDates = new Set(laneScreened.map((r) => r.sessionDate));
+    const unscreened = (laneBarDates as { date: string }[])
+      .map((r) => r.date)
+      .filter((d) => d >= PROSPECTIVE_FROM && sessionClosed(market, d, now) && !screenedDates.has(d));
+    const pendingTonight = storeThrough !== null && unscreened.length > 0 && unscreened[unscreened.length - 1] === storeThrough;
+    const rescreenableHoles = unscreened.length - (pendingTonight ? 1 : 0);
+
     const reasons: string[] = [];
 
     if (!run) {
@@ -345,6 +372,7 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
       dataThrough: latestBar?.date ?? null,
       expectedRunsMissed: missed,
       staleRunning: stale ? { id: stale.id, runAt: stale.runAt.toISOString() } : null,
+      rescreenableHoles,
     });
   }
 

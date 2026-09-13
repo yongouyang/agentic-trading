@@ -49,6 +49,13 @@ function renderLane(l: LaneHealth): string[] {
       ` · data through ${l.dataThrough ?? "—"} · missed ${l.expectedRunsMissed}`,
   ];
   for (const r of l.reasons) lines.push(`    - ${r}`);
+  // Informational only: holes are recoverable (screen:rescreen), so they are
+  // never a reason and never move the level.
+  if (l.rescreenableHoles > 0) {
+    lines.push(
+      `    · ${l.rescreenableHoles} rescreenable hole(s) — completed store session(s) never screened; recover: pnpm -C apps/api screen:rescreen -- --market ${l.market.toLowerCase()} --holes`,
+    );
+  }
   return lines;
 }
 

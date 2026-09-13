@@ -13,7 +13,10 @@
  * than a shell conditional because the question is exactly the one the run ledger
  * answers: **is either leg behind?** — (a) the store holds a session newer than
  * the newest session any run has screened (screen leg), or (b) the newest screen
- * run has no COMPLETE chain-source deep-dive attached (verdict leg). Checking
+ * run has no COMPLETE chain-source deep-dive attached (verdict leg). "Newest"
+ * means the MAX `sessionDate` across the lane's runs, never the newest `runAt`:
+ * a `screen:rescreen` row carries a fresh runAt and an old sessionDate, and must
+ * not make the lane read as behind on the sessions it just healed. Checking
  * only (a) was the 2026-09-12 production miss: HK was "up to date" on the screen
  * leg while the 09-10/09-11 chain deep-dives had never run (machine off), and the
  * guard skipped — leaving the verdict sample permanently behind until a manual
@@ -150,10 +153,13 @@ export async function runCatchup(prisma: PrismaService, markets: Market[]): Prom
       select: { date: true },
     });
     // The newest run *that records its session*, not merely the newest run: rows
-    // written before the column carry '' and cannot answer the question.
+    // written before the column carry '' and cannot answer the question. Order by
+    // SESSION DATE, not runAt (2026-09-13): a rescreen row (screen:rescreen) has
+    // a fresh runAt and an OLD sessionDate, and ordering by runAt would make the
+    // lane read as behind on exactly the sessions the rescreen just healed.
     const run = await prisma.screenRun.findFirst({
       where: { market, sessionDate: { not: "" } },
-      orderBy: { runAt: "desc" },
+      orderBy: [{ sessionDate: "desc" }, { runAt: "desc" }],
     });
     const newest = run ?? (await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } }));
     // Verdict leg: the newest screen run must carry a COMPLETE chain-source

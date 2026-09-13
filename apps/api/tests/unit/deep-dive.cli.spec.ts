@@ -189,6 +189,40 @@ describe("selectTargets", () => {
     expect(lanes.map((l) => l.market)).toEqual(["US"]);
     expect(warnings.some((w) => w.includes("HK: no ScreenRun"))).toBe(true);
   });
+
+  it("a rescreen row (newer runAt, OLD sessionDate) is not the lane's current session", async () => {
+    // 2026-09-13: after screen:rescreen the newest-by-runAt row can be an old
+    // session's recompute. selectTargets must order by sessionDate, or a manual
+    // deep-dive attaches to (and spends LLM calls on) the wrong session.
+    const chainRun = await prisma.screenRun.create({
+      data: {
+        market: "US", universeSize: 3, ok: 3, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]",
+        sessionDate: "2026-09-11", source: "chain", runAt: new Date("2026-09-11T22:00:00Z"),
+      },
+    });
+    await prisma.screenResult.create({
+      data: { runId: chainRun.id, symbol: "AAPL", rank: 1, score: 1.1, metricsJson: JSON.stringify({ close: 231 }) },
+    });
+    const rescreenRun = await prisma.screenRun.create({
+      // runAt defaults to now — strictly the newest run in the store.
+      data: {
+        market: "US", universeSize: 3, ok: 3, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]",
+        sessionDate: "2026-09-09", source: "rescreen",
+      },
+    });
+    await prisma.screenResult.create({
+      data: { runId: rescreenRun.id, symbol: "AAPL", rank: 1, score: 0.1, metricsJson: JSON.stringify({ close: 999 }) },
+    });
+    try {
+      const { lanes } = await selectTargets(prisma, { market: "us", top: 1, maxCalls: 200 }, dataDir);
+      expect(lanes[0]!.screenRunId).toBe(chainRun.id);
+      expect(lanes[0]!.targets[0]!.metrics).toEqual({ close: 231 });
+    } finally {
+      // The file's db is shared — leave it as the seed state for later tests.
+      await prisma.screenResult.deleteMany({ where: { runId: { in: [chainRun.id, rescreenRun.id] } } });
+      await prisma.screenRun.deleteMany({ where: { id: { in: [chainRun.id, rescreenRun.id] } } });
+    }
+  });
 });
 
 describe("runDeepDiveBatch", () => {

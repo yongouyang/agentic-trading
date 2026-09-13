@@ -40,13 +40,19 @@ interface ScreenRow {
   runAt: Date;
   /** Newest session this run screened; undefined simulates a pre-column row. */
   sessionDate?: string;
+  /** ScreenRun provenance — "rescreen" rows carry a fresh runAt + old session. */
+  source?: "chain" | "rescreen";
 }
 
-function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Record<string, string>; running?: RunRow[] } = {}) {
+function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Record<string, string | string[]>; running?: RunRow[] } = {}) {
   const runs = opts.runs ?? [];
   const screens = opts.screens ?? [];
   const bars = opts.bars ?? {};
   const running = opts.running ?? [];
+  const barDates = (m: string): string[] => {
+    const v = bars[m];
+    return v === undefined ? [] : Array.isArray(v) ? v : [v];
+  };
   return {
     deepDiveRun: {
       findFirst: async ({ where }: any) => {
@@ -61,14 +67,34 @@ function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Recor
       },
     },
     screenRun: {
-      findFirst: async ({ where }: any) =>
+      findFirst: async ({ where, orderBy }: any) => {
+        const pool = screens
+          .filter((r) => r.market === where.market)
+          .filter((r) => (where.sessionDate?.not === "" ? Boolean(r.sessionDate) : true));
+        // Honour the orderBy the way SQLite would — the whole point of the
+        // 2026-09-13 fix is WHICH row this returns when a rescreen row has the
+        // newest runAt but an old sessionDate.
+        const bySession = Array.isArray(orderBy) ? orderBy.some((o: any) => o.sessionDate) : Boolean(orderBy?.sessionDate);
+        return (
+          [...pool].sort((a, b) =>
+            bySession
+              ? (b.sessionDate ?? "").localeCompare(a.sessionDate ?? "") || b.runAt.getTime() - a.runAt.getTime()
+              : b.runAt.getTime() - a.runAt.getTime(),
+          )[0] ?? null
+        );
+      },
+      findMany: async ({ where }: any) =>
         screens
           .filter((r) => r.market === where.market)
           .filter((r) => (where.sessionDate?.not === "" ? Boolean(r.sessionDate) : true))
-          .sort((a, b) => b.runAt.getTime() - a.runAt.getTime())[0] ?? null,
+          .map((r) => ({ sessionDate: r.sessionDate })),
     },
     bar: {
-      findFirst: async ({ where }: any) => (bars[where.instrument.market] ? { date: bars[where.instrument.market] } : null),
+      findFirst: async ({ where }: any) => {
+        const ds = barDates(where.instrument.market);
+        return ds.length ? { date: ds[ds.length - 1] } : null;
+      },
+      findMany: async ({ where }: any) => barDates(where.instrument.market).map((date) => ({ date })),
     },
   } as any;
 }
@@ -208,8 +234,7 @@ describe("computeHealth — lane cadence (guarded evening catch-up)", () => {
   });
 });
 
-describe("computeHealth — run provenance", () => {
-  // Measured 2026-09-12: HK's "last complete run" was an ad-hoc 3-name smoke
+describe("computeHealth — run provenance", () => {  // Measured 2026-09-12: HK's "last complete run" was an ad-hoc 3-name smoke
   // run. The newest complete **chain** run is the lane's truth (same policy as
   // ReportsService.daily) — though with the 2026-09-13 cadence the missed count
   // comes from the store/screen state, not the run clock.
@@ -248,6 +273,78 @@ describe("computeHealth — run provenance", () => {
     // slots have not passed yet — not late.
     expect(hk.expectedRunsMissed).toBe(0);
     expect(hk.level).toBe("healthy");
+  });
+});
+
+describe("computeHealth — rescreen rows and rescreenable holes (2026-09-13)", () => {
+  it("a rescreen row (new runAt, OLD sessionDate) is not the newest SESSION — the lane stays healthy", async () => {
+    // The ordering fix: both the screen leg and the verdict leg must read the
+    // run with the MAX sessionDate (id 14), not the newest runAt (id 15).
+    // Without it this state reads "behind": lastScreened 09-09 < store 09-11,
+    // and the verdict-leg check looks for a chain deep-dive on the rescreen row.
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-11T20:50:00"), source: "chain", screenRunId: 14 }],
+        screens: [
+          { id: 14, market: "HK", runAt: hkt("2026-09-11T20:40:00"), sessionDate: "2026-09-11", source: "chain" },
+          { id: 15, market: "HK", runAt: hkt("2026-09-13T10:00:00"), sessionDate: "2026-09-09", source: "rescreen" },
+        ],
+        bars: { HK: "2026-09-11" },
+      }),
+      { now: hkt("2026-09-13T20:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.lastScreenRunId).toBe(14);
+    expect(hk.level).toBe("healthy");
+    expect(hk.expectedRunsMissed).toBe(0);
+  });
+
+  it("reports rescreenable holes informationally — the level does not move", async () => {
+    // Screened through 09-15 (with a chain verdict); the store also holds
+    // 09-14, which was never screened — a rescreenable hole, not an emergency.
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-15T20:50:00"), source: "chain", screenRunId: 14 }],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-15T20:40:00"), sessionDate: "2026-09-15", source: "chain" }],
+        bars: { HK: ["2026-09-11", "2026-09-14", "2026-09-15"] },
+      }),
+      { now: hkt("2026-09-16T10:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.rescreenableHoles).toBe(1); // 09-14; 09-11 predates PROSPECTIVE_FROM
+    expect(hk.level).toBe("healthy");
+    expect(hk.reasons.join(" ")).not.toMatch(/hole/);
+    const text = renderHealth(r);
+    expect(text).toMatch(/1 rescreenable hole/);
+    expect(text).toContain("pnpm -C apps/api screen:rescreen -- --market hk --holes");
+  });
+
+  it("the session tonight's catch-up will screen is pending, not a hole", async () => {
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-15T20:50:00"), source: "chain", screenRunId: 14 }],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-15T20:40:00"), sessionDate: "2026-09-15", source: "chain" }],
+        bars: { HK: ["2026-09-14", "2026-09-15", "2026-09-16"] },
+      }),
+      { now: hkt("2026-09-16T19:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.rescreenableHoles).toBe(1); // 09-14 only; 09-16 is tonight's catch-up's job
+    // 19:00 is before the evening slots — behind but not yet missed.
+    expect(hk.level).toBe("healthy");
+  });
+
+  it("a still-unclosed session is not a hole (sessionClosed)", async () => {
+    // 10:00 HKT — the 09-16 HK session is still forming.
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-15T20:50:00"), source: "chain", screenRunId: 14 }],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-15T20:40:00"), sessionDate: "2026-09-15", source: "chain" }],
+        bars: { HK: ["2026-09-15", "2026-09-16"] },
+      }),
+      { now: hkt("2026-09-16T10:00:00"), reportsDir },
+    );
+    expect(lane(r, "HK").rescreenableHoles).toBe(0);
   });
 });
 

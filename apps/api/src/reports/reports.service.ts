@@ -532,7 +532,18 @@ export class ReportsService {
       const instrument = await this.prisma.instrument.findUnique({ where: { symbol } });
       if (!instrument) throw new NotFoundException(`unknown symbol "${symbol}"`);
 
-      const screenRun = await this.prisma.screenRun.findFirst({ where: { market: instrument.market }, orderBy: { runAt: "desc" } });
+      // The lane's CURRENT session's screen run: MAX sessionDate, never runAt
+      // (2026-09-13): after a screen:rescreen the newest-by-runAt row can be an
+      // OLD session's rescreen row, and chat would compare against stale
+      // metrics. '' rows (pre-sessionDate-column) sort lowest; fall back to the
+      // newest run of any kind when nothing records a session (ops:catchup
+      // convention).
+      const screenRun =
+        (await this.prisma.screenRun.findFirst({
+          where: { market: instrument.market, sessionDate: { not: "" } },
+          orderBy: [{ sessionDate: "desc" }, { runAt: "desc" }],
+        })) ??
+        (await this.prisma.screenRun.findFirst({ where: { market: instrument.market }, orderBy: { runAt: "desc" } }));
       const screenResult = screenRun
         ? await this.prisma.screenResult.findUnique({ where: { runId_symbol: { runId: screenRun.id, symbol } } })
         : null;

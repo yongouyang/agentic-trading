@@ -88,6 +88,12 @@ model ScreenRun {
   // timestamp cannot serve: runAt and the session date differ by a day for the
   // US lane, which runs at 06:10 HKT on the previous night's close.
   sessionDate     String   @default("")
+  // 'chain' = screen:daily (scheduled or manual — the same deterministic screen
+  // of the newest session); 'rescreen' = screen:rescreen, a point-in-time
+  // recompute of a session missed during a multi-day outage (architecture §5.1
+  // recovery semantics). Consumers that order runs by runAt must order by
+  // sessionDate instead: a rescreen row has a fresh runAt and an OLD session.
+  source          String   @default("chain")
 
   results ScreenResult[]
 }

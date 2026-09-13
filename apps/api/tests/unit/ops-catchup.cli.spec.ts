@@ -103,8 +103,7 @@ describe("ops:catchup — surfaces", () => {
   });
 });
 
-describe("ops:catchup — the verdict leg (provenance)", () => {
-  /** Stub store: screen current through 09-11; deepDiveRun rows filtered the
+describe("ops:catchup — the verdict leg (provenance)", () => {  /** Stub store: screen current through 09-11; deepDiveRun rows filtered the
    *  way Prisma would (status + source + attached screenRunId). */
   function stubWithDeepDives(deepDives: { screenRunId: number; status: string; source: string }[]) {
     return {
@@ -162,5 +161,46 @@ describe("ops:catchup — the verdict leg (provenance)", () => {
   it("a chain deep-dive attached to an OLDER screen run does not heal the newest one", async () => {
     const r = await runCatchup(stubWithDeepDives([{ screenRunId: 5, status: "complete", source: "chain" }]), ["HK"]);
     expect(r.lanes[0]!.needsRun).toBe(true);
+  });
+});
+
+describe("ops:catchup — rescreen rows must not make the lane read as behind", () => {
+  // 2026-09-13: a screen:rescreen row carries a FRESH runAt and an OLD
+  // sessionDate. lastScreened is the MAX sessionDate across the lane's runs —
+  // ordering by runAt would report the rescreened hole as the newest screened
+  // session and re-trigger a run for sessions the chain already covered.
+  const screens = [
+    { id: 18, sessionDate: "2026-09-11", runAt: new Date("2026-09-11T08:50:00Z"), source: "chain" },
+    { id: 19, sessionDate: "2026-09-09", runAt: new Date("2026-09-13T02:00:00Z"), source: "rescreen" }, // newest by runAt
+  ];
+  const prisma = {
+    bar: { findFirst: async () => ({ date: "2026-09-11" }) },
+    screenRun: {
+      findFirst: async ({ where, orderBy }: any) => {
+        const pool = screens.filter((r) => (where?.sessionDate?.not === "" ? r.sessionDate !== "" : true));
+        const bySession = Array.isArray(orderBy) && orderBy.some((o: any) => o.sessionDate);
+        const sorted = [...pool].sort((a, b) =>
+          bySession
+            ? b.sessionDate.localeCompare(a.sessionDate) || b.runAt.getTime() - a.runAt.getTime()
+            : b.runAt.getTime() - a.runAt.getTime(),
+        );
+        return sorted[0] ?? null;
+      },
+    },
+    deepDiveRun: {
+      // The chain verdict is attached to the run that screened 09-11.
+      findFirst: async ({ where }: any) =>
+        where.screenRunId === 18 && where.status === "complete" && where.source === "chain" ? { id: 7 } : null,
+    },
+  } as any;
+
+  it("lastScreened is the max sessionDate, and the verdict leg reads that session's run", async () => {
+    const r = await runCatchup(prisma, ["HK"]);
+    expect(r.lanes[0]!.lastScreened).toBe("2026-09-11");
+    expect(r.lanes[0]!.needsRun).toBe(false);
+    expect(r.lanes[0]!.reason).toMatch(/up to date/);
+    // lastRunAt reports the run that ANSWERED the question (the existing
+    // behaviour: the ''-fallback only fires when no run records a session).
+    expect(r.lanes[0]!.lastRunAt).toBe("2026-09-11T08:50:00.000Z");
   });
 });

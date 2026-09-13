@@ -447,6 +447,42 @@ describe("ReportsService", () => {
       expect(out.integrity.dataThrough).toBe(seededIndDates[seededIndDates.length - 1]);
     });
   });
+
+  describe("compareSymbols — screen run is the lane's current SESSION, not the newest runAt (2026-09-13)", () => {
+    it("a rescreen row newer-by-runAt with an old sessionDate never supplies the metrics", async () => {
+      const inst = await prisma.instrument.create({ data: { symbol: "CMPT", market: "US", currency: "USD" } });
+      const chainRun = await prisma.screenRun.create({
+        data: {
+          market: "US", universeSize: 1, ok: 1, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]",
+          sessionDate: "2026-09-11", source: "chain", runAt: new Date("2026-09-11T22:00:00Z"),
+        },
+      });
+      await prisma.screenResult.create({
+        data: { runId: chainRun.id, symbol: "CMPT", rank: 1, score: 1.1, metricsJson: JSON.stringify({ close: 231 }) },
+      });
+      const rescreenRun = await prisma.screenRun.create({
+        // runAt defaults to now — strictly the newest run in the store.
+        data: {
+          market: "US", universeSize: 1, ok: 1, genuinelyAbsent: 0, fetchFailed: 0, degraded: false, warningsJson: "[]",
+          sessionDate: "2026-09-09", source: "rescreen",
+        },
+      });
+      await prisma.screenResult.create({
+        data: { runId: rescreenRun.id, symbol: "CMPT", rank: 1, score: 0.1, metricsJson: JSON.stringify({ close: 999 }) },
+      });
+      try {
+        const out = await service.compareSymbols(["CMPT", "INDX"]);
+        const row = out.symbols.find((s) => s.symbol === "CMPT")!;
+        expect(row.screen!.runId).toBe(chainRun.id);
+        expect(row.screen!.metrics).toMatchObject({ close: 231 });
+      } finally {
+        // The file's db is shared — leave it as the seed state for later tests.
+        await prisma.screenResult.deleteMany({ where: { runId: { in: [chainRun.id, rescreenRun.id] } } });
+        await prisma.screenRun.deleteMany({ where: { id: { in: [chainRun.id, rescreenRun.id] } } });
+        await prisma.instrument.delete({ where: { id: inst.id } });
+      }
+    });
+  });
 });
 
 describe("visibleRows — display breadth is narrower than measurement breadth", () => {

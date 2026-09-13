@@ -390,6 +390,26 @@ a session newer than the newest `ScreenRun.sessionDate`. Exit 10 from the guard
 means "behind"; any other non-zero means the guard failed and the script **does not
 run**, because a blind run duplicates a session and inflates the accrual.
 
+**Recovery semantics for multi-day outages (2026-09-13).** The catch-up heals
+only the NEWEST missed session, so after a multi-day gap the middle sessions
+stay holes — with three different recovery truths. Bars self-heal (every run
+refetches 5y and upserts). Verdicts are unrecoverable BY DESIGN: the
+promptness gate excludes lag > 1, so a deep-dive is never run for an old
+session. Screen observations are PIT-recoverable — the screen is a
+deterministic function of data dated ≤ T — via
+`pnpm -C apps/api screen:rescreen -- --market <lane> --holes|--date
+YYYY-MM-DD`: it replays the shipped screen from stored bars/dividends ≤ T
+(`replayScreen`'s exact slice) and persists a normal ScreenRun + top-N
+ScreenResults marked `ScreenRun.source = "rescreen"` (integrity counters are
+unknowable for a historical session and recorded as such in warningsJson).
+Only sessions ≥ the Phase-4c prospective cutoff are eligible — earlier windows
+are spent — and a session with an existing ScreenRun is refused (dedup by
+sessionDate, the accrual rule). Because a rescreen row has a fresh `runAt` and
+an old `sessionDate`, the catch-up guard and `ops:health` order the lane's
+runs by `sessionDate`, never `runAt`; health also prints the rescreenable-hole
+count per lane, informationally — holes are recoverable, so they never move a
+lane's level.
+
 **Cadence re-declared 2026-09-13.** The machine is normally OFF at the 06:10
 (US) and 16:50 (HK) slots, so the **guarded evening catch-up is the realistic
 daily run**; the morning/afternoon jobs stay armed but are opportunistic

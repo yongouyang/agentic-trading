@@ -133,6 +133,11 @@ export function hktDate(d: Date): string {
  * Rows written before 2026-09-11 carry `{}` and are skipped: `runDailyScreen`
  * computed the census from the start but persisted it only from this change, so
  * there is nothing to compare until the next production run.
+ *
+ * The candidate must be a `chain` row: a `rescreen` row's census IS the
+ * replay's own output recomputed from the store, so comparing against it would
+ * trivially "match" and prove nothing (the same !== / default-chain reading as
+ * the verdict-validate provenance gate — pre-column rows read as chain).
  */
 export async function auditAgainstProduction(
   prisma: PrismaService,
@@ -140,7 +145,8 @@ export async function auditAgainstProduction(
   replayDays: ReplayDay[],
 ): Promise<ReplayAudit | null> {
   const runs = await prisma.screenRun.findMany({ where: { market }, orderBy: { runAt: "desc" }, take: 25 });
-  const candidate = runs.find((r) => (r as { excludedJson?: string }).excludedJson && (r as { excludedJson?: string }).excludedJson !== "{}");
+  const withCensus = runs.filter((r) => (r as { excludedJson?: string }).excludedJson && (r as { excludedJson?: string }).excludedJson !== "{}");
+  const candidate = withCensus.find((r) => (r as { source?: string }).source !== "rescreen") ?? withCensus[0];
   if (!candidate) {
     const newest = runs[0];
     if (!newest) return null;
@@ -157,7 +163,10 @@ export async function auditAgainstProduction(
     };
   };
 
-  const date = hktDate(candidate.runAt);
+  // sessionDate over hktDate(runAt): identical for chain runs (both columns
+  // landed together on 2026-09-11), and the only honest date for a rescreen
+  // fallback, whose runAt is the recovery day, not the session.
+  const date = (candidate as { sessionDate?: string }).sessionDate || hktDate(candidate.runAt);
   const day = replayDays.find((d) => d.date === date);
   const stored = JSON.parse((candidate as { excludedJson: string }).excludedJson) as Record<string, number>;
   if (!day) {

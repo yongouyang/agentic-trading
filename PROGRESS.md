@@ -5,6 +5,64 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (PIT re-screen capability — the travel-gap tool, plus a full audit of "which session is current" reads)
+
+**Why now.** With the 20:30-catch-up schedule, a multi-day outage (travel)
+loses verdicts permanently (promptness gate — by design, unrecoverable) but
+loses *screen observations* only because the catch-up heals the newest session
+and leaves the middle ones as holes. Track B — the only H1 verdict path left
+after Track A closed — consumes exactly those rows. `screen:rescreen` recovers
+them: the screen is a deterministic function of data dated ≤ T, and
+`replayScreen` already proves the slicing PIT-correct by test.
+
+**Built (all locked in review).** `pnpm -C apps/api screen:rescreen -- --market
+us|hk --holes | --date YYYY-MM-DD`: enumerates holes (completed store sessions
+≥ `PROSPECTIVE_FROM` with no ScreenRun — constant shared with accrual, not
+copied), re-screens each PIT-correctly (bars ≤ T, 252-trailing window,
+dividends ex-date ≤ T), persists `ScreenRun` + `ScreenResult` in production
+shape (per-market `topN` re-applied; census in `excludedJson`) tagged
+**`source: "rescreen"`** (new additive column; existing rows defaulted to
+"chain"). Integrity counters are unknowable for a historical session — zeroed
+with a `warningsJson` note saying so. Refuses duplicates, pre-cutoff dates,
+unclosed sessions, and no-bars dates, each with its own reason. **Screen-only,
+never a deep-dive** — lag > 1 verdicts are excluded by the promptness gate, so
+running one would burn ~0.6M tokens per lane-day on uncountable output.
+
+**The hazard class it forced us to fix everywhere: "newest" meant newest
+runAt, not newest session.** A rescreen row (new runAt, old sessionDate) would
+have hijacked every "the lane's current session" read. Fixed and audited —
+every `screenRun` read in apps/api now either orders by `sessionDate`
+(`ops:catchup`, `ops/health` incl. the verdict-leg check, `deep-dive`
+selectTargets ×2, `compareSymbols`), is deliberately pinned elsewhere (the
+dashboard via `DeepDiveRun.source`), or is ordering-insensitive (accrual
+dedups by session; journal-link reads all). The two new ordering tests are
+mutation-verified (fail with `runAt desc`, pass with the fix).
+
+**Hole visibility.** `ops:health` now reports per-lane *rescreenable holes*
+with the exact recovery command — **informational only, never moves the level**
+(a hole is recoverable; the level system is for act-now). A travel week now
+ends with the dashboard telling you what to run.
+
+**Also fixed along the way:** the backtest census audit prefers
+`source ≠ "rescreen"` candidates and resolves the replay day by
+`sessionDate || hktDate(runAt)` — which also repairs a latent US-lane
+`no-replay-day` mismatch (the 06:10 HKT runAt lands on the next HKT day).
+Migration applied via `migrate deploy` per the repo's hand-written-migration
+convention (`migrate dev` refused on pre-existing comment-only checksum drift;
+store backed up first).
+
+**Tests:** api 534 → **558** + 1 skipped (+24 across five specs), quant-core
+156, web 107, tsc clean. Live: `--holes` → "no holes" (store pre-cutoff);
+catch-up exit 0; health HEALTHY.
+
+**Next (all passive):** tonight's 20:30 catch-up (Monday HK session + the 14
+new universe names); first prospective lane-days Mon/Tue; projection watch at
+~20 days. Standing: picker-lane marginal census (optional descriptive run),
+`journal:link` awaiting a Futu/Moomoo CSV, `.env.local.swp` + `*.swp`
+housekeeping.
+
+---
+
 ## 2026-09-13 (the model stack joins the sample contract — Phase-5 amendment A6, enforced by the gate)
 
 **The gap.** `verdict:validate` gated the deciding sample on `promptVersion`
