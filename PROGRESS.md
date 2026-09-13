@@ -5,6 +5,48 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (picker-lane marginal census RUN — the standing optional item, closed; plus the first live MATCH of the replay-vs-production census audit)
+
+Descriptive run only (`backtest:screen --market all`, artifact
+`apps/api/reports/backtest/2026-09-13.{json,txt}`); no gate touched, Fork C
+stands, and the picker window stays spent/firewalled — these numbers price
+hypotheticals, they do not reopen anything.
+
+**US (eligible breadth 180.0/day, 1004 days).** `BEARISH_ALIGNMENT` is the only gate that matters:
+any-fail 334/day, sole-fail 76,416 → relaxing it alone lifts eligible breadth
+180.0 → **256.1/day** (~1.4×). Every other gate's sole-fail contribution is
+small (NEGATIVE_MOMENTUM +13.9/day, HIGH_VOLATILITY +4.8). `LOW_LIQUIDITY`
+sole-fail is 0.6/day — the $20 M floor is confirmed non-binding on the picker
+lane, matching 4b's first-failure census (0.5 %) from the independent
+evaluation side. Contrast with the vendor lane, where LOW_LIQUIDITY was the
+binding gate (571 first-fails/day on venue-distorted adv20): on the picker's
+own data the trend filter *is* the screen.
+
+**HK (eligible breadth 24.1/day, 976 days).** Two gates bind, not one: `BEARISH_ALIGNMENT`
+sole-fail 10,847 (+11.1/day) → eligible-if-relaxed **35.2/day**, and `LOW_LIQUIDITY`
+sole-fail 6,925 (+7.1/day) → **31.2/day** — the HK$100 M floor is a
+real constraint on a 131-name universe, unlike the US floor). As on the
+vendor lane, most rejected name-days fail multiple gates — any-fail/sole-fail
+runs from 2.8× (US LOW_LIQUIDITY) to 43× (HK NON_POSITIVE_SHARPE) — so
+single-gate relaxations are upper bounds and multi-gate ones are a different
+screen.
+
+**Bonus, not the reason for the run:** the replay-vs-production census audit
+(item 3 of the 4b follow-ups) printed **MATCH on both lanes for the first
+time** — US 555 replay inputs vs ScreenRun 19 (2026-09-11), HK 131 vs
+ScreenRun 18. Every prior run reported `no-stored-census` (the persisted
+census postdated the stored rows). The end-to-end check of the
+truncation-equivalence property every Phase-4 number rests on is now live
+against real production runs, and it holds.
+
+**Next (all passive):** Monday's chain upserts the 14 new HK universe names
+(still 0 bars in store, as expected on a Sunday) and produces the first
+prospective lane-day; Tuesday the US Monday session. Standing: `journal:link`
+awaiting a Futu/Moomoo CSV; product-side deferred list (chat options data,
+prompt v2 experiment track) available on request.
+
+---
+
 ## 2026-09-13 (coverage follow-through — agents instrumented, money-math branches bought)
 
 From the morning's coverage review, the agreed small round landed:
