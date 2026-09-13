@@ -74,6 +74,10 @@ export interface ScreenOptions {
    *  ranking is sorted before truncation, so scores and ranks are unchanged —
    *  only how many rows come back differs. Asserted by test. */
   topN?: number;
+  /** When set, each exclusion also carries `reasons` — ALL failing gates in the
+   *  chain's order (order-independent attribution). `reason` stays the first
+   *  failure, so output is identical to today's when this is unset. */
+  allFailures?: boolean;
 }
 
 export interface ScreenPick {
@@ -100,8 +104,15 @@ export interface ScreenExclusion {
   symbol: string;
   /** Machine-stable reason, e.g. "INSUFFICIENT_HISTORY", "LOW_LIQUIDITY",
    *  "HIGH_VOLATILITY", "DEEP_DRAWDOWN", "BEARISH_ALIGNMENT",
-   *  "NEGATIVE_MOMENTUM", "NON_POSITIVE_SHARPE". */
+   *  "NEGATIVE_MOMENTUM", "NON_POSITIVE_SHARPE". The FIRST failing gate —
+   *  the if/else-if chain's semantics, unchanged. */
   reason: string;
+  /** ALL failing gates, in the chain's order. Present only when
+   *  `ScreenOptions.allFailures` is set. `reason` is always `reasons[0]`.
+   *  INSUFFICIENT_HISTORY is terminal: with too few bars the downstream metrics
+   *  are uncomputable, so the list is exactly `["INSUFFICIENT_HISTORY"]` — that
+   *  is an availability statement, not "all gates fail". */
+  reasons?: string[];
 }
 
 export interface ScreenOutput {
@@ -140,6 +151,44 @@ interface Candidate {
   caDegraded: boolean;
 }
 
+/** The metrics one name's gates read, computed once. */
+interface GateMetrics {
+  close: number | undefined;
+  adv20: number | null;
+  vol60: number | null;
+  mdd252: number | null;
+  sma50: number | null;
+  sma200: number | null;
+  mom20: number | null;
+  mom60: number | null;
+  sharpe252: number | null;
+}
+
+/** Every failing gate for one name, in the §4 chain's fixed order.
+ *
+ *  Gate 1 (INSUFFICIENT_HISTORY) is terminal: below `minBars` the downstream
+ *  metrics are uncomputable, so the list is exactly `["INSUFFICIENT_HISTORY"]`
+ *  — an availability statement, NOT "all gates fail". Otherwise gates 2–7 are
+ *  evaluated independently, each with exactly the chain's condition (a null
+ *  metric fails its gate, matching the chain). A passing name gets `[]`. */
+function failingGates(market: Market, barCount: number, m: GateMetrics): string[] {
+  if (barCount < SCREEN_PARAMS.minBars || m.close == null) {
+    return ["INSUFFICIENT_HISTORY"];
+  }
+  const close = m.close;
+  const fails: string[] = [];
+  // Eligibility (§4).
+  const floor = SCREEN_PARAMS.advFloor[market];
+  if (m.adv20 == null || m.adv20 < floor) fails.push("LOW_LIQUIDITY");
+  if (m.vol60 == null || m.vol60 > SCREEN_PARAMS.volMax) fails.push("HIGH_VOLATILITY");
+  if (m.mdd252 == null || m.mdd252 < SCREEN_PARAMS.mddMin) fails.push("DEEP_DRAWDOWN");
+  // Signal conditions (§4) — all must hold.
+  if (m.sma50 == null || m.sma200 == null || !(close > m.sma50 && m.sma50 > m.sma200)) fails.push("BEARISH_ALIGNMENT");
+  if (m.mom20 == null || m.mom60 == null || !(m.mom60 > 0)) fails.push("NEGATIVE_MOMENTUM");
+  if (m.sharpe252 == null || !(m.sharpe252 > 0)) fails.push("NON_POSITIVE_SHARPE");
+  return fails;
+}
+
 /** Run the deterministic §4 screen over one day's inputs (both markets may
  *  be mixed; ranking is per market). Pure function — no I/O. */
 export function runScreen(inputs: ScreenInput[], opts: ScreenOptions = {}): ScreenOutput {
@@ -158,36 +207,38 @@ export function runScreen(inputs: ScreenInput[], opts: ScreenOptions = {}): Scre
     const mom60 = momentum(closes, 60);
     const sharpe252 = sharpe(closes, 252);
 
-    // Eligibility (§4) — first failing reason recorded.
-    const floor = SCREEN_PARAMS.advFloor[inp.market];
-    if (closes.length < SCREEN_PARAMS.minBars || close == null) {
-      excluded.push({ symbol: inp.symbol, reason: "INSUFFICIENT_HISTORY" });
-    } else if (adv20 == null || adv20 < floor) {
-      excluded.push({ symbol: inp.symbol, reason: "LOW_LIQUIDITY" });
-    } else if (vol60 == null || vol60 > SCREEN_PARAMS.volMax) {
-      excluded.push({ symbol: inp.symbol, reason: "HIGH_VOLATILITY" });
-    } else if (mdd252 == null || mdd252 < SCREEN_PARAMS.mddMin) {
-      excluded.push({ symbol: inp.symbol, reason: "DEEP_DRAWDOWN" });
-      // Signal conditions (§4) — all must hold.
-    } else if (sma50 == null || sma200 == null || !(close > sma50 && sma50 > sma200)) {
-      excluded.push({ symbol: inp.symbol, reason: "BEARISH_ALIGNMENT" });
-    } else if (mom20 == null || mom60 == null || !(mom60 > 0)) {
-      excluded.push({ symbol: inp.symbol, reason: "NEGATIVE_MOMENTUM" });
-    } else if (sharpe252 == null || !(sharpe252 > 0)) {
-      excluded.push({ symbol: inp.symbol, reason: "NON_POSITIVE_SHARPE" });
+    // Eligibility (§4) — `reason` is the FIRST failing gate (the historical
+    // if/else-if chain's semantics, unchanged); `reasons` lists them all.
+    const fails = failingGates(inp.market, closes.length, {
+      close,
+      adv20,
+      vol60,
+      mdd252,
+      sma50,
+      sma200,
+      mom20,
+      mom60,
+      sharpe252,
+    });
+    if (fails.length > 0) {
+      const exclusion: ScreenExclusion = { symbol: inp.symbol, reason: fails[0]! };
+      if (opts.allFailures) exclusion.reasons = fails;
+      excluded.push(exclusion);
     } else {
+      // Every gate passed, so every metric is non-null (a null metric fails its
+      // gate — see failingGates).
       eligible.push({
         symbol: inp.symbol,
         market: inp.market,
-        close,
-        sma50,
-        sma200,
-        mom20,
-        mom60,
-        vol60,
-        sharpe252,
-        adv20,
-        mdd252,
+        close: close!,
+        sma50: sma50!,
+        sma200: sma200!,
+        mom20: mom20!,
+        mom60: mom60!,
+        vol60: vol60!,
+        sharpe252: sharpe252!,
+        adv20: adv20!,
+        mdd252: mdd252!,
         caDegraded: inp.caDegraded,
       });
     }

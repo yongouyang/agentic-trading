@@ -31,7 +31,9 @@ import {
   ForwardSeries,
   SymbolSeries,
   ExclusionCensus,
+  MarginalCensus,
   exclusionCensus,
+  marginalCensus,
   replayScreen,
   buildForwardSeries,
 } from "./replay.js";
@@ -197,6 +199,10 @@ export interface LaneResult {
   /** Phase 4b D3: which eligibility gate produced this lane's breadth.
    *  Descriptive only (Fork C) — it may not select a gate to relax. */
   exclusions: ExclusionCensus;
+  /** Phase 4c: the ORDER-INDEPENDENT counterpart of `exclusions` — per-gate
+   *  any-fail and sole-fail counts, with `eligibleIfRelaxed` answering "relax
+   *  gate X ⇒ breadth +Y". Descriptive only, same firewall as `exclusions`. */
+  marginalExclusions: MarginalCensus;
   /** Buy-and-hold total return of the index ETF, when present in the data.
    *  phase-4-plan.md pre-registered TWO benchmarks: the equal-weight
    *  same-universe book (which shares the screen's own selection, so the
@@ -421,6 +427,7 @@ export function runBacktest(input: BacktestInput): BacktestOutput {
       gate2Base: base.gate,
       gate2Double: doubled.gate,
       exclusions: exclusionCensus(days, market),
+      marginalExclusions: marginalCensus(days, market),
       indexReturn: idxRet,
       indexDifferential: idxRet == null ? null : base.result.metrics.totalReturn - idxRet,
       yearly,
@@ -438,13 +445,16 @@ function buildForwardMap(s: SymbolSeries): ForwardSeries {
 }
 
 /** IC/portfolio work is per market, so restrict the day list's rankings to it.
- *  `excludedByReason` is already keyed by market, so it passes through. */
+ *  `excludedByReason` and the marginal maps are already keyed by market, so
+ *  they pass through. */
 function daysFor(days: ReplayDay[], market: Market): ReplayDay[] {
   return days.map((d) => ({
     date: d.date,
     ranked: d.ranked.filter((p) => p.market === market),
     excludedCount: d.excludedCount,
     excludedByReason: d.excludedByReason,
+    excludedMarginal: d.excludedMarginal,
+    excludedSole: d.excludedSole,
   }));
 }
 

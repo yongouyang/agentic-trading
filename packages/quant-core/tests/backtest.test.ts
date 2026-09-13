@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { Bar, CorporateAction } from "../src/types.js";
 import { Market, SCREEN_PARAMS, ScreenInput, runScreen } from "../src/screening.js";
 import { deriveAdjustedBars } from "../src/adjustment.js";
-import { SymbolSeries, buildForwardSeries, forwardReturn, replayScreen, exclusionCensus, type ReplayDay } from "../src/replay.js";
+import { SymbolSeries, buildForwardSeries, forwardReturn, replayScreen, exclusionCensus, marginalCensus, type ReplayDay } from "../src/replay.js";
 import {
   icSeries,
   icStats,
@@ -505,7 +505,7 @@ describe("Phase 4b D4 — the proportional cutoff", () => {
     });
     const forward = new Map(syms.map((x) => [x.symbol, buildForwardSeries(x.bars, x.dividends)]));
     const ranked = names.map((s, k) => ({ symbol: s, market: "US" as Market, rank: k + 1 })) as unknown as ReplayDay["ranked"];
-    const day: ReplayDay = { date: ds[0]!, ranked, excludedCount: 0, excludedByReason: { US: {}, HK: {} } };
+    const day: ReplayDay = { date: ds[0]!, ranked, excludedCount: 0, excludedByReason: { US: {}, HK: {} }, excludedMarginal: { US: {}, HK: {} }, excludedSole: { US: {}, HK: {} } };
 
     const fixed = spreadSeries([day], forward, 1, 15)[0]!;
     const prop = spreadSeriesProportional([day], forward, 1, undefined, 0.1, 5)[0]!;
@@ -516,7 +516,7 @@ describe("Phase 4b D4 — the proportional cutoff", () => {
   });
 
   it("skips a day with no breadth instead of emitting a degenerate zero", () => {
-    const d: ReplayDay = { date: "2022-01-03", ranked: [], excludedCount: 0, excludedByReason: { US: {}, HK: {} } };
+    const d: ReplayDay = { date: "2022-01-03", ranked: [], excludedCount: 0, excludedByReason: { US: {}, HK: {} }, excludedMarginal: { US: {}, HK: {} }, excludedSole: { US: {}, HK: {} } };
     expect(spreadSeriesProportional([d], new Map(), 1)).toEqual([]);
   });
 });
@@ -531,6 +531,8 @@ describe("Phase 4b D3 — the eligibility census", () => {
       ] as unknown as ReplayDay["ranked"],
       excludedCount: 0,
       excludedByReason: { US: us, HK: hk },
+      excludedMarginal: { US: {}, HK: {} },
+      excludedSole: { US: {}, HK: {} },
     };
   }
 
@@ -567,6 +569,111 @@ describe("Phase 4b D3 — the eligibility census", () => {
     expect(Object.keys(census.byReason).length).toBeGreaterThan(0);
     // Another lane's rejections must not leak into this one's census.
     expect(exclusionCensus(days, "HK").total).toBe(0);
+  });
+});
+
+describe("Phase 4c — the marginal (all-failures) gate census", () => {
+  function mday(
+    date: string,
+    usMarginal: Record<string, number>,
+    usSole: Record<string, number>,
+    usFirst: Record<string, number>,
+    nUs: number,
+  ): ReplayDay {
+    return {
+      date,
+      ranked: Array.from({ length: nUs }, () => ({ market: "US" as Market })) as unknown as ReplayDay["ranked"],
+      excludedCount: 0,
+      excludedByReason: { US: usFirst, HK: {} },
+      excludedMarginal: { US: usMarginal, HK: {} },
+      excludedSole: { US: usSole, HK: {} },
+    };
+  }
+
+  it("is typed independent_evaluation — the order-independent counterpart of first_failure", () => {
+    const d = mday("2023-05-02", { LOW_LIQUIDITY: 1 }, {}, { LOW_LIQUIDITY: 1 }, 10);
+    expect(marginalCensus([d], "US").basis).toBe("independent_evaluation");
+  });
+
+  it("aggregates any-fail and sole-fail across days and derives eligibleIfRelaxed = eligible + sole", () => {
+    // Day 1: 3 names fail LOW_LIQUIDITY any-fail, but only 1 of them fails it
+    // ALONE; day 2: 2 more any-fail, 0 sole. So relaxing LOW_LIQUIDITY recovers
+    // exactly 1 name, not 5 — the number the first-failure census cannot give.
+    const days = [
+      mday("2023-05-02", { LOW_LIQUIDITY: 3, BEARISH_ALIGNMENT: 2 }, { LOW_LIQUIDITY: 1 }, { LOW_LIQUIDITY: 2, BEARISH_ALIGNMENT: 1 }, 100),
+      mday("2024-06-03", { LOW_LIQUIDITY: 2, NON_POSITIVE_SHARPE: 4 }, { NON_POSITIVE_SHARPE: 3 }, { LOW_LIQUIDITY: 1, NON_POSITIVE_SHARPE: 2 }, 90),
+    ];
+    const c = marginalCensus(days, "US");
+    expect(c.anyFail).toEqual({ LOW_LIQUIDITY: 5, BEARISH_ALIGNMENT: 2, NON_POSITIVE_SHARPE: 4 });
+    expect(c.soleFail).toEqual({ LOW_LIQUIDITY: 1, NON_POSITIVE_SHARPE: 3 });
+    expect(c.total).toBe(6); // distinct rejected names (first-failure sum), not Σ anyFail
+    expect(c.eligible).toBe(190);
+    expect(c.days).toBe(2);
+    expect(c.eligibleIfRelaxed.LOW_LIQUIDITY).toBe(191); // 190 + 1, not 190 + 5
+    expect(c.eligibleIfRelaxed.NON_POSITIVE_SHARPE).toBe(193);
+    expect(c.eligibleIfRelaxed.BEARISH_ALIGNMENT).toBe(190); // any-fail but never sole
+  });
+
+  it("keeps lanes separate: HK marginal counts never enter the US census", () => {
+    const d: ReplayDay = {
+      date: "2023-05-02",
+      ranked: [] as unknown as ReplayDay["ranked"],
+      excludedCount: 0,
+      excludedByReason: { US: {}, HK: { LOW_LIQUIDITY: 4 } },
+      excludedMarginal: { US: {}, HK: { LOW_LIQUIDITY: 6 } },
+      excludedSole: { US: {}, HK: { LOW_LIQUIDITY: 2 } },
+    };
+    const us = marginalCensus([d], "US");
+    expect(us.total).toBe(0);
+    expect(us.anyFail).toEqual({});
+    const hk = marginalCensus([d], "HK");
+    expect(hk.anyFail).toEqual({ LOW_LIQUIDITY: 6 });
+    expect(hk.soleFail).toEqual({ LOW_LIQUIDITY: 2 });
+    expect(hk.total).toBe(4);
+  });
+
+  it("is populated by the replay: multi-fail names count per gate, sole-fail only when alone", () => {
+    const ds = dates(300);
+    // FLAT fails BEARISH_ALIGNMENT + NEGATIVE_MOMENTUM + NON_POSITIVE_SHARPE
+    // (constant closes: close == smas, mom60 = 0, sharpe null) — sole for none.
+    const flat = series("FLAT", "US", ds, rising(300, 0, 100, 0, 0));
+    // VOL fails ONLY HIGH_VOLATILITY: a fat ±6% oscillation (vol60 ≈ 0.67) on a
+    // strong drift keeps alignment bullish, mom60 > 0, sharpe > 0, mdd small.
+    const vol = series("VOL", "US", ds, rising(300, 0.004, 100, 0.06, 0));
+    const up = series("UP", "US", ds, rising(300, 0.002));
+    const window = ds.slice(270);
+    const days = replayScreen(window, [flat, vol, up]);
+    expect(days.length).toBe(window.length);
+
+    for (const d of days) {
+      expect(d.excludedMarginal.US).toEqual({
+        HIGH_VOLATILITY: 1,
+        BEARISH_ALIGNMENT: 1,
+        NEGATIVE_MOMENTUM: 1,
+        NON_POSITIVE_SHARPE: 1,
+      });
+      expect(d.excludedSole.US).toEqual({ HIGH_VOLATILITY: 1 });
+      // First-failure attribution is unchanged alongside: FLAT first-fails
+      // BEARISH_ALIGNMENT, VOL HIGH_VOLATILITY.
+      expect(d.excludedByReason.US).toEqual({ HIGH_VOLATILITY: 1, BEARISH_ALIGNMENT: 1 });
+    }
+
+    const c = marginalCensus(days, "US");
+    const n = window.length;
+    expect(c.anyFail).toEqual({
+      HIGH_VOLATILITY: n,
+      BEARISH_ALIGNMENT: n,
+      NEGATIVE_MOMENTUM: n,
+      NON_POSITIVE_SHARPE: n,
+    });
+    expect(c.soleFail).toEqual({ HIGH_VOLATILITY: n });
+    expect(c.total).toBe(2 * n); // distinct rejected names: FLAT + VOL per day
+    expect(c.eligible).toBe(n); // UP alone
+    // Relaxing HIGH_VOLATILITY alone recovers VOL; relaxing BEARISH_ALIGNMENT
+    // recovers nothing (FLAT also fails momentum + sharpe) — the exact
+    // "relax gate X → breadth +Y" answer the first-failure census cannot give.
+    expect(c.eligibleIfRelaxed.HIGH_VOLATILITY).toBe(2 * n);
+    expect(c.eligibleIfRelaxed.BEARISH_ALIGNMENT).toBe(n);
   });
 });
 
@@ -666,7 +773,7 @@ describe("Phase 4b review amendments — the census says what it is", () => {
   it("is typed first_failure, because runScreen records ONE reason per name", () => {
     // Without this the census reads as marginal bindingness and licenses
     // "relax gate X -> breadth +Y", which first-failure evidence cannot support.
-    const d: ReplayDay = { date: "2023-05-02", ranked: [] as unknown as ReplayDay["ranked"], excludedCount: 0, excludedByReason: { US: { BEARISH_ALIGNMENT: 3 }, HK: {} } };
+    const d: ReplayDay = { date: "2023-05-02", ranked: [] as unknown as ReplayDay["ranked"], excludedCount: 0, excludedByReason: { US: { BEARISH_ALIGNMENT: 3 }, HK: {} }, excludedMarginal: { US: {}, HK: {} }, excludedSole: { US: {}, HK: {} } };
     expect(exclusionCensus([d], "US").basis).toBe("first_failure");
   });
 });

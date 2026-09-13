@@ -64,6 +64,14 @@ export interface ReplayDay {
    *  (HK) — the single fact that determines the whole lane's statistical power.
    *  Per market because a replay may carry both lanes at once. */
   excludedByReason: Record<Market, Record<string, number>>;
+  /** Phase-4c marginal census inputs, per market (see `MarginalCensus`):
+   *  gate → count of names FAILING it, any-fail basis — a name that fails three
+   *  gates counts once in each of the three. Order-independent, unlike
+   *  `excludedByReason` (first failure only). */
+  excludedMarginal: Record<Market, Record<string, number>>;
+  /** gate → count of names for which it is the ONLY failure — the exact set of
+   *  names relaxing that gate alone would recover. */
+  excludedSole: Record<Market, Record<string, number>>;
 }
 
 /**
@@ -111,6 +119,63 @@ export function exclusionCensus(days: ReplayDay[], market: Market): ExclusionCen
     eligible,
     days: days.length,
   };
+}
+
+/**
+ * Aggregate per-day MARGINAL exclusions for one lane into a census. Pure.
+ * Descriptive only, same firewall as `ExclusionCensus`: it describes the
+ * screen's *inputs*, not returns, and may not be used to choose a gate to relax
+ * and then re-test IC on the same window.
+ */
+export interface MarginalCensus {
+  /** Always "independent_evaluation": every gate is evaluated for every name
+   *  with sufficient history (runScreen `allFailures`), so unlike
+   *  `ExclusionCensus` this CAN answer "relax gate X ⇒ breadth +Y" — but only
+   *  for Y = soleFail[X], the names for which X is the ONLY failure. Names
+   *  failing X *and* another gate stay rejected either way.
+   *  INSUFFICIENT_HISTORY is terminal in `runScreen` (the other metrics are
+   *  uncomputable below 252 bars), so it appears as a sole failure by
+   *  construction — read its sole count as an availability statement, not as
+   *  evidence the name would pass the other gates. */
+  basis: "independent_evaluation";
+  /** gate → names failing it, any-fail basis (a name counts once per gate it
+   *  fails). Sums double-count names, so Σ anyFail ≥ total. */
+  anyFail: Record<string, number>;
+  /** gate → names for which it is the ONLY failure. */
+  soleFail: Record<string, number>;
+  /** gate → eligible + soleFail[gate]: the implied breadth if that gate alone
+   *  were relaxed. */
+  eligibleIfRelaxed: Record<string, number>;
+  /** Distinct rejected name-observations (each name counted once), matching
+   *  `ExclusionCensus.total`. */
+  total: number;
+  /** Σ ranked (screen-eligible) observations — the same denominator as
+   *  `ExclusionCensus.eligible`. */
+  eligible: number;
+  days: number;
+}
+
+export function marginalCensus(days: ReplayDay[], market: Market): MarginalCensus {
+  const anyFail: Record<string, number> = {};
+  const soleFail: Record<string, number> = {};
+  let total = 0;
+  let eligible = 0;
+  for (const day of days) {
+    eligible += day.ranked.reduce((a, p) => a + (p.market === market ? 1 : 0), 0);
+    // One first-failure reason per rejected name ⇒ the sum is the distinct count.
+    total += Object.values(day.excludedByReason[market] ?? {}).reduce((a, b) => a + b, 0);
+    for (const [gate, n] of Object.entries(day.excludedMarginal[market] ?? {})) {
+      anyFail[gate] = (anyFail[gate] ?? 0) + n;
+    }
+    for (const [gate, n] of Object.entries(day.excludedSole[market] ?? {})) {
+      soleFail[gate] = (soleFail[gate] ?? 0) + n;
+    }
+  }
+  const eligibleIfRelaxed: Record<string, number> = {};
+  for (const gate of new Set([...Object.keys(anyFail), ...Object.keys(soleFail)])) {
+    eligibleIfRelaxed[gate] = eligible + (soleFail[gate] ?? 0);
+  }
+  return { basis: "independent_evaluation", anyFail, soleFail, eligibleIfRelaxed, total, eligible, days: days.length };
 }
 
 /** Adjusted prices with a date index — the forward-return / mark lookup. */
@@ -234,14 +299,23 @@ export function replayScreen(
       });
     }
 
-    const screen = runScreen(inputs, { topN: Number.MAX_SAFE_INTEGER });
+    const screen = runScreen(inputs, { topN: Number.MAX_SAFE_INTEGER, allFailures: true });
     const excludedByReason: Record<Market, Record<string, number>> = { US: {}, HK: {} };
+    const excludedMarginal: Record<Market, Record<string, number>> = { US: {}, HK: {} };
+    const excludedSole: Record<Market, Record<string, number>> = { US: {}, HK: {} };
     for (const ex of screen.excluded) {
       const m = marketBySymbol.get(ex.symbol);
       if (!m) continue;
       excludedByReason[m][ex.reason] = (excludedByReason[m][ex.reason] ?? 0) + 1;
+      const fails = ex.reasons ?? [ex.reason];
+      for (const gate of fails) {
+        excludedMarginal[m][gate] = (excludedMarginal[m][gate] ?? 0) + 1;
+      }
+      if (fails.length === 1) {
+        excludedSole[m][fails[0]!] = (excludedSole[m][fails[0]!] ?? 0) + 1;
+      }
     }
-    days.push({ date, ranked: screen.ranked, excludedCount: screen.excluded.length, excludedByReason });
+    days.push({ date, ranked: screen.ranked, excludedCount: screen.excluded.length, excludedByReason, excludedMarginal, excludedSole });
   }
 
   return days;

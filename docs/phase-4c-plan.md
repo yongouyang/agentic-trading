@@ -146,5 +146,68 @@ point, the cap, the guard factor, the statistic.
    ~1 session, fast tier).
 3. Design-half measurement → **the bar, locked numerically, appended to this
    document** (with the design-half breadth/SE it came from).
-4. Test half spent **once** → verdict per the classes above.
+4. Test half spent **once** → verdict per the classes above. **(Superseded
+   2026-09-13: the lane was declared `underpowered` at step 3 — see below — so
+   the test half was never spent. An unspent half is the only asset a future
+   re-powered lane would have; spending it on a lane that cannot decide would
+   have burned it for an anecdote.)**
 5. Track B continues accruing in the background (no action).
+
+## Bar derivation outcome (2026-09-13) — `underpowered by design`
+
+Design-half measurement, artifact
+`apps/api/reports/backtest/vendor-2026-09-13.{json,txt}` — 502 sessions
+2022-09-01…2024-08-30, 1,469 series loaded per the manifest rules above:
+
+- mean breadth **237.4**/day (the scoping's 2–3×-of-180 estimate was wrong by
+  ~2×; see the census note below for why)
+- NW SE of the 20d rank IC: **0.019558** (df 24.1; naive 0.00640, heuristic
+  0.01298)
+- 0.8-power bar = 2.4865 × 0.019558 = **0.0486** > cap **0.03**
+
+Per the locked rule ("if the 0.8-power bar exceeds 0.03, the lane is declared
+**underpowered by design** — before any test-half number is computed"), Track
+A's verdict is **`underpowered`**, declared 2026-09-13. Fitting under the cap
+needs SE ≤ 0.03/2.4865 = 0.0121 — a 1.62× reduction, i.e. breadth ≈ 620/day
+under 1/√(N−1) scaling, against the 237 measured. `--spend-test-half` was
+never passed; the test half (2024-09-03 → 2026-09-02) remains unspent.
+
+Design-half effect sizes (design information, never a bar): mean 20d rank IC
+**−0.0138** (NW t −0.71; CI [−0.054, +0.027]); by year 2022 −0.058 /
+2023 −0.009 / 2024 +0.000; 5d −0.011, 60d −0.039; Gate 2 differential +2.19 %
+(t 0.31, falsification-only). The point estimate of H1-generality on fresh
+names is negative at every printed horizon.
+
+**Why the breadth came in at half the estimate** — the design-half census
+(first-failure basis): 82.5 % of observations rejected, and **LOW_LIQUIDITY
+rejects first for 49.5 % of rejections (571/day)** — versus 0.5 % on the
+picker lane. The replay computes adv20 from *vendor venue* volume (no
+consolidated tape), so an unknown share of those rejections is measurement
+error rather than gate intent.
+
+**Re-powering priced and rejected (2026-09-13).** An order-independent
+(marginal) census was built for exactly this question (`failingGates` in
+quant-core `screening.ts`, `marginalCensus` in `replay.ts`, printed by both
+backtest CLIs). It shows 71 % of rejected name-days fail more than one gate,
+and prices the largest single-gate fix: relaxing LOW_LIQUIDITY entirely lifts
+breadth 245.3 → 398.2/day (upper bound — assumes every sole-failure passes on
+corrected volume). Under 1/√(N−1) scaling that yields SE ≈ 0.0151 and a bar of
+≈ 0.0375 — **still above the 0.03 cap**; the cap needs breadth ≈ 620/day,
+beyond any single-gate fix by 1.56×. Combined with the negative design-half
+IC, Track A is **closed**: no new pre-registration will be spun up from this
+measurement. The pristine test half remains available only to a genuinely new
+measurement basis (e.g. consolidated-tape volume from a paid vendor — the
+Databento purchase stays gated, and now has its concrete trigger). The
+marginal census itself is kept as a standing instrument: it answers
+"relax gate X → breadth +Y" on any replay window, including the picker lane's
+HK-breadth question from Phase 4b.
+
+**Newly measured disclosure — delisted names contribute no IC observation.**
+`forwardReturn` (quant-core `replay.ts:166`) returns `null` when a series ends
+before the horizon, so a delisting's catastrophic tail never enters any
+forward return: the rank IC is computed on names that survive the horizon — an
+upward bias on the deciding statistic itself, previously disclosed only for
+the Gate-2 differential. The direction is conservative for this artifact (the
+measured IC is already negative), but any future lane must carry the
+disclosure on Gate 1, and any `supported` verdict on any lane is conditional
+on it.

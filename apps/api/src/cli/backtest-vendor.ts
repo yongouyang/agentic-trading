@@ -172,6 +172,18 @@ export function renderVendorBacktest(
   for (const [reason, n] of Object.entries(X.byReason).sort((a, b) => b[1] - a[1])) {
     L.push(`    ${reason.padEnd(22)} ${num(n, 0).padStart(7)}  (${num(n / Math.max(1, X.days), 0)}/day)`);
   }
+  // Marginal (order-independent) census: every gate evaluated per name, so the
+  // SOLE count is the exact answer to "relax gate X → breadth +Y".
+  const M = lane.marginalExclusions;
+  L.push(
+    `  marginal census (descriptive; basis=${M.basis}): ${num(M.total, 0)} rejected vs ${num(M.eligible, 0)} eligible — any-fail counts names per gate failed, sole-fail = only failure`,
+  );
+  for (const [gate, n] of Object.entries(M.anyFail).sort((a, b) => b[1] - a[1])) {
+    const sole = M.soleFail[gate] ?? 0;
+    L.push(
+      `    ${gate.padEnd(22)} any-fail ${num(n, 0).padStart(7)} (${num(n / Math.max(1, M.days), 1)}/day) · sole-fail ${num(sole, 0).padStart(7)} → eligible-if-relaxed ${num((M.eligibleIfRelaxed[gate] ?? M.eligible) / Math.max(1, M.days), 1)}/day`,
+    );
+  }
   L.push("");
   L.push("Pre-registered caveats:");
   L.push("  · Gate 2 passes are never confirmations; the differential is biased UPWARD by the dividend residual (≤ ~0.1%/yr).");

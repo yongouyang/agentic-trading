@@ -5,6 +5,77 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (Track A CLOSED as `underpowered` — the design-half run set the bar at 0.0486 against the 0.03 cap; the marginal census priced the only fix and it does not reach)
+
+The four rounds locked in the morning's review were executed in one session;
+the first one's result reordered the rest.
+
+**1. Phase-4c step 3 executed — the bar, and the verdict.** Full design-half
+vendor run (artifact `apps/api/reports/backtest/vendor-2026-09-13.{json,txt}`):
+502 sessions 2022-09-01…2024-08-30, 1,469 series. Mean breadth **237.4/day**
+(the scoping's 2–3×-of-180 estimate was ~2× high). NW SE of the 20d rank IC
+**0.019558** (df 24.1; naive 0.0064, heuristic 0.0130 — the realized is 3× the
+naive). The locked rule is arithmetic: bar = 2.4865 × SE = **0.0486 > cap
+0.03** → **`underpowered by design`**, declared before any test-half number
+and appended to `docs/phase-4c-plan.md`. **The test half was never spent**
+(`--spend-test-half` never passed) — an underpowered spend decides nothing,
+and the pristine half is the only asset a future lane would have. Design-half
+effect sizes (design information, never a bar): mean IC **−0.0138** (t −0.71;
+by year −0.058 / −0.009 / +0.000; negative at 5d/20d/60d), Gate 2 +2.19 %
+(t 0.31). H1-generality's point estimate on fresh names is negative.
+
+**2. Marginal census built — the first-failure blind spot removed.** 4b had
+recorded that the census could not price a gate relaxation ("which gate
+rejects first ≠ which gate binds"). Now it can: `failingGates()` in
+quant-core `screening.ts` evaluates gates 2–7 independently
+(INSUFFICIENT_HISTORY stays terminal — later metrics are uncomputable),
+`ScreenExclusion.reasons?` carries the ordered full set behind an opt-in
+`allFailures` flag (default output byte-identical, asserted by test), and
+`marginalCensus` in `replay.ts` aggregates any-fail / sole-fail /
+eligible-if-relaxed per gate. Both backtest CLIs print it; the JSON artifacts
+carry it. Tests: quant-core **149** (+8), api **522** + 1 skipped, tsc clean.
+
+**3. The re-powering question answered: no.** On the vendor design half,
+**71 % of rejected name-days fail more than one gate.** The largest fix —
+relaxing LOW_LIQUIDITY entirely, an upper bound assuming every sole-failure
+(76,749) passes on corrected consolidated volume — lifts breadth 245.3 →
+**398.2/day**, giving SE ≈ 0.0151 and a bar ≈ **0.0375, still above the cap**
+(the cap needs ≈ 620/day, 1.56× beyond the best single-gate fix). A multi-gate
+relaxation stops being a measurement correction and becomes a different
+screen. Combined with the negative design-half IC, **Track A is closed** — no
+new pre-registration from this measurement. The Databento consolidated-tape
+purchase stays gated and now has its concrete trigger: it is the only
+measurement basis that could reopen the lane.
+
+**4. Residuals resolved by closure + quantification.** The adv20 venue
+distortion is now measured in effect, not just disclosed: it is why
+LOW_LIQUIDITY binds on the vendor lane (571 first-fails/day vs 0.5 % on the
+picker). And a code read confirmed the delisting bias reaches Gate 1, not only
+Gate 2: `forwardReturn` (replay.ts:166) returns `null` when a series ends
+before the horizon, so a delisting's catastrophic tail never enters any IC
+observation — disclosed on Gate 1 in the plan append (conservative direction
+here: the true IC is likely worse than −0.0138).
+
+**5. Top-decile pre-registration — not drafted, on the design half's own
+evidence.** The vendor design half prints the 20d spread at **−0.05 %** and
+5d at −0.08 % on fresh names; only 60d is positive (+0.65 %). The picker
+window's +0.83 %/t 1.66 is firewalled and may not inform a bar, and
+pre-registering a 60d variant to chase the one positive cell is the
+cell-picking the discipline exists to prevent.
+
+**Ops, same morning:** the weekly **f10 job fired on its first-ever due slot**
+(Sun 09:17), exit 0, first artifact `f10-refresh-2026-09-13.json` — the last
+standing health caveat closed; all 6 jobs are now proven end-to-end in
+production. Its two WARNs (`3993.HK`, `6181.HK` not in store) are expected
+until tonight's 16:50 HK chain upserts the new universe names.
+
+**Next (all passive):** Track B accrual — first real prospective lane-days
+Mon 09-14 (HK 16:50) / Tue 09-15 (US 06:10); the Phase-5 projection watch
+fires at ~20 accrued days; the 12 unattributed universe names resolve at the
+December index review. Track A's unspent test half sleeps.
+
+---
+
 ## 2026-09-12 (the HK universe was two quarterly reviews stale — 14 index members missing, 4 stale names held; fixed as a recorded pre-label amendment)
 
 Started from a question about "popular" HK tickers (`3750`, `3455`, `2840`, `1879`,

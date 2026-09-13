@@ -115,6 +115,62 @@ describe("screening — signal conditions (§4, each fails independently)", () =
   });
 });
 
+describe("screening — allFailures: the order-independent gate census", () => {
+  // Steady 150→100 decline over 260 bars at tiny volume: fails LOW_LIQUIDITY
+  // (adv20 ≈ 13 000 << $20M), BEARISH_ALIGNMENT (close < sma50 < sma200),
+  // NEGATIVE_MOMENTUM (mom60 < 0) and NON_POSITIVE_SHARPE (mean ret < 0), while
+  // vol60 ≈ 8% and mdd252 = −33% pass.
+  const multiFail = () => {
+    const closes = Array.from({ length: 260 }, (_, i) => 150 - (50 * i) / 259);
+    return input("MULTI", closes, { rawBars: barsOf(closes, 100) });
+  };
+
+  it("records EVERY failing gate in `reasons`, in the chain's order, with `reason` = the first failure", () => {
+    const { excluded } = runScreen([multiFail()], { allFailures: true });
+    expect(excluded).toHaveLength(1);
+    expect(excluded[0]!.reasons).toEqual([
+      "LOW_LIQUIDITY",
+      "BEARISH_ALIGNMENT",
+      "NEGATIVE_MOMENTUM",
+      "NON_POSITIVE_SHARPE",
+    ]);
+    expect(excluded[0]!.reason).toBe("LOW_LIQUIDITY");
+    expect(excluded[0]!.reason).toBe(excluded[0]!.reasons![0]);
+  });
+
+  it("a sole failure yields a one-element `reasons` equal to the first-failure reason", () => {
+    // The MOM fixture from the signal block: alignment holds, sharpe > 0, only
+    // mom60 ≤ 0 binds.
+    const closes = [
+      ...Array.from({ length: 151 }, () => 100),
+      ...Array.from({ length: 41 }, (_, i) => 100 + (i + 1) * 1),
+      ...Array.from({ length: 20 }, (_, i) => 141 - 1.2 * (i + 1)),
+      ...Array.from({ length: 40 }, (_, i) => 117 + 0.25 * (i + 1)),
+    ];
+    const { excluded } = runScreen([input("SOLE", closes)], { allFailures: true });
+    expect(excluded[0]!.reasons).toEqual(["NEGATIVE_MOMENTUM"]);
+    expect(excluded[0]!.reason).toBe("NEGATIVE_MOMENTUM");
+  });
+
+  it("INSUFFICIENT_HISTORY is terminal: exactly [\"INSUFFICIENT_HISTORY\"], not \"all gates fail\"", () => {
+    // 251 bars of a perfect riser would pass gates 2–7 if they were evaluated;
+    // the list must still be the single availability statement.
+    const { excluded } = runScreen([input("SHORT", riser(251, 0.15))], { allFailures: true });
+    expect(excluded).toEqual([{ symbol: "SHORT", reason: "INSUFFICIENT_HISTORY", reasons: ["INSUFFICIENT_HISTORY"] }]);
+  });
+
+  it("leaves output IDENTICAL when allFailures is unset (no `reasons` key anywhere)", () => {
+    const inputs = [multiFail(), input("SHORT", riser(251, 0.15)), input("PASS", riser(260, 0.15))];
+    const without = runScreen(inputs);
+    const withOpt = runScreen(inputs, { allFailures: true });
+    for (const ex of without.excluded) expect("reasons" in ex).toBe(false);
+    // Same exclusions, same ranking, same order — only the added key differs.
+    expect(without.excluded).toEqual(withOpt.excluded.map(({ reasons: _reasons, ...rest }) => rest));
+    expect(without.ranked).toEqual(withOpt.ranked);
+    expect(without).toEqual(runScreen(inputs, {})); // empty opts = default
+  });
+});
+
 describe("screening — score, rank, truncation (§4)", () => {
   // Naive recomputations (independent of src/indicators.ts) for expected values.
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;

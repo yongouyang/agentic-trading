@@ -356,6 +356,19 @@ function renderLane(lane: LaneResult, indexReturn?: number): string[] {
   out.push(
     `    by year: ${X.byYear.map((y) => `${y.year} ${Object.entries(y.byReason).sort((a, b) => b[1] - a[1])[0]?.join(" ") ?? "—"}`).join(" · ")}  (dominant reason)`,
   );
+  // Marginal (order-independent) census: every gate evaluated per name, so the
+  // SOLE count is the exact answer to "relax gate X → breadth +Y". Descriptive
+  // only — the same firewall as D3 applies.
+  const M = lane.marginalExclusions;
+  out.push(
+    `  marginal census (descriptive; basis=${M.basis}): every gate evaluated per name, so any-fail ≥ first-failure and only SOLE-fail counts are recoverable breadth`,
+  );
+  for (const [gate, n] of Object.entries(M.anyFail).sort((a, b) => b[1] - a[1])) {
+    const sole = M.soleFail[gate] ?? 0;
+    out.push(
+      `    ${gate.padEnd(22)} any-fail ${num(n, 0).padStart(7)} (${num(n / Math.max(1, M.days), 1)}/day) · sole-fail ${num(sole, 0).padStart(7)} → eligible-if-relaxed ${num((M.eligibleIfRelaxed[gate] ?? M.eligible) / Math.max(1, M.days), 1)}/day`,
+    );
+  }
   out.push(`VERDICT ${lane.market}: ${lane.verdict}`);
   for (const n of lane.notes) out.push(`  note: ${n}`);
   for (const g of [lane.gate2Base, lane.gate2Double]) for (const r of g.reasons) out.push(`  falsified: ${r}`);
