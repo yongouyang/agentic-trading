@@ -152,6 +152,71 @@ describe("runDailyScreen — dummy provider, throwaway SQLite", () => {
     expect((await prisma.instrument.findUnique({ where: { symbol: "0005.HK" } }))?.caDegraded).toBe(false);
   });
 
+  it("a still-forming bar never enters the store (session-close filter) and the drop is logged", async () => {
+    const dummy = new DummyMarketDataProvider();
+    // Append a still-forming 2026-09-11 bar to the dummy's OK response —
+    // exactly what Yahoo serves during market hours.
+    const wrap: MarketDataProvider = {
+      fetchDailyBars: async (symbol, opts) => {
+        const r = await dummy.fetchDailyBars(symbol, opts);
+        return { ...r, bars: [...r.bars, { date: "2026-09-11", open: 101, high: 102, low: 100, close: 101.5, volume: 500_000 }] };
+      },
+    };
+    const lines: string[] = [];
+    const reports = await runDailyScreen(
+      {
+        prisma,
+        provider: wrap,
+        providerLabel: "yahoo",
+        universes: { us: [entry("FRM")] },
+        reportsDir: null,
+        today: "2026-09-11",
+        now: new Date("2026-09-11T15:03:00Z"), // 11:03 EDT — session in progress
+        log: (l) => lines.push(l),
+      },
+      { market: "us" },
+    );
+    const r = reports[0]!;
+    expect(r.inProgressBarsFiltered).toBe(1);
+    expect(r.warnings.some((w) => w.includes("FRM: dropped in-progress bar(s)") && w.includes("2026-09-11"))).toBe(true);
+    expect(lines.join("\n")).toContain("1 in-progress bars filtered");
+
+    const instrument = await prisma.instrument.findUnique({ where: { symbol: "FRM" } });
+    const stored = await prisma.bar.findMany({ where: { instrumentId: instrument!.id } });
+    expect(stored.some((b) => b.date === "2026-09-11")).toBe(false);
+    // The run's sessionDate is the newest COMPLETED bar — the forming session
+    // stays unscreened, so the next guard run still sees it as due.
+    const run = await prisma.screenRun.findFirst({ where: { market: "US" }, orderBy: { id: "desc" } });
+    expect(run!.sessionDate).toBe("2024-12-31");
+  });
+
+  it("the same bar is stored once its session has closed", async () => {
+    const dummy = new DummyMarketDataProvider();
+    const wrap: MarketDataProvider = {
+      fetchDailyBars: async (symbol, opts) => {
+        const r = await dummy.fetchDailyBars(symbol, opts);
+        return { ...r, bars: [...r.bars, { date: "2026-09-11", open: 101, high: 102, low: 100, close: 101.5, volume: 500_000 }] };
+      },
+    };
+    const reports = await runDailyScreen(
+      {
+        prisma,
+        provider: wrap,
+        providerLabel: "yahoo",
+        universes: { us: [entry("FRM2")] },
+        reportsDir: null,
+        today: "2026-09-11",
+        now: new Date("2026-09-11T20:01:00Z"), // 16:01 EDT — closed
+        log: silent,
+      },
+      { market: "us" },
+    );
+    expect(reports[0]!.inProgressBarsFiltered).toBe(0);
+    const instrument = await prisma.instrument.findUnique({ where: { symbol: "FRM2" } });
+    const stored = await prisma.bar.findMany({ where: { instrumentId: instrument!.id } });
+    expect(stored.some((b) => b.date === "2026-09-11")).toBe(true);
+  });
+
   it("small universe of synthetic trending names yields a persisted ranked shortlist", async () => {
     const symbols = ["TRD1", "TRD2", "TRD3", "TRD4", "TRD5", "TRD6"];
     const provider = new TrendingProvider({ TRD6: "rate-limited" });

@@ -57,7 +57,7 @@ describe("HealthBanner", () => {
     expect(banner).toHaveTextContent("pipeline alert");
     expect(banner).toHaveTextContent("US");
     expect(banner).toHaveTextContent("data through 2026-09-08");
-    expect(banner).toHaveTextContent("3 scheduled run(s) missed");
+    expect(banner).toHaveTextContent("3 evening catch-up(s) missed");
   });
 
   it("renders a warn lane with the amber class, not the red one", () => {

@@ -37,7 +37,7 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 | Output | Interactive chat/session in a local web UI, with charts, tables, signals; plus a daily report view |
 | Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); either covers both markets for the future paper→live path |
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
-| Cadence | **Daily after close** — installed **16:50 HKT** (HK) and **06:10 HKT** (post US close), plus a guarded 20:30 HKT catch-up slot (§5.1) |
+| Cadence | **Daily after close** — installed **16:50 HKT** (HK) and **06:10 HKT** (post US close), plus guarded evening catch-up slots at **20:30 + 23:03 HKT** (§5.1; since 2026-09-13 the evening catch-up is the realistic daily run — the machine is usually off at the morning/afternoon slots, which stay armed as bonuses) |
 | LLM providers | Kimi (Moonshot) as workhorse; budget/open models (DeepSeek/Qwen) optional for cheap summarization. OpenAI-compatible client, swappable via env vars |
 | Universe | **Large/liquid only (~800 tickers)**: S&P 500 + Nasdaq 100 + ~50 major US ETFs; HSI + HS Tech constituents + liquid HK ETFs (HK 141 as of 2026-09-12 — see `universe.hk.json._meta` for the refresh and the HSI-source warning) |
 | Agent depth | **Lean pipeline** (~6–8 LLM calls/stock): News/Sentiment Analyst + Fundamentals Analyst → Bull vs Bear debate → structured verdict |
@@ -209,6 +209,22 @@ HSBC: median 0.97pp, **p95 10.8pp** — enough to re-order a shortlist.
   anyway for every lane that needs them; Phase 4 gets Day-17 total-return
   correctness. Feasibility verified: a provider's full adjusted series was
   reconstructed from Yahoo's own event list to within 0.6pp.
+
+  **Session-close invariant (locked 2026-09-13).** A bar may enter the `Bar`
+  store only after its session's **official close** — US 16:00
+  America/New_York (regular close; early closes are earlier, so this is the
+  conservative boundary), HK 16:10 Asia/Hong_Kong (continuous session 16:00 +
+  closing auction). Yahoo serves the still-forming bar during market hours;
+  if it were stored, `ops:catchup` would see "store newer than screened",
+  `screen:daily` would write `sessionDate` for a half-formed session, and the
+  real session would be permanently blocked (verdicts from such a run would
+  even pass the promptness gate at lag 0). Enforced by
+  `sessionClosed(market, date, now)` (`quant-core/src/calendars.ts`,
+  timezone-correct via `Intl`, no hardcoded UTC offsets) at the fetch/upsert
+  boundary in `screen:daily` — Yahoo path and HK rescue path alike — so every
+  downstream consumer is correct automatically. Filtered bars are tallied and
+  shown in the run's integrity header (`N in-progress bars filtered`), never
+  silent. This is what makes the 23:03 HKT catch-up slot safe (§5.1).
 - **R2 — dual series, different jobs.** Signals and screening read the derived
   adjusted series; every displayed price, and everything the user types an
   order against, is the **raw** series (161.00, not an adjusted number).
@@ -374,13 +390,39 @@ a session newer than the newest `ScreenRun.sessionDate`. Exit 10 from the guard
 means "behind"; any other non-zero means the guard failed and the script **does not
 run**, because a blind run duplicates a session and inflates the accrual.
 
+**Cadence re-declared 2026-09-13.** The machine is normally OFF at the 06:10
+(US) and 16:50 (HK) slots, so the **guarded evening catch-up is the realistic
+daily run**; the morning/afternoon jobs stay armed but are opportunistic
+bonuses — they can satisfy a lane's expectation early, they can never be
+"missed". `ops:health` was re-declared to match (it previously counted
+06:10/16:50 as expected, which made the report permanently red — the exact
+failure class R0 was built to kill): per lane, the expected event is one
+guarded evening catch-up, and a lane counts a **missed evening** only when it
+was still *behind* (the `ops:catchup` definition: store newer than the newest
+screened session, or the newest screen lacking a complete chain deep-dive)
+after the evening's slots (20:30 and 23:03, last slot + 6h grace) of a day on
+which the store held a completed unscreened session. Session → expected
+evening: HK the **same** evening (bars are storable from 16:10 HKT, lag 0);
+US the **following** HKT evening (the US close is 04:00/05:00 HKT the next
+day, so Monday's session is screened Tuesday 20:30 HKT, lag 1 by
+construction). Thresholds unchanged: 1 missed evening = warn, 2+ = alert, and
+still no market-holiday calendar.
+
+A **second catch-up slot at 23:03 HKT** was added the same day. It is safe for
+both lanes ONLY because of the new store invariant (§4.2, R1's session-close
+invariant): at 23:03 HKT
+the US session is in progress (open 21:30 HKT in EDT / 22:30 in EST), and the
+fetch-boundary session-close filter guarantees Yahoo's still-forming bar never
+enters the store — so the guard screens the previous **completed** US session
+(lag 1, admissible under the promptness gate by construction).
+
 | Label | Runs | Schedule (HKT) |
 |---|---|---|
 | `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive` (candidate breadth from `SCREEN_PARAMS.topN`) | Mon–Fri 16:50 |
 | `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
 | `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
 | `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
-| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`) | **20:30 daily** |
+| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`) | **20:30 + 23:03 daily** |
 | `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 07:15, 17:30 daily |
 
 ### 5.2 Failure visibility (R0, 2026-09-10)
@@ -408,18 +450,24 @@ check that can catch a **killed** process, which reports no exit code of its own
 It is lane-scoped so a stale HK lane cannot fail the US chain.
 
 **Health model.** Per lane: newest complete run, newest screen run, store data
-cutoff, missed scheduled runs, and stale `running` rows. Cadence is
-weekday-arithmetic from the plists (HK Mon–Fri 16:50, US Tue–Sat 06:10 HKT) with
-**no** market-holiday calendar; 1 missed slot is **warn** (runs are
-catch-up-on-wake by design, so "late" must not read as "broken") and 2+, a stale
-`running` row, or an overdue weekly job is **alert**. Weekly jobs are judged from
-dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`), and when no
-artifact exists yet the check is anchored on **when the job was installed** —
-read from the plist's mtime, which `install.sh`'s `cp` makes the install instant.
-Without that anchor "no artifact" cannot be told apart from "has never been
-due": on 2026-09-11 the f10 job (installed 09-10 23:21, first slot Sun 09-13
-09:17) reported ALERT, and since any job alert pins the whole report, the banner
-was red for a job that had not yet been due and could not go green before 09-13.
+cutoff, missed evening catch-ups, and stale `running` rows. Cadence is
+weekday-arithmetic over the **guarded evening catch-up** (re-declared
+2026-09-13, see §5.1): the 06:10/16:50 jobs are opportunistic bonuses that are
+never "missed"; a lane is missed only when still behind (stale screen, or the
+newest screen lacking a complete chain deep-dive) after an evening's
+20:30/23:03 slots on a day the store held a completed unscreened session — HK
+sessions due the same evening, US the following one — with **no**
+market-holiday calendar. 1 missed evening is **warn** (runs are
+catch-up-on-wake by design, so "late" must not read as "broken") and 2+, a
+stale `running` row, or an overdue weekly job is **alert**. Weekly jobs are
+judged from dated artifacts (`sentinel-<date>.json`, `f10-refresh-<date>.json`),
+and when no artifact exists yet the check is anchored on **when the job was
+installed** — read from the plist's mtime, which `install.sh`'s `cp` makes the
+install instant. Without that anchor "no artifact" cannot be told apart from
+"has never been due": on 2026-09-11 the f10 job (installed 09-10 23:21, first
+slot Sun 09-13 09:17) reported ALERT, and since any job alert pins the whole
+report, the banner was red for a job that had not yet been due and could not
+go green before 09-13.
 
 **Arming.** `install.sh` uses `bootout`/`bootstrap`/`enable` and then runs
 `scripts/launchd/verify.sh`, which **asserts each job's calendar stream is

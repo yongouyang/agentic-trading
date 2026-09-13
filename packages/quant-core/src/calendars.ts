@@ -17,6 +17,7 @@
  * attribution — they are closure sets, not an additional L1 phantom-drop input
  * (L1 keeps its own, narrower holiday semantics).
  */
+import type { Market } from "./screening.js";
 
 /** HKEX full-day holidays 2021–2027. Includes: New Year's Day, Lunar New
  *  Year days, Ching Ming, Good Friday + Easter Monday, Labour Day, Buddha's
@@ -264,3 +265,46 @@ export const NYSE_HOLIDAYS: ReadonlySet<string> = new Set([
   "2027-11-25", // Thanksgiving
   "2027-12-24", // Christmas (Dec 25 Saturday → observed)
 ]);
+
+// --------------------------------------------------------------------------
+// Session-close boundary (store invariant, locked 2026-09-13).
+// --------------------------------------------------------------------------
+
+/** Official session close per market, in the exchange's own wall clock.
+ *  US: 16:00 America/New_York — the regular close; early closes (13:00 ET)
+ *  are EARLIER, so 16:00 is the conservative boundary (a half-day bar only
+ *  becomes storable 3h late, never too early). HK: 16:10 Asia/Hong_Kong —
+ *  the continuous session ends 16:00 and the closing auction ~16:10.
+ *
+ *  A bar may enter the store only once its session has officially closed:
+ *  Yahoo serves the still-forming bar during market hours, and storing it
+ *  would let the catch-up guard and the screen treat a half-formed session
+ *  as real (writing its sessionDate and permanently blocking the completed
+ *  session). The filter lives at the fetch/upsert boundary in
+ *  `apps/api/src/cli/daily-screen.ts` so every downstream consumer is
+ *  correct automatically. */
+export const SESSION_CLOSE: Record<Market, { timeZone: string; closeLocal: string }> = {
+  US: { timeZone: "America/New_York", closeLocal: "16:00" },
+  HK: { timeZone: "Asia/Hong_Kong", closeLocal: "16:10" },
+};
+
+/** True iff `now` is strictly after the official close instant of `date`'s
+ *  session in `market`. Timezone-correct via the IANA zone (no hardcoded UTC
+ *  offsets — the EDT/EST switch is handled by Intl). Compares the
+ *  market-local date-time of `now` against `${date} ${closeLocal}` as
+ *  zero-padded strings (lexicographic = chronological for this shape). */
+export function sessionClosed(market: Market, date: string, now: Date): boolean {
+  const { timeZone, closeLocal } = SESSION_CLOSE[market];
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(now);
+  const get = (t: Intl.DateTimeFormatPartTypes): string => parts.find((p) => p.type === t)!.value;
+  const localNow = `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+  return localNow > `${date} ${closeLocal}`;
+}

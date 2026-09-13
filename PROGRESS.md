@@ -5,6 +5,65 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-13 (the 20:30 catch-up becomes the primary slot — and the user's 23:00 question exposed a partial-session hazard bigger than the slot)
+
+**The decision (user).** No VPS deploy, no architecture change: the Mac is
+realistically off at 06:10/16:50, so the daily run is the **guarded 20:30
+catch-up** (auto, or manual via `bash scripts/daily-catchup.sh`). The morning/
+afternoon jobs stay armed as opportunistic bonuses — on a day the machine is
+on they fire, and the evening catch-up no-ops. Both lanes stay admissible to
+the Phase-5 sample under this schedule: HK lag 0, US lag 1 — exactly what
+`MAX_PROMPT_LAG_DAYS = 1` was pre-registered to admit.
+
+**The hazard the discussion surfaced.** The user balked at a 23:00 second slot
+("that's during US market hours") — and the code confirmed the instinct was
+right, and worse than the slot: a fetch during US/HK market hours upserts
+Yahoo's **forming** daily bar; the catch-up guard compares store-max vs
+last-screened, so it would run the chain; `screen:daily` would then screen the
+half-formed session and stamp `sessionDate` on it, which (a) admits
+partial-session verdicts into the Phase-5 sample at lag 0 and (b) makes every
+later guard check read "up to date", so **the real session is never screened**.
+The exposure already existed for any manual run during market hours.
+
+**The fix (locked: fetch-boundary filter).** A bar enters the store only after
+its session's official close — new `SESSION_CLOSE` + `sessionClosed()` in
+quant-core `calendars.ts` (US 16:00 ET, HK 16:10 HKT — post-closing-auction;
+Intl-based, EDT/EST-correct by construction, tested at both boundaries).
+Applied at both upsert paths in `daily-screen.ts` before `createMany`,
+integrity checks, and the `screenedThrough` computation; drops are counted and
+surfaced (`inProgressBarsFiltered`, per-symbol warning, integrity-header
+segment) so a filtered forming bar is never mistaken for missing data. One
+boundary fix makes the guard, the screen, `dataThrough`, and the accrual
+counter all correct at once, and makes manual runs safe at any hour.
+
+**With the store unable to hold a partial bar, the 23:03 slot is safe** and was
+added to the daily-catchup plist (installed; `verify.sh`: all 6 jobs armed,
+both calendar streams watching). It rescues a US sample day on late-boot
+evenings that would otherwise be lost to the lag-2 exclusion.
+
+**Health cadence re-declared (locked).** Expecting 06:10/16:50 while the
+machine is off at those hours would have sat the dashboard at permanent WARN —
+the always-red failure class R0 exists to kill. `ops/health` now expects **one
+guarded evening catch-up per lane-day**: a missed evening = a lane still
+behind (the catch-up guard's own two-leg definition) after the 23:03 slot +
+6 h grace on a cadence evening (HK Mon–Fri, US Tue–Sat; the US Monday session
+is expected Tuesday evening, lag 1 by construction). Thresholds unchanged:
+1 = warn, 2 = alert. Opportunistic 06:10/16:50 runs satisfy the expectation
+early and can never be "missed". Web banner copy updated to match ("evening
+catch-up(s) missed").
+
+**Tests:** quant-core 149 → **156**, api 522 → **525** + 1 skipped, web **107**,
+tsc clean both packages. Live (Sunday): `ops:catchup` exit 0 both lanes up to
+date; `ops:health` HEALTHY, `missed 0`.
+
+**Next (all passive):** first real prospective lane-days Mon 09-14 (HK,
+screened same evening) / Tue 09-15 (US Monday session, screened Tuesday
+evening); Phase-5 projection watch at ~20 accrued days. Retired as standing
+noise: "Databento R1 baseline" and the deploy profile (superseded by this
+decision — recorded in architecture §5.1).
+
+---
+
 ## 2026-09-13 (Track A CLOSED as `underpowered` — the design-half run set the bar at 0.0486 against the 0.03 cap; the marginal census priced the only fix and it does not reach)
 
 The four rounds locked in the morning's review were executed in one session;

@@ -49,6 +49,8 @@ import {
   deriveAdjustedBars,
   runChecks,
   runScreen,
+  sessionClosed,
+  type Bar,
   type CorporateAction,
   type Market,
   type ScreenInput,
@@ -80,6 +82,9 @@ export interface DailyScreenDeps {
   reportsDir?: string | null;
   /** Run date YYYY-MM-DD (default: today) — deterministic in tests. */
   today?: string;
+  /** Wall clock for the session-close filter (default: real now) — tests
+   *  inject an in-session instant to exercise the forming-bar drop. */
+  now?: Date;
   /** Report sink (default: console.log). */
   log?: (line: string) => void;
   /** HK rescue loader (phase-1-hardening-plan §A). Undefined ⇒ default:
@@ -135,6 +140,11 @@ export interface LaneReport {
   fetchFailed: FetchFailure[];
   clampedBars: number;
   nullCloseDropped: number;
+  /** Bars dropped by the session-close filter (a bar enters the store only
+   *  after its session's official close — Yahoo serves the still-forming bar
+   *  during market hours). Visible so a filtered forming bar never looks like
+   *  missing data. */
+  inProgressBarsFiltered: number;
   levelBreakDropped: number;
   degraded: boolean;
   warnings: string[];
@@ -194,6 +204,7 @@ function renderText(r: LaneReport): string {
     ? ` · ${r.rescued.length} rescued via eastmoney (${r.rescued.map((x) => x.symbol).join(", ")})`
     : "";
   const nullCloseSegment = r.nullCloseDropped ? ` · ${r.nullCloseDropped} null-close bars dropped` : "";
+  const inProgressSegment = r.inProgressBarsFiltered ? ` · ${r.inProgressBarsFiltered} in-progress bars filtered (session not closed)` : "";
   const levelBreakSegment = r.levelBreakDropped ? ` · ${r.levelBreakDropped} level-break bars dropped` : "";
   // Synthetic data is the one thing an integrity header must never hide.
   const providerSegment = isDummyProviderLabel(r.provider)
@@ -202,7 +213,7 @@ function renderText(r: LaneReport): string {
   const lines = [
     `== DATA INTEGRITY ==  ${r.market} ${r.date}${providerSegment}: ${r.ok}/${r.universeSize} screened · ` +
       `${r.fetchFailed.length} fetch-failed (${failedList}) · ${r.genuinelyAbsent} genuinely absent · ` +
-      `${r.clampedBars} clamped bars${nullCloseSegment}${levelBreakSegment}${rescuedSegment} · DEGRADED: ${r.degraded ? "yes" : "no"}`,
+      `${r.clampedBars} clamped bars${nullCloseSegment}${inProgressSegment}${levelBreakSegment}${rescuedSegment} · DEGRADED: ${r.degraded ? "yes" : "no"}`,
     "== SHORTLIST ==",
     ...r.shortlist.map(
       (p) =>
@@ -221,6 +232,7 @@ async function runLane(
   today: string,
   repairProvider: RepairProvider | null,
   provider: string,
+  now: Date,
 ): Promise<LaneReport> {
   const market = lane.toUpperCase() as Market;
   const { prisma } = deps;
@@ -232,6 +244,7 @@ async function runLane(
   let genuinelyAbsent = 0;
   let clampedBars = 0;
   let nullCloseDropped = 0;
+  let inProgressBarsFiltered = 0;
   /** W3a: null-close drops counted BY DATE, so a single wiped session is
    *  distinguishable from scattered per-name gaps (docs/ops-hardening-plan.md). */
   const nullCloseByDate = new Map<string, number>();
@@ -261,6 +274,25 @@ async function runLane(
     }
     ok++;
 
+    // Session-close filter (store invariant, locked 2026-09-13): a bar may
+    // enter the store only after its session's official close. Yahoo serves
+    // the still-forming bar during market hours; if it were stored,
+    // ops:catchup would see "store newer than screened", screen:daily would
+    // write sessionDate for a half-formed session, and the completed session
+    // would be permanently blocked. Filtered here — the fetch/upsert boundary
+    // — so every downstream consumer (checks, adjustment, screen,
+    // screenedThrough) sees completed sessions only.
+    const bars: Bar[] = [];
+    const inProgressDates: string[] = [];
+    for (const b of result.bars) {
+      if (sessionClosed(market, b.date, now)) bars.push(b);
+      else inProgressDates.push(b.date);
+    }
+    if (inProgressDates.length) {
+      inProgressBarsFiltered += inProgressDates.length;
+      warnings.push(`${entry.symbol}: dropped in-progress bar(s), session not closed: ${inProgressDates.join(",")}`);
+    }
+
     if (result.droppedPhantomBars.length) {
       warnings.push(`${entry.symbol}: L1 dropped holiday-phantom bars: ${result.droppedPhantomBars.join(",")}`);
     }
@@ -284,7 +316,7 @@ async function runLane(
     // Yahoo fetch reclaims series ownership (single-source invariant, §A.2).
     await prisma.bar.deleteMany({ where: { instrumentId: instrument.id } });
     await prisma.bar.createMany({
-      data: result.bars.map((b) => ({
+      data: bars.map((b) => ({
         instrumentId: instrument.id,
         date: b.date,
         open: b.open,
@@ -315,12 +347,12 @@ async function runLane(
     }
 
     // Day-17 quality gate — failures and warnings are both loud.
-    const check = runChecks(market, result.bars, today);
+    const check = runChecks(market, bars, today);
     for (const f of check.failures) warnings.push(`${entry.symbol}: CHECK FAILURE: ${f}`);
     for (const w of check.warnings) warnings.push(`${entry.symbol}: ${w}`);
 
-    const adjustedBars = deriveAdjustedBars(result.bars, result.corporateActions);
-    inputs.push({ symbol: entry.symbol, market, adjustedBars, rawBars: result.bars, caDegraded: result.caDegraded });
+    const adjustedBars = deriveAdjustedBars(bars, result.corporateActions);
+    inputs.push({ symbol: entry.symbol, market, adjustedBars, rawBars: bars, caDegraded: result.caDegraded });
   }
 
   // HK rescue pass (phase-1-hardening-plan §A.2) — after the main pass,
@@ -339,10 +371,21 @@ async function runLane(
       }
 
       // Quality gate on rescued bars, identical to the Yahoo path.
-      const { bars, repaired } = clampOhlc(res.bars);
+      const { bars: clampedRescued, repaired } = clampOhlc(res.bars);
       if (repaired.length) {
         clampedBars += repaired.length;
         warnings.push(`${item.symbol}: L2 clamped close into [H,L] on rescued bars ${repaired.join(",")}`);
+      }
+      // The store invariant binds rescue sources too: no in-progress bar.
+      const bars: Bar[] = [];
+      const rescuedInProgress: string[] = [];
+      for (const b of clampedRescued) {
+        if (sessionClosed(market, b.date, now)) bars.push(b);
+        else rescuedInProgress.push(b.date);
+      }
+      if (rescuedInProgress.length) {
+        inProgressBarsFiltered += rescuedInProgress.length;
+        warnings.push(`${item.symbol}: dropped in-progress rescued bar(s), session not closed: ${rescuedInProgress.join(",")}`);
       }
       const check = runChecks(market, bars, today);
       for (const w of check.warnings) warnings.push(`${item.symbol}: ${w}`);
@@ -481,6 +524,7 @@ async function runLane(
     fetchFailed,
     clampedBars,
     nullCloseDropped,
+    inProgressBarsFiltered,
     levelBreakDropped,
     degraded,
     warnings,
@@ -517,8 +561,9 @@ export async function runDailyScreen(deps: DailyScreenDeps, opts: DailyScreenOpt
     log(`⚠ Store impact: each lane's stored series is rewritten from this provider — point DATABASE_URL at a throwaway db for dummy runs.`);
   }
   const reports: LaneReport[] = [];
+  const now = deps.now ?? new Date();
   for (const lane of lanes) {
-    const report = await runLane(lane, deps, service, today, repairProvider, provider);
+    const report = await runLane(lane, deps, service, today, repairProvider, provider, now);
     log(report.text);
     if (deps.reportsDir !== null) {
       const dir = deps.reportsDir ?? path.join(PKG_ROOT, "reports");

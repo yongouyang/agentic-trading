@@ -35,7 +35,7 @@ export function HealthBanner({ health }: { health: HealthReport | null }) {
             <strong>{l.market}</strong>: data through {l.dataThrough ?? "—"}
             {l.lastCompleteRunId === null
               ? ", no complete run"
-              : `, last completed run ${l.lastCompleteRunId} (${l.expectedRunsMissed} scheduled run(s) missed)`}
+              : `, last completed run ${l.lastCompleteRunId} (${l.expectedRunsMissed} evening catch-up(s) missed)`}
             {l.reasons.map((r, i) => (
               <div key={i} className="health-reason">
                 {r}

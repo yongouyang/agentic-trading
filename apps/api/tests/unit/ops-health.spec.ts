@@ -2,9 +2,14 @@
  * Ops health (W4a, docs/ops-hardening-plan.md).
  *
  * The cadence arithmetic is the part most likely to be quietly wrong, so these
- * tests pin concrete HKT instants — especially the Sat→Tue weekend gap that the
- * earlier "age in hours" idea could not distinguish from a failure, and the
- * catch-up-on-wake case that must stay a warn rather than an alert.
+ * tests pin concrete HKT instants. Cadence re-declared 2026-09-13: the expected
+ * event per lane is the GUARDED evening catch-up (20:30/23:03 HKT); the
+ * 06:10/16:50 jobs are opportunistic bonuses that can satisfy the expectation
+ * early but can never be "missed". A lane is missed only when it was still
+ * behind (store newer than screened, or newest screen lacking a complete chain
+ * deep-dive) after an evening's slots on a day the store held a completed
+ * unscreened session. HK sessions are due the same evening (lag 0), US sessions
+ * the following HKT evening (lag 1 by construction).
  *
  * No DB, no network: computeHealth is called with a stub prisma.
  */
@@ -26,11 +31,15 @@ interface RunRow {
   runAt: Date;
   /** DeepDiveRun provenance; undefined simulates a pre-column chain row. */
   source?: "chain" | "adhoc";
+  /** Set when this deep-dive is attached to a screen run (the verdict leg). */
+  screenRunId?: number;
 }
 interface ScreenRow {
   id: number;
   market: string;
   runAt: Date;
+  /** Newest session this run screened; undefined simulates a pre-column row. */
+  sessionDate?: string;
 }
 
 function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Record<string, string>; running?: RunRow[] } = {}) {
@@ -43,8 +52,9 @@ function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Recor
       findFirst: async ({ where }: any) => {
         const pool = where.status === "running" ? running : runs;
         const match = pool
-          .filter((r) => r.market === where.market)
+          .filter((r) => (where.market ? r.market === where.market : true))
           .filter((r) => (where.source ? r.source === where.source : true))
+          .filter((r) => (where.screenRunId !== undefined ? r.screenRunId === where.screenRunId : true))
           .filter((r) => (where.runAt?.lt ? r.runAt.getTime() < where.runAt.lt.getTime() : true))
           .sort((a, b) => b.runAt.getTime() - a.runAt.getTime());
         return match[0] ?? null;
@@ -52,7 +62,10 @@ function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Recor
     },
     screenRun: {
       findFirst: async ({ where }: any) =>
-        screens.filter((r) => r.market === where.market).sort((a, b) => b.runAt.getTime() - a.runAt.getTime())[0] ?? null,
+        screens
+          .filter((r) => r.market === where.market)
+          .filter((r) => (where.sessionDate?.not === "" ? Boolean(r.sessionDate) : true))
+          .sort((a, b) => b.runAt.getTime() - a.runAt.getTime())[0] ?? null,
     },
     bar: {
       findFirst: async ({ where }: any) => (bars[where.instrument.market] ? { date: bars[where.instrument.market] } : null),
@@ -69,54 +82,65 @@ afterAll(() => rmSync(reportsDir, { recursive: true, force: true }));
 
 const lane = (r: HealthReport, m: "HK" | "US") => r.lanes.find((l) => l.market === m)!;
 
-describe("computeHealth — lane cadence", () => {
-  it("US: the real 2026-09-10 state (last complete run Sun 09-06) is ALERT with 3 missed", async () => {
-    // Slots after Sun 09-06 21:16 HKT: Tue 09-08, Wed 09-09, Thu 09-10 at 06:10.
+describe("computeHealth — lane cadence (guarded evening catch-up)", () => {
+  it("machine-on day: the 06:10 opportunistic run fired, evening is a no-op → HEALTHY", async () => {
+    // US lane: Saturday 06:10 screened Friday's session (store holds exactly
+    // that session) with a complete chain deep-dive. The weekend evenings are
+    // not due at all — nothing can be missed.
     const r = await computeHealth(
-      stubPrisma({ runs: [{ id: 3, market: "US", runAt: hkt("2026-09-06T21:16:11") }] }),
-      { now: hkt("2026-09-10T22:00:00"), reportsDir },
-    );
-    const us = lane(r, "US");
-    expect(us.level).toBe("alert");
-    expect(us.expectedRunsMissed).toBe(3);
-  });
-
-  it("US: a Saturday run is NOT stale by Tuesday (the Sat→Tue weekend gap)", async () => {
-    // Sat 09-12 06:10 ran; the next slot is Tue 09-15 06:10, so on Sun 09-13
-    // nothing is even due yet — the case pure age-in-hours got wrong.
-    const r = await computeHealth(
-      stubPrisma({ runs: [{ id: 9, market: "US", runAt: hkt("2026-09-12T06:15:00") }] }),
+      stubPrisma({
+        runs: [{ id: 9, market: "US", runAt: hkt("2026-09-12T06:15:00"), source: "chain", screenRunId: 20 }],
+        screens: [{ id: 20, market: "US", runAt: hkt("2026-09-12T06:12:00"), sessionDate: "2026-09-11" }],
+        bars: { US: "2026-09-11" },
+      }),
       { now: hkt("2026-09-13T20:00:00"), reportsDir },
     );
-    expect(lane(r, "US").level).toBe("healthy");
-    expect(lane(r, "US").expectedRunsMissed).toBe(0);
+    const us = lane(r, "US");
+    expect(us.level).toBe("healthy");
+    expect(us.expectedRunsMissed).toBe(0);
   });
 
-  it("US: Monday 06:10 is not an expected US slot at all", async () => {
-    // US runs Tue-Sat. A run on Sat 09-12 followed by now = Mon 09-14 must not
-    // count Monday's 06:10 as missed.
+  it("normal day: nothing ran before the 20:30 catch-up → still HEALTHY (the evening is not late yet)", async () => {
+    // HK lane, Monday 19:00: the store holds today's completed session (bars
+    // are storable from 16:10), no run has screened it, but the evening slots
+    // (20:30/23:03) have not passed — the catch-up is expected TONIGHT.
     const r = await computeHealth(
-      stubPrisma({ runs: [{ id: 9, market: "US", runAt: hkt("2026-09-12T06:15:00") }] }),
-      { now: hkt("2026-09-14T12:00:00"), reportsDir },
+      stubPrisma({
+        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-11T20:50:00"), source: "chain", screenRunId: 14 }],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-11T20:40:00"), sessionDate: "2026-09-11" }],
+        bars: { HK: "2026-09-14" },
+      }),
+      { now: hkt("2026-09-14T19:00:00"), reportsDir },
     );
-    expect(lane(r, "US").expectedRunsMissed).toBe(0);
+    const hk = lane(r, "HK");
+    expect(hk.expectedRunsMissed).toBe(0);
+    expect(hk.level).toBe("healthy");
   });
 
-  it("HK: a slot inside the grace window is WARN, not ALERT (catch-up on wake)", async () => {
-    // HK Thu 09-10 16:50 slot; now 19:00 is only 2.2h past — under the 6h
-    // grace, so it must not count as missed at all.
+  it("normal day after the catch-up ran at 20:30 → HEALTHY", async () => {
     const r = await computeHealth(
-      stubPrisma({ runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-09T23:10:45") }] }),
-      { now: hkt("2026-09-10T19:00:00"), reportsDir },
+      stubPrisma({
+        runs: [{ id: 7, market: "HK", runAt: hkt("2026-09-14T20:50:00"), source: "chain", screenRunId: 15 }],
+        screens: [{ id: 15, market: "HK", runAt: hkt("2026-09-14T20:40:00"), sessionDate: "2026-09-14" }],
+        bars: { HK: "2026-09-14" },
+      }),
+      { now: hkt("2026-09-14T21:30:00"), reportsDir },
     );
-    expect(lane(r, "HK").expectedRunsMissed).toBe(0);
     expect(lane(r, "HK").level).toBe("healthy");
+    expect(lane(r, "HK").expectedRunsMissed).toBe(0);
   });
 
-  it("HK: exactly one fully-elapsed slot is WARN with a catch-up reason", async () => {
+  it("genuinely missed day: the evening slots passed and the lane is still behind → counted (1 = WARN)", async () => {
+    // HK store holds Friday's session, last screened Thursday, and Friday's
+    // 20:30/23:03 slots never ran (machine off). Saturday 08:00 is past
+    // 23:03+6h grace, so Friday evening is a missed catch-up.
     const r = await computeHealth(
-      stubPrisma({ runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-09T23:10:45") }] }),
-      { now: hkt("2026-09-10T23:30:00"), reportsDir },
+      stubPrisma({
+        runs: [{ id: 5, market: "HK", runAt: hkt("2026-09-10T20:50:00"), source: "chain", screenRunId: 13 }],
+        screens: [{ id: 13, market: "HK", runAt: hkt("2026-09-10T20:40:00"), sessionDate: "2026-09-10" }],
+        bars: { HK: "2026-09-11" },
+      }),
+      { now: hkt("2026-09-12T08:00:00"), reportsDir },
     );
     const hk = lane(r, "HK");
     expect(hk.expectedRunsMissed).toBe(1);
@@ -124,15 +148,55 @@ describe("computeHealth — lane cadence", () => {
     expect(hk.reasons.join(" ")).toMatch(/catch-up/);
   });
 
-  it("HK: two fully-elapsed slots escalate to ALERT", async () => {
-    // Last complete run Thu 09-09 23:10 → slots Thu 09-10 16:50, Fri 09-11
-    // 16:50, Mon 09-14 16:50. (Mon-Fri only: Sat/Sun are not HK slots.)
+  it("a second missed evening escalates to ALERT (weekend evenings do not count)", async () => {
+    // Same state, now Tuesday 05:30: Friday's and Monday's evenings both
+    // passed with the lane behind; Sat/Sun are not HK evenings.
     const r = await computeHealth(
-      stubPrisma({ runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-09T23:10:45") }] }),
-      { now: hkt("2026-09-14T23:30:00"), reportsDir },
+      stubPrisma({
+        runs: [{ id: 5, market: "HK", runAt: hkt("2026-09-10T20:50:00"), source: "chain", screenRunId: 13 }],
+        screens: [{ id: 13, market: "HK", runAt: hkt("2026-09-10T20:40:00"), sessionDate: "2026-09-10" }],
+        bars: { HK: "2026-09-11" },
+      }),
+      { now: hkt("2026-09-15T05:30:00"), reportsDir },
     );
-    expect(lane(r, "HK").expectedRunsMissed).toBe(3);
+    expect(lane(r, "HK").expectedRunsMissed).toBe(2);
     expect(lane(r, "HK").level).toBe("alert");
+  });
+
+  it("US lag 1 by construction: Monday's session is due TUESDAY evening, never Monday", async () => {
+    // US store holds Monday's session (arrived Tue ~04:00 HKT), Friday was
+    // screened Saturday. Tuesday 19:00 — the evening the session is due —
+    // has not passed its slots, so nothing is missed.
+    const state = stubPrisma({
+      runs: [{ id: 9, market: "US", runAt: hkt("2026-09-12T06:15:00"), source: "chain", screenRunId: 20 }],
+      screens: [{ id: 20, market: "US", runAt: hkt("2026-09-12T06:12:00"), sessionDate: "2026-09-11" }],
+      bars: { US: "2026-09-14" },
+    });
+    const r = await computeHealth(state, { now: hkt("2026-09-15T19:00:00"), reportsDir });
+    expect(lane(r, "US").expectedRunsMissed).toBe(0);
+    expect(lane(r, "US").level).toBe("healthy");
+
+    // Wednesday 06:00: Tuesday's 23:03 slot + 6h grace has passed and the lane
+    // is still behind → one missed evening, warn.
+    const late = await computeHealth(state, { now: hkt("2026-09-16T06:00:00"), reportsDir });
+    expect(lane(late, "US").expectedRunsMissed).toBe(1);
+    expect(lane(late, "US").level).toBe("warn");
+  });
+
+  it("verdict leg: a screened session without a complete CHAIN deep-dive is behind (adhoc does not count)", async () => {
+    // HK screened Friday at 20:40, but only an ad-hoc deep-dive exists — the
+    // chain verdict never completed. Saturday 08:00: Friday evening is missed.
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 31, market: "HK", runAt: hkt("2026-09-11T20:50:00"), source: "adhoc", screenRunId: 30 }],
+        screens: [{ id: 30, market: "HK", runAt: hkt("2026-09-11T20:40:00"), sessionDate: "2026-09-11" }],
+        bars: { HK: "2026-09-11" },
+      }),
+      { now: hkt("2026-09-12T08:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.expectedRunsMissed).toBe(1);
+    expect(hk.level).toBe("warn");
   });
 
   it("a lane with no complete run is ALERT and reports it plainly", async () => {
@@ -146,34 +210,42 @@ describe("computeHealth — lane cadence", () => {
 
 describe("computeHealth — run provenance", () => {
   // Measured 2026-09-12: HK's "last complete run" was an ad-hoc 3-name smoke
-  // run, which reset the missed-slot clock. The newest complete **chain** run
-  // is the lane's truth (same policy as ReportsService.daily).
+  // run. The newest complete **chain** run is the lane's truth (same policy as
+  // ReportsService.daily) — though with the 2026-09-13 cadence the missed count
+  // comes from the store/screen state, not the run clock.
   it("a newer adhoc run does not replace the older chain run as lastComplete", async () => {
     const r = await computeHealth(
       stubPrisma({
         runs: [
-          { id: 6, market: "HK", runAt: hkt("2026-09-10T16:55:00"), source: "chain" },
+          { id: 6, market: "HK", runAt: hkt("2026-09-11T20:50:00"), source: "chain", screenRunId: 14 },
           { id: 8, market: "HK", runAt: hkt("2026-09-12T15:00:00"), source: "adhoc" },
         ],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-11T20:40:00"), sessionDate: "2026-09-11" }],
+        bars: { HK: "2026-09-11" },
       }),
-      { now: hkt("2026-09-12T20:00:00"), reportsDir },
+      { now: hkt("2026-09-13T20:00:00"), reportsDir },
     );
     const hk = lane(r, "HK");
     expect(hk.lastCompleteRunId).toBe(6);
-    // Judged against the chain run: Fri 09-11 16:50 passed beyond grace.
-    expect(hk.expectedRunsMissed).toBe(1);
-    expect(hk.level).toBe("warn");
+    // Screen current through the store's newest session, verdict attached →
+    // not behind, nothing missed. (Weekend: no HK evenings due anyway.)
+    expect(hk.expectedRunsMissed).toBe(0);
+    expect(hk.level).toBe("healthy");
   });
 
   it("falls back to any provenance only when the lane has no chain run at all", async () => {
     const r = await computeHealth(
       stubPrisma({
-        runs: [{ id: 8, market: "HK", runAt: hkt("2026-09-12T15:00:00"), source: "adhoc" }],
+        runs: [{ id: 8, market: "HK", runAt: hkt("2026-09-11T20:50:00"), source: "adhoc", screenRunId: 14 }],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-11T20:40:00"), sessionDate: "2026-09-11" }],
+        bars: { HK: "2026-09-11" },
       }),
-      { now: hkt("2026-09-12T20:00:00"), reportsDir },
+      { now: hkt("2026-09-11T21:30:00"), reportsDir },
     );
     const hk = lane(r, "HK");
     expect(hk.lastCompleteRunId).toBe(8);
+    // The verdict leg is unsatisfied (adhoc ≠ chain), but Friday's evening
+    // slots have not passed yet — not late.
     expect(hk.expectedRunsMissed).toBe(0);
     expect(hk.level).toBe("healthy");
   });
@@ -208,8 +280,8 @@ describe("computeHealth — crashed runs and surfaces", () => {
   it("carries dataThrough and the screen run id per lane (W3b surfacing)", async () => {
     const r = await computeHealth(
       stubPrisma({
-        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-10T16:50:00") }],
-        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-10T16:45:00") }],
+        runs: [{ id: 6, market: "HK", runAt: hkt("2026-09-10T20:50:00"), source: "chain", screenRunId: 14 }],
+        screens: [{ id: 14, market: "HK", runAt: hkt("2026-09-10T20:40:00"), sessionDate: "2026-09-09" }],
         bars: { HK: "2026-09-09", US: "2026-09-08" },
       }),
       { now: hkt("2026-09-10T22:00:00"), reportsDir },

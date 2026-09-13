@@ -11,10 +11,14 @@
 # failed and we do NOT run (a blind run would duplicate a session and inflate the
 # very sample this protects).
 #
-# Scheduled 20:30 HKT deliberately: after the HK close (16:00) and BEFORE the US
-# open (21:30 HKT summer), so the US lane's newest bar is always a completed
-# session — screening a just-opened partial bar is the failure mode that would
-# quietly poison the sample instead of protecting it.
+# Scheduled 20:30 and 23:03 HKT (the 23:03 slot added 2026-09-13). 20:30 is
+# after the HK close (16:00) and BEFORE the US open (21:30 HKT summer), so the
+# US lane's newest bar is always a completed session. 23:03 lands mid-US-session
+# and is safe ONLY because of the session-close filter (quant-core
+# sessionClosed, applied at the fetch/upsert boundary in screen:daily): Yahoo's
+# still-forming bar never enters the store, so the guard screens the previous
+# COMPLETED US session. Screening a just-opened partial bar is the failure mode
+# that would quietly poison the sample instead of protecting it.
 set -uo pipefail
 
 ROOT="/Users/yongouyang/projects/agentic-trading"
