@@ -5,6 +5,69 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-16 (cost tracking, phases 1-2 + 4-5) — K3 stops being an estimate: the cache split is captured, and the spend line cannot lie or move a level
+
+**Why this was cheap to build:** the measurement base already existed and was
+complete. `AgentDecision.usageJson` records `{promptTokens, completionTokens,
+totalTokens}` for every live call — verified over the whole store: **1,929 rows,
+zero with a null usageJson** — covering the pipeline *and* chat, and an app-level
+cache hit writes no row because it makes no API call (correctly free). Per-name
+attribution was already a working join
+(`DeepDiveReport.decisionHashesJson → AgentDecision.hash`): measured on run 15,
+261 decisions / 493,639 in / 95,637 out over 37 names = **15,926 tokens/name**,
+reproducing the charter's hand-tallied 15,602. So: no table, no migration, no
+write path.
+
+**Phase 1 — stop discarding the cache split.** The client kept three usage fields
+and dropped DeepSeek's `prompt_cache_hit_tokens`/`prompt_cache_miss_tokens`.
+Measured on this pipeline's prompt shape (one long shared system prompt, the 7
+calls per name differ only in the tail): call 1 reported 0 cached of 1,520 input,
+calls 2 and 3 reported **1,280 of 1,520 cached** — and cache-hit input bills ~50×
+cheaper than cache-miss, while input outnumbers output ~5:1 here. Naive pricing
+was therefore overstating spend by roughly 1.8×, which is fine for a sanity
+figure and not fine for a gate. `LlmUsage` now carries both counts (reading the
+OpenAI-style `prompt_tokens_details.cached_tokens` as a fallback, deriving the
+miss remainder, refusing a negative remainder), and they flow through both
+recording paths unchanged.
+
+**Phase 2 — `apps/api/src/ops/cost.ts`.** Pure pricing + math + two loaders:
+`parsePricing` (**config, never a default** — null when absent, which is also why
+a misconfigured price cannot take down `ops:health`), `parseUsageJson` (tolerant:
+this reads a log column written by several call sites plus historical rows),
+`costOf` (hit / miss / output buckets, `upperBound` flag), `summarize` (totals +
+per-model + per-agent breakdowns, measured cache-hit rate over split rows only),
+`loadCostRows` (window), `loadRunCosts` (per name, keeping **failed** names — a
+failed name is not a free name).
+
+**Phase 4 — the health line, informational by construction.** `HealthReport`
+gains a `cost` block; the renderer prints one line and it returns data, never a
+reason, so it *cannot* move a level — pinned by a test that drives spend over cap
+and asserts the lane is still HEALTHY while the line still says OVER CAP. Two
+properties earn their keep in the live output:
+
+- `LLM_PRICE_*` unset → `1929 calls · 3.73M in / 0.74M out — no prices configured`, no dollar sign anywhere;
+- all 1,929 rows predate the split → `UPPER BOUND (rows before cache-split capture)`;
+- a month straddling the switch names its mix — `k3-256k 1914, deepseek-flash 15` — because the pre-switch model was **subscription-billed and had no marginal cost at all**, so a blended total would be nonsense.
+
+**A wiring defect found by running it, not by reading it:** only `cli/deep-dive.ts`
+loaded `.env`, so `ops:health` read prices from the shell alone and would have
+printed "no prices configured" forever while the values sat in the file. It now
+loads the same files in the same order (shell env still wins — `loadEnvFile` does
+not override, which is the behaviour we verified earlier today).
+
+**Tests:** agents 47 → **51** (+4 cache-split capture: DeepSeek fields,
+OpenAI fallback with derived remainder, malformed never negative, absent stays
+null), api 585 → **608** (+18 cost module known-answer incl. the upper-bound and
+no-prices paths and both store loaders, +5 health line), web **107**, tsc clean.
+
+**Next:** phase 3 (`report:cost` CLI — per-lane-night cost, cost per name, and
+the **marginal cost per additional name**, which is the price tag on the open
+HK-breadth question) is not built. The dollar figure stays dormant until the
+prices and the K3 cap are pasted into `.env`; the cap's agreed value is still the
+user's to set.
+
+---
+
 ## 2026-09-16 (the same evening, after the DeepSeek switch) — P0 chain preflight fixed, A6 re-baselined to A7, and the guards learn that "complete" ≠ "produced verdicts"
 
 ### P0 — the chain would have skipped the deep-dive every night (measured, not guessed)

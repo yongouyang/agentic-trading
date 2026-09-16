@@ -41,6 +41,18 @@ export interface LlmUsage {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
+  /** Input tokens the provider served from its prompt-prefix cache, and the rest
+   *  (2026-09-16, cost tracking). DeepSeek reports these as
+   *  `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`; OpenAI-style
+   *  providers put the hit count in `prompt_tokens_details.cached_tokens`.
+   *  They were being DISCARDED, which made every cost reading an overstatement:
+   *  a cache hit bills ~50x cheaper than a miss, our input tokens outnumber
+   *  output ~5:1, and the 7 calls per name share one long prefix — measured on
+   *  this shape, call 2 of an identical prefix reported **1280 of 1520 input
+   *  tokens cached**. Optional because rows written before this change carry no
+   *  split (they are priced at the miss rate and labelled an upper bound). */
+  promptCacheHitTokens?: number | null;
+  promptCacheMissTokens?: number | null;
 }
 
 export interface LlmResponse {
@@ -198,13 +210,24 @@ export class OpenAiCompatLlmClient implements LlmClient {
         else throw new LlmError("malformed", "llm 200 without choices[0].message.content");
       }
       const u = json?.usage;
+      const num = (v: unknown): number | null => (typeof v === "number" ? v : null);
       const usage: LlmUsage | null =
         u && typeof u === "object"
-          ? {
-              promptTokens: typeof u.prompt_tokens === "number" ? u.prompt_tokens : null,
-              completionTokens: typeof u.completion_tokens === "number" ? u.completion_tokens : null,
-              totalTokens: typeof u.total_tokens === "number" ? u.total_tokens : null,
-            }
+          ? (() => {
+              const promptTokens = num(u.prompt_tokens);
+              // DeepSeek's own field first, then the OpenAI-compatible spelling.
+              const hit = num(u.prompt_cache_hit_tokens) ?? num(u.prompt_tokens_details?.cached_tokens);
+              // Providers that report only hits ⇒ miss is the remainder; a
+              // negative remainder would be a malformed report, so drop it.
+              const miss = num(u.prompt_cache_miss_tokens) ?? (hit !== null && promptTokens !== null ? Math.max(promptTokens - hit, 0) : null);
+              return {
+                promptTokens,
+                completionTokens: num(u.completion_tokens),
+                totalTokens: num(u.total_tokens),
+                promptCacheHitTokens: hit,
+                promptCacheMissTokens: miss,
+              };
+            })()
           : null;
       return toolCalls?.length ? { content, usage, toolCalls } : { content, usage };
     } catch (err: any) {

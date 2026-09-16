@@ -30,12 +30,45 @@ const jsonResponse = (status: number, body: unknown) =>
 const noSleep = async () => {};
 const REQ = { model: "m", messages: [{ role: "user" as const, content: "hi" }] };
 
+describe("cache-split usage capture (cost tracking, 2026-09-16)", () => {
+  const withUsage = (usage: unknown) =>
+    fakeFetch(async () => jsonResponse(200, { choices: [{ message: { content: "ok" } }], usage }));
+  const chat = async (usage: unknown) => {
+    const { fetchImpl } = withUsage(usage);
+    const client = new OpenAiCompatLlmClient({ baseUrl: "https://x", apiKey: "k", fetchImpl, sleep: noSleep });
+    return (await client.chat(REQ)).usage!;
+  };
+
+  it("reads DeepSeek's prompt_cache_hit/miss tokens", async () => {
+    const u = await chat({ prompt_tokens: 1520, completion_tokens: 32, total_tokens: 1552, prompt_cache_hit_tokens: 1280, prompt_cache_miss_tokens: 240 });
+    expect(u.promptCacheHitTokens).toBe(1280);
+    expect(u.promptCacheMissTokens).toBe(240);
+  });
+
+  it("falls back to the OpenAI-style prompt_tokens_details.cached_tokens and derives the miss remainder", async () => {
+    const u = await chat({ prompt_tokens: 100, completion_tokens: 5, total_tokens: 105, prompt_tokens_details: { cached_tokens: 64 } });
+    expect(u.promptCacheHitTokens).toBe(64);
+    expect(u.promptCacheMissTokens).toBe(36);
+  });
+
+  it("never derives a negative miss count from a malformed report", async () => {
+    const u = await chat({ prompt_tokens: 10, completion_tokens: 1, total_tokens: 11, prompt_cache_hit_tokens: 99 });
+    expect(u.promptCacheMissTokens).toBe(0);
+  });
+
+  it("leaves both null when the provider reports no cache split (priced at the miss rate upstream)", async () => {
+    const u = await chat({ prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 });
+    expect(u.promptCacheHitTokens).toBeNull();
+    expect(u.promptCacheMissTokens).toBeNull();
+  });
+});
+
 describe("OpenAiCompatLlmClient", () => {
   it("POSTs the OpenAI-compatible body and captures usage", async () => {
     const { fetchImpl, calls } = fakeFetch(async () => jsonResponse(200, okJson));
     const client = new OpenAiCompatLlmClient({ baseUrl: "https://llm.example/v1/", apiKey: "k", fetchImpl, sleep: noSleep });
     const res = await client.chat(REQ);
-    expect(res).toEqual({ content: "hello", usage: { promptTokens: 12, completionTokens: 3, totalTokens: 15 } });
+    expect(res).toEqual({ content: "hello", usage: { promptTokens: 12, completionTokens: 3, totalTokens: 15, promptCacheHitTokens: null, promptCacheMissTokens: null } });
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("https://llm.example/v1/chat/completions");
     expect(calls[0]!.init.headers.Authorization).toBe("Bearer k");
@@ -139,7 +172,7 @@ describe("OpenAiCompatLlmClient", () => {
       const res = await client.chat({ ...REQ, tools: TOOLS });
       expect(res).toEqual({
         content: "",
-        usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+        usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7, promptCacheHitTokens: null, promptCacheMissTokens: null },
         toolCalls: [{ id: "call_1", name: "getDailyReport", argumentsJson: '{"market":"US"}' }],
       });
       const body = JSON.parse(calls[0]!.init.body);

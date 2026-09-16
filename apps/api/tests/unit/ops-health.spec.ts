@@ -16,7 +16,7 @@
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { computeHealth, MISSED_RUN_GRACE_HOURS, type HealthReport } from "../../src/ops/health.js";
 import { parseOpsHealthArgs, renderHealth, todayHkt, opsHealthArtifactPath, LOG_DIR } from "../../src/cli/ops-health.js";
 
@@ -49,8 +49,9 @@ interface ScreenRow {
   source?: "chain" | "rescreen";
 }
 
-function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Record<string, string | string[]>; running?: RunRow[] } = {}) {
+function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Record<string, string | string[]>; running?: RunRow[]; costRows?: { model: string; agent: string; usageJson: string | null }[] } = {}) {
   const runs = (opts.runs ?? []).map((r) => ({ topN: 40, failed: 0, ...r }));
+  const costRows = opts.costRows ?? [];
   const screens = opts.screens ?? [];
   const bars = opts.bars ?? {};
   const running = opts.running ?? [];
@@ -59,6 +60,7 @@ function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Recor
     return v === undefined ? [] : Array.isArray(v) ? v : [v];
   };
   return {
+    agentDecision: { findMany: async () => costRows },
     deepDiveRun: {
       findFirst: async ({ where }: any) => {
         const pool = where.status === "running" ? running : runs;
@@ -759,5 +761,101 @@ describe("ops-health CLI surface", () => {
 
   it("grace is 6h and runs are alert-free inside it", () => {
     expect(MISSED_RUN_GRACE_HOURS).toBe(6);
+  });
+});
+
+/** Charter K3's spend line (2026-09-16). It is INFORMATIONAL: the whole point of
+ *  the tests below is that a spend number — even one over cap — can never move a
+ *  lane's level. */
+describe("computeHealth — K3 cost line (informational only)", () => {
+  const CLOSED_DAY = {
+    runs: [{ id: 7, market: "HK", runAt: hkt("2026-09-14T20:50:00"), source: "chain", screenRunId: 15 }],
+    screens: [{ id: 15, market: "HK", runAt: hkt("2026-09-14T20:40:00"), sessionDate: "2026-09-14" }],
+    bars: { HK: "2026-09-14" },
+  };
+  const NOW = hkt("2026-09-14T21:30:00");
+  const ROW = { model: "deepseek-flash", agent: "bull", usageJson: JSON.stringify({ promptTokens: 1520, completionTokens: 32, promptCacheHitTokens: 1280, promptCacheMissTokens: 240 }) };
+
+  /** Prices are read from process.env by design (config, never a default), so the
+   *  tests set and then clear them. */
+  const withPrices = async (env: Record<string, string>, fn: () => Promise<void>) => {
+    for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
+    try {
+      await fn();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  };
+
+  it("reports month-to-date spend, the measured cache rate and the basis when prices are configured", async () => {
+    await withPrices(
+      {
+        LLM_PRICE_INPUT_PER_MTOK: "0.15",
+        LLM_PRICE_OUTPUT_PER_MTOK: "0.6",
+        LLM_PRICE_CACHE_HIT_PER_MTOK: "0.003",
+        LLM_PRICE_BASIS: "test basis 2026-09-16",
+        LLM_MONTHLY_CAP_USD: "10",
+      },
+      async () => {
+        const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [ROW] }), { now: NOW, reportsDir });
+        const c = r.cost!;
+        expect(c.priced).toBe(true);
+        expect(c.month).toBe("2026-09");
+        expect(c.monthUsd).toBeCloseTo(59.04e-6, 12);
+        expect(c.capUsd).toBe(10);
+        expect(c.overCap).toBe(false);
+        expect(c.cacheHitRate).toBeCloseTo(1280 / 1520, 6);
+        expect(c.upperBound).toBe(false);
+        expect(c.basis).toBe("test basis 2026-09-16");
+        expect(renderHealth(r)).toMatch(/cost 2026-09: \$0\.00 of \$10\.00 cap · 1 calls/);
+      },
+    );
+  });
+
+  it("an OVER-CAP spend reports itself but must NOT raise the health level", async () => {
+    await withPrices({ LLM_PRICE_INPUT_PER_MTOK: "0.15", LLM_PRICE_OUTPUT_PER_MTOK: "0.6", LLM_MONTHLY_CAP_USD: "0.00001" }, async () => {
+      const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [ROW] }), { now: NOW, reportsDir });
+      expect(r.cost!.overCap).toBe(true);
+      // The claim: a spend overrun cannot touch the level system. Scoped to the
+      // lane, because the overall level also carries the weekly-job artifacts.
+      expect(lane(r, "HK").level).toBe("healthy");
+      expect(lane(r, "HK").reasons.join(" ")).not.toMatch(/cost|spend/i);
+      // …and it is still printed, so the signal is not silenced by being benign.
+      expect(renderHealth(r)).toMatch(/OVER CAP/);
+    });
+  });
+
+  it("with no prices configured it reports tokens and refuses to invent dollars", async () => {
+    const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [ROW] }), { now: NOW, reportsDir });
+    const c = r.cost!;
+    expect(c.priced).toBe(false);
+    expect(c.monthUsd).toBeNull();
+    expect(c.capUsd).toBeNull();
+    expect(c.overCap).toBe(false);
+    expect(c.promptTokens).toBe(1520);
+    const out = renderHealth(r);
+    expect(out).toMatch(/no prices configured/);
+    expect(out).not.toMatch(/\$\d/);
+  });
+
+  it("labels a pre-cache-split reading an upper bound instead of presenting it as measured", async () => {
+    await withPrices({ LLM_PRICE_INPUT_PER_MTOK: "0.15", LLM_PRICE_OUTPUT_PER_MTOK: "0.6" }, async () => {
+      const row = { model: "k3-256k", agent: "bull", usageJson: JSON.stringify({ promptTokens: 1520, completionTokens: 32 }) };
+      const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [row] }), { now: NOW, reportsDir });
+      expect(r.cost!.upperBound).toBe(true);
+      expect(r.cost!.cacheHitRate).toBeNull();
+      expect(renderHealth(r)).toMatch(/UPPER BOUND/);
+    });
+  });
+
+  it("names the model mix when a month straddles the switch, instead of blending two price lists", async () => {
+    await withPrices({ LLM_PRICE_INPUT_PER_MTOK: "0.15", LLM_PRICE_OUTPUT_PER_MTOK: "0.6", LLM_PRICE_CACHE_HIT_PER_MTOK: "0.003" }, async () => {
+      const k3 = { model: "k3-256k", agent: "bull", usageJson: JSON.stringify({ promptTokens: 1000, completionTokens: 100 }) };
+      const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [k3, ROW] }), { now: NOW, reportsDir });
+      expect(r.cost!.modelMix.map((m) => m.model)).toEqual(["k3-256k", "deepseek-flash"]);
+      const out = renderHealth(r);
+      expect(out).toMatch(/k3-256k 1, deepseek-flash 1/);
+      expect(lane(r, "HK").level).toBe("healthy");
+    });
   });
 });

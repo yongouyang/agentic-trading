@@ -44,6 +44,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { sessionClosed } from "@agentic-trading/quant-core";
 import { PROSPECTIVE_FROM } from "../cli/accrual.js";
+import { loadCostRows, parseCapUsd, parsePricing, summarize } from "./cost.js";
 import type { PrismaService } from "../prisma.service.js";
 
 export const HKT_OFFSET_MS = 8 * 3600 * 1000;
@@ -179,6 +180,40 @@ export interface HealthReport {
   level: HealthLevel;
   lanes: LaneHealth[];
   jobs: JobHealth[];
+  /** Charter K3's spend reading (2026-09-16). INFORMATIONAL ONLY — like
+   *  `rescreenableHoles`, it never contributes a reason or moves the level:
+   *  exceeding a spend cap is a discipline signal, not a data-integrity
+   *  failure, and mixing them would devalue the level system. `null` only if the
+   *  store read failed. */
+  cost: HealthCost | null;
+}
+
+export interface HealthCost {
+  /** False when `LLM_PRICE_*` are unset — then every USD field is null and
+   *  consumers must show tokens without inventing dollars. */
+  priced: boolean;
+  basis: string | null;
+  /** Calendar month-to-date, HKT (the zone every other window in this file uses). */
+  month: string;
+  monthUsd: number | null;
+  capUsd: number | null;
+  overCap: boolean;
+  calls: number;
+  promptTokens: number;
+  completionTokens: number;
+  cacheHitTokens: number;
+  cacheMissTokens: number;
+  /** Measured over rows carrying the cache split; `null` while none do. */
+  cacheHitRate: number | null;
+  /** True when some rows predate cache-split capture: the USD figure is an
+   *  upper bound, and it is labelled that way rather than silently presented. */
+  upperBound: boolean;
+  /** Per-model calls (and spend) in the window. A month that straddles a model
+   *  switch is a month whose dollar total mixes two price lists — and in this
+   *  project's first such month, one of them (k3-256k) was subscription-billed
+   *  and therefore had NO marginal cost at all. The mix is published so the
+   *  headline number can be read correctly instead of being silently blended. */
+  modelMix: { model: string; calls: number; usd: number | null }[];
 }
 
 export interface HealthOptions {
@@ -527,5 +562,45 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
 
   const all = [...lanes.map((l) => l.level), ...jobs.map((j) => j.level)];
   const level: HealthLevel = all.includes("alert") ? "alert" : all.includes("warn") ? "warn" : "healthy";
-  return { asOf: now.toISOString(), level, lanes, jobs };
+  return { asOf: now.toISOString(), level, lanes, jobs, cost: await computeCost(prisma, now) };
+}
+
+/** First instant of the HKT calendar month containing `now`. */
+export function hktMonthStart(now: Date): { start: Date; month: string } {
+  const { y, m } = hktParts(now);
+  return { start: hktSlot(y, m, 1, 0, 0), month: `${y}-${String(m).padStart(2, "0")}` };
+}
+
+/** K3's reading. Informational by construction — it returns data, never a reason,
+ *  so it cannot move a lane's level. */
+async function computeCost(prisma: PrismaService, now: Date): Promise<HealthCost | null> {
+  const pricing = parsePricing(process.env);
+  const capUsd = parseCapUsd(process.env);
+  const { start, month } = hktMonthStart(now);
+  try {
+    const rows = await loadCostRows(prisma, start, now);
+    const s = summarize(rows, pricing, capUsd);
+    return {
+      priced: s.priced,
+      basis: s.basis,
+      month,
+      monthUsd: s.priced ? s.totals.usd : null,
+      capUsd: s.priced ? s.capUsd : null,
+      overCap: s.overCap,
+      calls: s.totals.calls,
+      promptTokens: s.totals.promptTokens,
+      completionTokens: s.totals.completionTokens,
+      cacheHitTokens: s.totals.cacheHitTokens,
+      cacheMissTokens: s.totals.cacheMissTokens,
+      cacheHitRate: s.cacheHitRate,
+      upperBound: s.totals.upperBound,
+      modelMix: Object.entries(s.byModel)
+        .map(([model, t]) => ({ model, calls: t.calls, usd: s.priced ? t.usd : null }))
+        .sort((a, b) => b.calls - a.calls),
+    };
+  } catch {
+    // A cost read must never be able to fail the health check that guards the
+    // data pipeline: absent is better than a false ALERT.
+    return null;
+  }
 }

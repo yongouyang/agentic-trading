@@ -491,6 +491,16 @@ alerts on (older than 2 h).
 check that can catch a **killed** process, which reports no exit code of its own.
 It is lane-scoped so a stale HK lane cannot fail the US chain.
 
+**Spend (K3, added 2026-09-16).** The health report also carries a month-to-date
+cost reading computed from the decision log (`ops/cost.ts` over
+`AgentDecision.usageJson`). It is **informational only** — it contributes no
+reason and cannot move a level, like the rescreenable-holes line — and it prints
+tokens instead of dollars when `LLM_PRICE_*` is unset, because prices are a
+provider fact that belongs in `.env`, not in code. Rows written before the
+prompt-cache split was captured are labelled `UPPER BOUND`, and a month that
+straddles a model switch publishes its model mix (see K3 in the charter for the
+measured cache-hit reasoning).
+
 **Health model.** Per lane: newest complete run, newest screen run, store data
 cutoff, missed evening catch-ups, and stale `running` rows. Cadence is
 weekday-arithmetic over the **guarded evening catch-up** (re-declared

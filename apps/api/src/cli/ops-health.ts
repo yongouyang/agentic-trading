@@ -12,8 +12,14 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { computeHealth, type HealthReport, type LaneHealth } from "../ops/health.js";
+import { computeHealth, type HealthCost, type HealthReport, type LaneHealth } from "../ops/health.js";
 import { PrismaService } from "../prisma.service.js";
+// Same native .env loading the deep-dive uses (Node 22 `process.loadEnvFile`, no
+// dotenv in this repo) and in the same order. Needed here since 2026-09-16 for
+// the K3 cost line: the prices live in .env, and this is the only other CLI that
+// reads them — without this it reported "no prices configured" forever while the
+// values sat in the file. Shell env still wins (loadEnvFile never overrides).
+import { loadEnvFiles } from "./deep-dive.js";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 
@@ -65,9 +71,32 @@ function renderLane(l: LaneHealth): string[] {
   return lines;
 }
 
+/** Charter K3's spend line (2026-09-16). Informational, exactly like the holes
+ *  line: printed even when it is over cap, but never a level and never a reason. */
+function renderCost(c: HealthCost | null): string[] {
+  if (!c) return ["    · cost: unavailable (store read failed — informational only)"];
+  const tokens =
+    `${(c.promptTokens / 1e6).toFixed(2)}M in / ${(c.completionTokens / 1e6).toFixed(2)}M out` +
+    (c.cacheHitRate != null ? ` · ${(c.cacheHitRate * 100).toFixed(0)}% of input cached` : "");
+  if (!c.priced) {
+    return [
+      `    · cost ${c.month}: ${c.calls} calls · ${tokens} — no prices configured (set LLM_PRICE_INPUT_PER_MTOK / LLM_PRICE_OUTPUT_PER_MTOK / LLM_PRICE_CACHE_HIT_PER_MTOK in .env)`,
+    ];
+  }
+  const cap = c.capUsd != null ? ` of $${c.capUsd.toFixed(2)} cap${c.overCap ? " — OVER CAP" : ""}` : " (no cap set)";
+  // A month straddling the model switch mixes two price lists (and one of them
+  // was subscription-billed), so the mix is named rather than blended away.
+  const mix = c.modelMix.length > 1 ? ` · ${c.modelMix.map((m) => `${m.model} ${m.calls}`).join(", ")}` : "";
+  return [
+    `    · cost ${c.month}: $${c.monthUsd!.toFixed(2)}${cap} · ${c.calls} calls${mix} · ${tokens} · ${c.basis}` +
+      `${c.upperBound ? " · UPPER BOUND (rows before cache-split capture)" : ""}`,
+  ];
+}
+
 export function renderHealth(report: HealthReport): string {
   const lines = [`== OPS HEALTH == ${report.asOf} · ${report.level.toUpperCase()}`];
   for (const l of report.lanes) lines.push(...renderLane(l));
+  lines.push(...renderCost(report.cost));
   for (const j of report.jobs) {
     lines.push(`${j.job}: ${j.level.toUpperCase()} · last artifact ${j.lastArtifactDate ?? "—"}`);
     for (const r of j.reasons) lines.push(`    - ${r}`);
@@ -85,6 +114,7 @@ export function opsHealthArtifactPath(now: Date = new Date()): string {
 
 async function main(): Promise<void> {
   const args = parseOpsHealthArgs(process.argv.slice(2));
+  loadEnvFiles();
   const prisma = new PrismaService();
   await prisma.$connect();
   let report: HealthReport;
