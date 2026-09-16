@@ -94,7 +94,14 @@ PROGRESS 2026-09-06 (§1 quick wins).
   `Instrument.dataSource` (new column, default `"yahoo"`) set to
   `"eastmoney"`. On any later run where Yahoo succeeds for that ticker, the
   full-window rewrite flips it back to `"yahoo"` automatically. A ticker's
-  stored series is therefore always single-source.
+  stored series is therefore always single-source — with ONE curated
+  exception (added 2026-09-15): `YAHOO_KNOWN_GAPS` sessions. Those dates are
+  eastmoney-rescued by definition, so the full-window rewrite (in
+  `screen:daily` and `repair:store` alike) preserves the stored bar on them
+  and drops any fresh Yahoo bar dated there. Without the guard, every daily
+  rewrite silently undid the session rescues — the 0941.HK phantom returned
+  the day after its 09-06 repair and only the weekly eastmoney sentinel leg
+  noticed.
 - **CA handling on rescue:** eastmoney supplies no usable CA events. Keep any
   previously stored Yahoo dividend events and continue deriving with them.
   If none exist, set `caDegraded = true` and warn ("rescue-filled without CA
@@ -123,7 +130,8 @@ PROGRESS 2026-09-06 (§1 quick wins).
 The §4.3 insurance against silent provider revision — not optional per the
 architecture. Manual CLI; run it roughly weekly. *(2026-09-06)* Superseded:
 now scheduled via launchd — `com.agentic-trading.weekly-sentinel` runs it with
-`--eastmoney` every Sunday 08:47 HKT (see architecture §5.1); the CLI remains
+`--eastmoney` every Sunday 20:47 HKT (see architecture §5.1; moved from 08:47
+on 2026-09-15 because the machine is only on in the evening); the CLI remains
 for ad-hoc runs. Read-only by design: it never writes bars, events or runs —
 only the JSON artifact and the exit code.
 

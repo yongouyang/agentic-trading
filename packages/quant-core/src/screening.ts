@@ -5,6 +5,22 @@
  * Phase 4 backtests; they are chosen to be conventional and defensible, not
  * optimal. Do not tune before then.
  *
+ * Hypothesized economic mechanism (charter §5.3, written 2026-09-15 — one
+ * sentence per component; the *hypothesis* Phase 4/5 tests, not an
+ * established result):
+ *   mom60 (w 0.50) — medium-term momentum rides investor underreaction:
+ *     anchoring and gradual information diffusion (plus institutional
+ *     herding) make prices drift for months after fundamentals shift.
+ *   mom20 (w 0.25) — the same underreaction at monthly scale, but noisier
+ *     and more reversal-prone, hence half weight.
+ *   sharpe252 (w 0.25) — return per unit of volatility rewards steady
+ *     compounders over jumpy gainers; economically a quality/predictability
+ *     tilt (the low-volatility anomaly: lottery-demand leaves steady names
+ *     underpriced).
+ *   trend alignment (gate, close > SMA50 > SMA200) — requires the drift to
+ *     be established at two timescales, filtering falling-knife bounces
+ *     where positive momentum is an artifact inside a downtrend.
+ *
  * Eligibility (failing any ⇒ excluded, reason recorded):
  *   ≥252 adjusted bars; adv20 ≥ floor; vol60 ≤ 0.60; mdd252 ≥ −0.50.
  * Signal (all must hold):

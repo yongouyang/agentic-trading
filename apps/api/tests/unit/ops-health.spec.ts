@@ -447,10 +447,11 @@ describe("computeHealth — weekly jobs", () => {
 
 describe("computeHealth — a weekly job must be due before it can be late", () => {
   // Regression for the 2026-09-11 false alarm: the f10 job was installed
-  // Sun 09-10 23:21, *after* that morning's 09:17 slot, so its first due slot
-  // was Sun 09-13. Health still reported ALERT, and because any job alert pins
-  // the whole report, the dashboard banner went red permanently for a job that
-  // had never been due — and could never go green before 09-13.
+  // Sun 09-10 23:21, *after* that morning's slot (09:17 then; 21:17 since the
+  // 2026-09-15 evening move), so its first due slot was Sun 09-13. Health still
+  // reported ALERT, and because any job alert pins the whole report, the
+  // dashboard banner went red permanently for a job that had never been due —
+  // and could never go green before 09-13.
   const installed = hkt("2026-09-10T23:21:00");
   const label = "com.agentic-trading.weekly-f10";
 
@@ -479,7 +480,7 @@ describe("computeHealth — a weekly job must be due before it can be late", () 
     const rep = mkdtempSync(path.join(tmpdir(), "ops-health-rep-"));
     try {
       plistInstalledAt(la, label, installed);
-      // Sun 09-13 09:17 has passed (1 slot); the 6h grace is long gone.
+      // Sun 09-13 21:17 has passed (1 slot); the 6h grace is long gone.
       const r = await computeHealth(stubPrisma(), {
         now: hkt("2026-09-14T09:00:00"),
         reportsDir: rep,
@@ -542,8 +543,8 @@ describe("computeHealth — the weekly validation digest job", () => {
     const la = mkdtempSync(path.join(tmpdir(), "ops-health-la-"));
     const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
     try {
-      // Installed Sun 09-13 10:00 — after that morning's 09:47 slot, so the
-      // first due slot is Sun 09-20 09:47.
+      // Installed Sun 09-13 10:00 — that evening's 21:47 slot has not passed
+      // yet at 20:00, so nothing is due (first due slot is Sun 09-13 21:47).
       plistInstalledAt(la, label, hkt("2026-09-13T10:00:00"));
       const r = await computeHealth(stubPrisma(), {
         now: hkt("2026-09-13T20:00:00"),
@@ -566,7 +567,7 @@ describe("computeHealth — the weekly validation digest job", () => {
     const logs = mkdtempSync(path.join(tmpdir(), "ops-health-logs-"));
     try {
       plistInstalledAt(la, label, hkt("2026-09-10T23:21:00"));
-      // Sun 09-13 09:47 has passed (1 slot); the 6h grace is long gone.
+      // Sun 09-13 21:47 has passed (1 slot); the 6h grace is long gone.
       const r = await computeHealth(stubPrisma(), {
         now: hkt("2026-09-14T09:00:00"),
         reportsDir,

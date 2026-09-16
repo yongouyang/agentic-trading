@@ -11,11 +11,19 @@
  * `GET /ops/health` endpoint (the dashboard banner) and the chain's
  * post-condition check (W1c), so all three agree by construction.
  *
- * Cadence (re-declared 2026-09-13): the machine is normally OFF at the 06:10
- * (US) and 16:50 (HK) slots, so the realistic daily run is the GUARDED evening
- * catch-up (`daily-catchup` plist, 20:30 and 23:03 HKT). The morning/afternoon
- * jobs stay armed as opportunistic bonuses — they can satisfy the expectation
- * early, they can never be "missed". A lane therefore counts a missed evening
+ * Cadence (re-declared 2026-09-14): the 06:10 (US) and 16:50 (HK) jobs were
+ * REMOVED on 2026-09-14 — the machine is realistically only on in the
+ * evening, so the GUARDED evening catch-up (`daily-catchup` plist, 20:30 and
+ * 23:03 HKT) is now the ONLY daily run for both lanes, and this health model's
+ * expected cadence. Since the same day the catch-up guard PROBES the provider
+ * for the newest completed session instead of trusting the store alone, so a
+ * power-off day (store never fetched) triggers the chain that brings the
+ * store forward — which keeps the store-bound behind-ness logic here accurate
+ * for the states that are actionable. A fully-dark evening (machine off
+ * through both slots) remains invisible to the missed count — accepted: its
+ * verdicts are unrecoverable by design (promptness gate) and its screen
+ * sessions surface as informational rescreenable holes after the next fetch.
+ * A lane therefore counts a missed evening
  * only when it was still BEHIND after an evening's slots (last slot + grace)
  * on a day the store held a completed unscreened session — "behind" being the
  * ops:catchup definition: the store holds a session newer than the newest
@@ -68,8 +76,9 @@ export const EVENING_LAST_SLOT = { hour: 23, minute: 3 } as const;
 /** Cadence-aware weekday arithmetic (locked 2026-09-13): which HKT evenings a
  *  lane can be expected screened by. HK sessions are due the SAME evening
  *  (Mon–Fri, lag 0); US sessions the FOLLOWING HKT evening, so US evenings are
- *  Tue–Sat (lag 1 by construction). The 06:10/16:50 jobs are not in this table
- *  at all — they are opportunistic bonuses, never "missed". */
+ *  Tue–Sat (lag 1 by construction). The 06:10/16:50 jobs were removed on
+ *  2026-09-14 and were never in this table anyway — the guarded evening run is
+ *  the only daily run, so it is the only thing that can be "missed". */
 export const LANE_CADENCE: Record<"HK" | "US", { weekdays: number[] }> = {
   HK: { weekdays: [1, 2, 3, 4, 5] },
   US: { weekdays: [2, 3, 4, 5, 6] },
@@ -91,9 +100,9 @@ const DEFAULT_LOGS_DIR = path.join(PKG_ROOT, "..", "..", "logs");
  *  matters, because its mtime is the only record of when the job was
  *  installed. */
 export const WEEKLY_CADENCE: Record<WeeklyJob, { label: string; weekday: number; hour: number; minute: number }> = {
-  sentinel: { label: "com.agentic-trading.weekly-sentinel", weekday: 0, hour: 8, minute: 47 },
-  f10: { label: "com.agentic-trading.weekly-f10", weekday: 0, hour: 9, minute: 17 },
-  validation: { label: "com.agentic-trading.weekly-validation", weekday: 0, hour: 9, minute: 47 },
+  sentinel: { label: "com.agentic-trading.weekly-sentinel", weekday: 0, hour: 20, minute: 47 },
+  f10: { label: "com.agentic-trading.weekly-f10", weekday: 0, hour: 21, minute: 17 },
+  validation: { label: "com.agentic-trading.weekly-validation", weekday: 0, hour: 21, minute: 47 },
 };
 
 /** The per-job artifact prefix, and which directory the artifact lives in. */
@@ -365,8 +374,7 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     // session the lane has not caught up on — each unscreened store session
     // (screen leg), plus the newest screened session when its chain verdict is
     // missing (verdict leg). An empty list means the lane is NOT behind, and a
-    // lane that is not behind cannot have missed anything: the 06:10/16:50
-    // bonuses satisfy the expectation early by construction.
+    // lane that is not behind cannot have missed anything.
     const pending = new Set<string>();
     if (storeThrough && lastScreened && storeThrough > lastScreened) {
       for (const d of sessionCandidatesBetween(lastScreened, storeThrough)) pending.add(expectedEvening(market, d));

@@ -3,6 +3,7 @@ export * from "./data-quality.js";
 export * from "./adjustment.js";
 export * from "./calendars.js";
 export * from "./indicators.js";
+export * from "./correlation.js";
 export * from "./screening.js";
 export * from "./replay.js";
 export * from "./ic.js";

@@ -26,7 +26,7 @@
  */
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { DataOutcome, type Bar } from "@agentic-trading/quant-core";
+import { DataOutcome, YAHOO_KNOWN_GAPS, type Bar } from "@agentic-trading/quant-core";
 import { EastmoneyRepairProvider, type RepairProvider } from "../market-data/eastmoney-repair.provider.js";
 import { MarketDataService } from "../market-data/market-data.service.js";
 import { YahooMarketDataProvider } from "../market-data/yahoo-market-data.provider.js";
@@ -108,10 +108,18 @@ export async function repairSymbol(deps: RepairDeps, symbol: string, requiredDat
   }
 
   // Full-window rewrite, identical to daily-screen.ts (single-source
-  // invariant: a successful Yahoo fetch reclaims series ownership).
-  await prisma.bar.deleteMany({ where: { instrumentId: instrument.id } });
+  // invariant: a successful Yahoo fetch reclaims series ownership) — with the
+  // same YAHOO_KNOWN_GAPS exception: curated eastmoney-rescued sessions
+  // survive the rewrite and fresh Yahoo bars on those defect dates are dropped.
+  const knownGaps = YAHOO_KNOWN_GAPS.get(symbol);
+  const writableBars = knownGaps?.size ? result.bars.filter((b) => !knownGaps.has(b.date)) : result.bars;
+  await prisma.bar.deleteMany({
+    where: knownGaps?.size
+      ? { instrumentId: instrument.id, date: { notIn: [...knownGaps] } }
+      : { instrumentId: instrument.id },
+  });
   await prisma.bar.createMany({
-    data: result.bars.map((b) => ({
+    data: writableBars.map((b) => ({
       instrumentId: instrument.id,
       date: b.date,
       open: b.open,

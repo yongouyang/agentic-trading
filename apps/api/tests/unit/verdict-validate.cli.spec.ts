@@ -72,8 +72,8 @@ describe("verdict:validate — surfaces", () => {
 
 describe("promptness gate — a late run is look-ahead, not an observation", () => {
   it("treats the US lane's own next-morning convention as prompt", () => {
-    // daily-us runs 06:10 HKT on the morning after the US close, so runDate is
-    // entry + 1 by construction. Anything stricter would discard every US verdict.
+    // The evening chain (20:30 HKT) screens the PREVIOUS US session, so runDate
+    // is entry + 1 by construction. Anything stricter would discard every US verdict.
     expect(MAX_PROMPT_LAG_DAYS).toBe(1);
     expect(daysBetweenIso("2026-09-10", "2026-09-11")).toBe(1);
   });

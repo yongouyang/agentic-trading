@@ -18,8 +18,6 @@ DEST="$HOME/Library/LaunchAgents"
 DOMAIN="gui/$(id -u)"
 
 LABELS=(
-  com.agentic-trading.daily-hk
-  com.agentic-trading.daily-us
   com.agentic-trading.weekly-sentinel
   com.agentic-trading.weekly-f10
   com.agentic-trading.weekly-validation

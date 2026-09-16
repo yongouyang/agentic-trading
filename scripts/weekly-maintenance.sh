@@ -4,7 +4,8 @@
 #   scripts/weekly-maintenance.sh sentinel   # screen:sentinel -- --eastmoney
 #   scripts/weekly-maintenance.sh f10        # ca:f10-refresh (HK lane)
 #
-# Sunday morning HKT: sentinel 08:47, f10 09:17 — the gap keeps the two
+# Sunday evening HKT: sentinel 20:47, f10 21:17 (moved from Sunday morning on
+# 2026-09-15 — the machine is only on in the evening) — the gap keeps the two
 # eastmoney hosts (push2his vs datacenter) from being hit back-to-back.
 # Logs via launchd StandardOutPath to logs/; diff week-over-week.
 set -u

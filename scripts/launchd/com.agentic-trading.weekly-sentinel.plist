@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Weekly sentinel WITH the eastmoney leg (locked 2026-09-06): Sun 08:47 HKT.
+<!-- Weekly sentinel WITH the eastmoney leg: Sun 20:47 HKT (moved from 08:47 on
+     2026-09-15 — the machine is only on in the evening, and launchd does not
+     replay slots missed while powered off).
      Paced ≥2s+jitter per name; exit 1 = ALARMs to triage in the log. -->
 <plist version="1.0">
 <dict>
@@ -11,7 +13,7 @@
     <string>sentinel</string>
   </array>
   <key>StartCalendarInterval</key>
-  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>47</integer></dict>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>20</integer><key>Minute</key><integer>47</integer></dict>
   <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-sentinel.log</string>
   <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-sentinel.err.log</string>
 </dict>

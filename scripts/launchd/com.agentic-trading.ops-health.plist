@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Ops health (W4e, docs/ops-hardening-plan.md). Runs after both daily chains
-     so the artifact and log record exist even when nobody opens the dashboard.
+<!-- Ops health (W4e, docs/ops-hardening-plan.md). Runs after the evening
+     chains so the artifact and log record exist even when nobody opens the
+     dashboard.
 
-     Fire times are 07:15 and 17:30 HKT, i.e. after the US chain (Tue-Sat 06:10)
-     and after the HK chain (Mon-Fri 16:50). launchd catches missed calendar
-     jobs on wake, so a sleeping laptop delays this rather than skipping it —
-     but a powered-OFF laptop skips it outright (see the daily-hk note).
+     Fire time is 22:35 HKT, once daily (changed from 07:15/17:30 on
+     2026-09-14, when the 06:10/16:50 chain jobs were removed): the machine is
+     realistically only on in the evening, 22:35 lands after the 20:30 chains
+     have typically finished (a chain is ~10-30 min), and before the 23:03
+     second-chance slot. Health's missed-evening grace already counts through
+     the PREVIOUS evening, so a single late slot loses nothing. Note the
+     chain's post-condition (W1c) also runs ops:health per lane at the end of
+     every chain, so on chain days additional artifacts are written anyway —
+     this job's slot is the backstop for an evening nothing else ran.
+     launchd catches missed calendar jobs on wake, so a sleeping laptop delays
+     this rather than skipping it — but a powered-OFF laptop skips it outright.
 
      Exit 1 = at least one lane or weekly job is in ALERT; triage in the log.
      NOTE: this job is a RECORD, not the alerting mechanism — the user-facing
@@ -21,8 +29,7 @@
   </array>
   <key>StartCalendarInterval</key>
   <array>
-    <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>15</integer></dict>
-    <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>22</integer><key>Minute</key><integer>35</integer></dict>
   </array>
   <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/ops-health.log</string>
   <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/ops-health.err.log</string>

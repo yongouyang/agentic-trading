@@ -1,28 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Evening catch-up (2026-09-11; second slot added 2026-09-13): GUARDED slots
-     that recover a day launchd could not replay. launchd has no memory of
-     calendar slots that elapsed while the machine was off (architecture §5.1),
-     and measured supply is 56% — which now costs a lost observation from two
-     validation samples. The machine is normally OFF at the 06:10 (US) / 16:50
-     (HK) slots, so these evening slots are the realistic daily run and
-     ops:health's expected cadence; the morning/afternoon jobs stay armed as
-     opportunistic bonuses.
+<!-- THE daily pipeline (2026-09-14 — no longer a safety net). The machine is
+     realistically only on in the evening, so the 06:10 (US) and 16:50 (HK)
+     launchd jobs were removed on 2026-09-14; these two guarded evening slots
+     are now the ONLY daily runs for both lanes. At 20:30 HKT the HK lane's
+     same-day session is complete (close 16:00, bars storable from 16:10); the
+     US lane processes the PREVIOUS US session (closed 04:00/05:00 HKT that
+     morning) — lag 1 by construction, admissible under the promptness gate.
 
-     20:30 HKT: after the HK close and BEFORE the US open, so the US lane's
-     newest bar is always a completed session.
+     20:30 HKT is the primary slot; 23:03 HKT is the second chance for an
+     evening the first slot missed (launchd has no memory of calendar slots
+     that elapsed while the machine was off — architecture §5.1).
 
      23:03 HKT is safe for both lanes ONLY because of the 2026-09-13
      session-close filter (quant-core sessionClosed, applied at the
      fetch/upsert boundary in screen:daily): at 23:03 HKT the US session is in
      progress (open 21:30 HKT in EDT / 22:30 in EST), and the filter guarantees
      Yahoo's still-forming bar never enters the store, so the guard screens the
-     previous COMPLETED US session — lag 1, admissible under the promptness
-     gate by construction. Without that filter this slot would poison the
-     sample it protects.
+     previous COMPLETED US session. Without that filter this slot would poison
+     the sample it protects.
 
      scripts/daily-catchup.sh runs a lane only when ops:catchup reports it is
-     behind, so a healthy day is a no-op rather than a duplicate run.
+     behind, so a healthy evening is a no-op rather than a duplicate run.
+     Since 2026-09-14 the guard no longer trusts the store alone: it PROBES
+     the provider for the newest completed session (first 3 universe names,
+     sessionClosed filter), so a power-off day — store never fetched, nothing
+     to compare — can no longer read as "up to date" (the 2026-09-14 incident:
+     powered off until 20:05 HKT, HK's session nearly lost while every surface
+     reported healthy).
      PATH is exported by the script itself (see its header), as in daily-chain.sh —
      every other plist here relies on the script, and a plist PATH is easy to get
      wrong silently: the first version of this one named ~/.local/share/pnpm, which

@@ -245,6 +245,52 @@ describe("runDailyScreen — dummy provider, throwaway SQLite", () => {
   });
 });
 
+describe("runDailyScreen — YAHOO_KNOWN_GAPS guard on the full-window rewrite", () => {
+  // Regression for 2026-09-15: before the guard, every successful Yahoo fetch
+  // rewrote the WHOLE bar series and silently undid the curated eastmoney
+  // rescues — the 0941.HK 2024-01-15 phantom returned the day after its
+  // 09-06 rescue, and the 2025-10-24 / 2026-03-06 rescues vanished with it.
+  it("an eastmoney-rescued known-gap bar survives the rewrite; a fresh Yahoo bar on that date is dropped", async () => {
+    const instrument = await prisma.instrument.upsert({
+      where: { symbol: "2800.HK" },
+      create: { symbol: "2800.HK", market: "HK", currency: "HKD", name: "2800.HK" },
+      update: {},
+    });
+    // The curated rescue, as left by `repair:store --rescue 2025-10-24`.
+    await prisma.bar.create({
+      data: { instrumentId: instrument.id, date: "2025-10-24", open: 99.9, high: 100.1, low: 99.8, close: 99.99, volume: 123_000 },
+    });
+    const provider: MarketDataProvider = {
+      fetchDailyBars: async () => ({
+        httpStatus: 200,
+        hasTimestamps: true,
+        providerSaysNotFound: false,
+        corporateActions: [],
+        bars: [
+          { date: "2025-10-22", open: 25.5, high: 25.6, low: 25.4, close: 25.55, volume: 4e8 },
+          { date: "2025-10-23", open: 25.55, high: 25.7, low: 25.5, close: 25.6, volume: 4e8 },
+          // Yahoo keeps serving its defective bar on the curated date:
+          { date: "2025-10-24", open: 25.6, high: 25.6, low: 25.6, close: 25.6, volume: 0 },
+          { date: "2025-10-27", open: 25.7, high: 25.8, low: 25.6, close: 25.75, volume: 4e8 },
+        ],
+      }),
+    };
+    const reports = await runDailyScreen(
+      { prisma, provider, providerLabel: "yahoo", universes: { hk: [entry("2800.HK")] }, reportsDir: null, today: "2025-10-28", log: silent },
+      { market: "hk" },
+    );
+
+    const stored = await prisma.bar.findMany({ where: { instrumentId: instrument.id }, orderBy: { date: "asc" } });
+    expect(stored.map((b) => b.date)).toEqual(["2025-10-22", "2025-10-23", "2025-10-24", "2025-10-27"]);
+    const gap = stored.find((b) => b.date === "2025-10-24")!;
+    expect(gap.close).toBe(99.99); // the rescue, not Yahoo's 25.60 phantom
+    expect(gap.volume).toBe(123_000);
+    expect(
+      reports[0]!.warnings.some((w) => w.includes("YAHOO_KNOWN_GAPS guard") && w.includes("preserved 1") && w.includes("dropped 1")),
+    ).toBe(true);
+  });
+});
+
 /** Deterministic trending provider: 300 weekday bars ending 2026-09-01 with a
  *  per-symbol positive drift plus a tiny alternating wobble (zero-variance
  *  series get sharpe=null by design — indicators never return NaN). */

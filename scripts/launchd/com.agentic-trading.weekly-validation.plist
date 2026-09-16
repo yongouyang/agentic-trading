@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Weekly validation digest (2026-09-13): Sun 09:47 HKT — after f10 (09:17).
+<!-- Weekly validation digest: Sun 21:47 HKT (moved from 09:47 on 2026-09-15,
+     evening-only machine) — after f10 (21:17).
      Runs the two read-only validation clocks (verdict:validate, phase4c:accrual)
      and writes logs/validation-digest-<date>.json so the projection watch
      (Phase-5 A3's re-pricing signal) cannot accrue unnoticed. Both CLIs exit 0
@@ -14,7 +15,7 @@
     <string>/Users/yongouyang/projects/agentic-trading/scripts/weekly-validation.sh</string>
   </array>
   <key>StartCalendarInterval</key>
-  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>47</integer></dict>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>47</integer></dict>
   <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-validation.out.log</string>
   <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-validation.err.log</string>
 </dict>

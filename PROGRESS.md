@@ -5,6 +5,190 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-15 (Round 2) — charter §5.3 MEDIUMs CLOSED: mechanism sentences written, diversification measured for the first time
+
+Both Stage-1-permitted charter findings executed (nothing forbidden touched:
+weights, gates, universe, portfolio rule all unchanged).
+
+**1. Economic mechanism sentences** — one per score component, now in
+`screening.ts`'s header and architecture-v1.md §5 step 3, each labelled as the
+hypothesis Phase 4/5 tests: mom60 rides investor underreaction (anchoring +
+gradual diffusion + herding → months of drift); mom20 is the same at monthly
+scale but noisier/more reversal-prone (half weight); sharpe252 is a
+quality/predictability tilt (low-vol anomaly: lottery-demand leaves steady
+compounders underpriced); trend alignment requires the drift at two
+timescales (filters falling-knife bounces).
+
+**2. Diversification measured** — new read-only CLI `report:correlation`
+(`correlation-report.ts` + quant-core `correlation.ts`: `pearson` reused from
+ic.ts, `returnsByDate`, `pairwiseCorrelation` with per-pair date
+intersection, `summarizeCorrelation`; min overlap 20). Recomputes the latest
+session via `replayScreen` (topN lifted) and reports inter-factor,
+inter-name (breadth + display), and inter-lane correlations over trailing 60
+sessions. First live readings (`reports/correlation-2026-09-15.json`):
+
+- **Inter-factor US: ρ(mom20,mom60)=0.43, sharpe vs both ≈ 0.2** — the
+  composite is NOT one factor; the three components carry mostly independent
+  information. HK: ρ(mom20,mom60)=**−0.49** (n=22, noisy — short-term
+  momentum currently anti-correlated with medium-term in the HK eligible set).
+- **Inter-name US breadth 40: mean ρ 0.078** — broadly diversified — **but
+  max 0.93 (CVX~XLE)**; the display 10 mean 0.108 with max 0.88 (MPC~PSX).
+  Tonight's US list is visibly an energy basket: the mean hides the cluster.
+- **HK breadth 22: mean ρ 0.194, max 0.92 (0939~3328)** — the Chinese-bank
+  cluster again, matching the ⚠CA cohort on the shortlist.
+- **Inter-lane: ρ=−0.089 over 57 common sessions** — HK and US eligible
+  sleeves are effectively uncorrelated; the two-lane structure does
+  diversify.
+
+Charter rows ready to flip to addressed at lock time. The sector cap stays
+unwired (no sector metadata in the store; wiring it is a portfolio-rule
+change, Stage-1-forbidden) — but the max-pair output already names the
+clusters a sector cap would target.
+
+**Tests:** quant-core 187 → **191** (+4 correlation known-answer), api 576 →
+**578** (+2 CLI integration), tsc clean both, quant-core dist rebuilt
+(yesterday's gotcha applied preemptively).
+
+---
+
+## 2026-09-15 (later) — sentinel triage: ingest rewrite was silently undoing every session rescue — guarded, rescues restored, sentinel green
+
+**The bug (bigger than the 3 ALARMs).** `screen:daily`'s full-window rewrite
+("a successful Yahoo fetch reclaims series ownership") ran with NO knowledge
+of `YAHOO_KNOWN_GAPS` — the registry only fed the sentinel's check
+exclusions. So every successful daily Yahoo fetch silently undid the curated
+eastmoney session rescues: the 0941.HK 2024-01-15 phantom was back in the
+store the day after its 09-06 repair, and the 2800.HK 2025-10-24 /
+3195.HK 2025-10-24+2026-03-06 rescues were gone too. The weekly eastmoney
+sentinel leg was the only witness — which is exactly why the class surfaced
+as "the same divergence re-flagged 9 days later."
+
+**Fix.** The rewrite in `daily-screen.ts` AND the identical one in
+`repair-store-bars.ts` now honor the registry: stored bars on known-gap
+dates survive the delete+rewrite, and fresh Yahoo bars on those dates (the
+phantom class) are dropped — with a precise warning only when something was
+actually preserved/dropped (`YAHOO_KNOWN_GAPS guard — preserved N …;
+dropped M …`). Registry: `2026-09-14` added for 2800.HK and 3195.HK
+(confirmed by two carriers in the 09-15 sentinel: eastmoney + tencent serve
+the session, fresh Yahoo's full-window pull omits it). Docs: §A.2
+single-source rule in phase-1-hardening-plan.md amended with the curated
+exception; registry comment in quant-core `calendars.ts` records the lesson.
+
+**Rescues restored** (all level-gate clean): 0941.HK 2024-01-15 (real bar
+65.75 / 9.97M back, phantom gone), 2800.HK 2025-10-24 + 2026-09-14, 3195.HK
+2025-10-24 + 2026-03-06 + 2026-09-14.
+
+**Gotcha worth remembering:** `@agentic-trading/quant-core` is consumed as
+compiled `dist/` — after editing quant-core source, `pnpm -C
+packages/quant-core build` is required or the sentinel/api keep running the
+stale registry (cost one confusing verification run tonight).
+
+**Tests:** +1 integration regression (rescued known-gap bar survives the
+rewrite, fresh phantom dropped, warning logged) — api 575 → **576** passed /
+1 skipped, quant-core 187, tsc clean both packages.
+
+**Verification:** sentinel re-run fully green — **ALARM 0 · WARN 0 · ok 10 ·
+exit 0** (0941.HK eastmoney max dev back to 0.38%; both ETFs show their
+known-gap annotations as exclusions, not alarms). Tomorrow's 20:30 chain is
+the first live exercise of the ingest guard (expect the 0941.HK "dropped 1
+fresh Yahoo bar" warning daily — Yahoo still serves the phantom).
+
+---
+
+## 2026-09-15 (late) — weekly jobs moved to Sunday evening; sentinel run manually, one finding to triage
+
+**Why the sentinel alert kept recurring.** The `weekly-sentinel` 08:47 Sunday
+slot never fired on 09-13: the machine was powered off (evening-only usage,
+per the 09-14 decision), and launchd does not replay `StartCalendarInterval`
+slots missed while powered *off*. f10 (09:17) and validation (09:47) only
+fired because the machine happened to be on by then. The slot times themselves
+were incompatible with when the machine runs — the alert would have recurred
+every week.
+
+**User decision:** run the sentinel manually now and move all three Sunday
+jobs to the evening, keeping the locked 30-min eastmoney spacing:
+**sentinel Sun 20:47, f10 Sun 21:17, validation Sun 21:47 HKT** (both weekly
+artifacts now land before the 22:35 ops-health slot). On Sunday evenings the
+20:30 catch-up is a no-op, so no overlap with the daily chain.
+
+**Changed:** the three plists (Hour 8→20, 9→21) + comments,
+`scripts/weekly-maintenance.sh` header comment, `WEEKLY_CADENCE` in
+`ops/health.ts`, architecture-v1.md §5.1 table, phase-1-hardening-plan.md §B,
+stale slot-time comments in `ops-health.spec.ts`. Reinstalled via
+`install.sh` (bootout/bootstrap/enable) — all 5 jobs verified ARMED. api 575
+tests pass, tsc clean. `ops:health` now reports **HEALTHY overall** (was
+ALERT on sentinel).
+
+**Manual sentinel run (exit 1, 3 ALARMs — expected, triage pending):**
+- `0941.HK` eastmoney-raw max |dev| 1.08% on 2024-01-15 — historical
+  divergence, first time flagged.
+- `2800.HK` / `3195.HK`: store is missing **2026-09-14** while eastmoney and
+  tencent both carry it — a one-day hole in two fixed-sample names (both show
+  09-15, so yesterday's fetch skipped them). Worth a rescreen/repair look.
+- Artifact: `apps/api/reports/sentinel-2026-09-15.json`.
+
+## 2026-09-14 (the catch-up guard's blind spot, caught live on its first full-miss day — fixed with a provider probe; evening run is now THE daily pipeline)
+
+**The incident.** Machine powered off until 20:05 HKT → the 16:50 HK chain
+never fired → no fetch happened → at 20:30 the guarded catch-up compared
+store (09-11) vs screened (09-11), reported "up to date", and nearly let the
+Monday HK session die unobserved while self-reporting healthy. The guard's
+premise — "the store holds a session no run has screened" — is false on
+exactly the full-miss days it exists for, because `screen:daily` is the only
+fetch path and it lives inside the chain that never ran. Caught by manual
+review of the evening log; the HK chain was then run by hand (screen run 20,
+deep-dive run 11: 30 names, 213 calls, worst-exit 0) — today's verdict saved
+inside the promptness window.
+
+**User decision (schedule reality).** The machine is only on in the evening,
+so the 20:30 HKT run is now THE daily pipeline for both lanes: HK's same-day
+session (closed 16:00), US's PREVIOUS session (closed 04:00–05:00 HKT that
+morning — lag 1 by construction, matching the health model's existing
+LANE_CADENCE). The 06:10 daily-us and 16:50 daily-hk launchd jobs were
+REMOVED (booted out, plists deleted from both LaunchAgents and
+scripts/launchd; install.sh/verify.sh now track 5 jobs). ops-health moved
+from 07:15/17:30 to a single 22:35 HKT slot (after the 20:30 chains, before
+the 23:03 second chance; the chain's per-lane post-condition still writes
+artifacts on run days).
+
+**The fix (ops:catchup probe).** The guard now asks the PROVIDER, not the
+store: `makeExpectedSessionProbe` fetches the first 3 universe symbols per
+lane and returns the newest bar date passing quant-core `sessionClosed` —
+the latest session that has actually completed. `decideLane` fires needsRun
+when that probe date exceeds the newest screened session, ahead of the
+unchanged store-based and deep-dive legs; probe failure (null) degrades to
+exactly the old behavior. A probe, not a holiday calendar: on a holiday the
+market itself reports no new session, so there are no false positives and no
+calendar to maintain. Live-verified post-fix at 21:44 HKT: US probe
+correctly read 2026-09-11 (today's session mid-forming — the session-close
+filter holds at the probe boundary too), HK 2026-09-14. ops/health.ts needed
+NO logic change — with the store kept fresh by the probing guard its
+store-bound behind-ness is accurate for actionable states; a fully-dark
+evening stays invisible to the missed count (accepted: its verdicts are
+unrecoverable by design, its screens surface as informational rescreenable
+holes after the next fetch). Comments updated there; docs/architecture-v1.md
+§0/§5 brought to the new cadence.
+
+**Tests:** api 564 → **575** + 1 skipped (+11: probe leg firing/equality/
+null-fallback/wiring, `makeExpectedSessionProbe` unit tests), tsc clean, all
+5 launchd jobs verified ARMED. Empirically confirmed `launchctl bootstrap`
+does NOT fire a StartCalendarInterval job whose slot passed today (scratch
+job test) — reinstalling the catch-up plist could not trigger an
+out-of-schedule chain.
+
+**Known residual (accepted, noted for the record):** the 23:03 second-chance
+slot can still race a long-running 20:30 chain (guard sees the lane behind
+mid-run and would launch a duplicate) — same exposure as before this change;
+chains measured ~30–60 min for one lane make it unlikely, not impossible.
+
+**Next (all passive):** tonight 23:03 second-chance slot (should no-op);
+tomorrow 20:30 processes HK 09-15 + US 09-14 — the first fully-probed
+evening; Sunday 09-20 the first scheduled weekly-validation slot. Standing:
+`journal:link` awaiting a Futu/Moomoo CSV; product-side deferred list (chat
+options data, prompt v2 experiment track) available on request.
+
+---
+
 ## 2026-09-13 (picker-lane marginal census RUN — the standing optional item, closed; plus the first live MATCH of the replay-vs-production census audit)
 
 Descriptive run only (`backtest:screen --market all`, artifact

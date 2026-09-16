@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
-# Evening catch-up (2026-09-11). launchd does not replay calendar slots missed
-# across POWER-OFF (only sleep — architecture §5.1), and measured supply is 56 %:
-# 5 of 9 expected slots per lane since 2026-09-01. That now costs a lost
-# OBSERVATION from two validation samples (Phase 5's verdict IC and Phase 4c's
-# screen rank IC), not merely a stale report — it roughly doubles the longer clock.
+# THE daily pipeline (created 2026-09-11 as an evening catch-up; promoted
+# 2026-09-14). The machine is realistically only on in the evening, so the
+# 06:10 (US) / 16:50 (HK) launchd jobs — which almost never fired — were
+# removed on 2026-09-14. These two guarded evening slots are now the ONLY
+# daily runs for both lanes.
 #
-# Guarded: ops:catchup decides per lane whether the store holds a session no run
-# has screened, so this is a no-op on a day the normal slot fired. Exit 10 from the
-# guard means "run it", 0 means "up to date", anything else means the guard itself
-# failed and we do NOT run (a blind run would duplicate a session and inflate the
-# very sample this protects).
+# Guarded: ops:catchup decides per lane whether a completed session exists that
+# no run has screened. Since 2026-09-14 the guard no longer trusts the store
+# alone — it PROBES the provider for the newest completed session (2026-09-14
+# incident: machine powered off until 20:05 HKT, nothing fetched, store ended
+# 2026-09-11 == last screened, and the store-only guard read "up to date" while
+# that day's HK session went unscreened). Exit 10 from the guard means "run it",
+# 0 means "up to date", anything else means the guard itself failed and we do
+# NOT run (a blind run would duplicate a session and inflate the very sample
+# this protects).
 #
-# Scheduled 20:30 and 23:03 HKT (the 23:03 slot added 2026-09-13). 20:30 is
-# after the HK close (16:00) and BEFORE the US open (21:30 HKT summer), so the
-# US lane's newest bar is always a completed session. 23:03 lands mid-US-session
-# and is safe ONLY because of the session-close filter (quant-core
-# sessionClosed, applied at the fetch/upsert boundary in screen:daily): Yahoo's
-# still-forming bar never enters the store, so the guard screens the previous
-# COMPLETED US session. Screening a just-opened partial bar is the failure mode
-# that would quietly poison the sample instead of protecting it.
+# Scheduled 20:30 (primary) and 23:03 (second chance) HKT. At 20:30 the HK
+# lane's same-day session is complete (close 16:00) and the US lane processes
+# the PREVIOUS US session (closed 04:00/05:00 HKT that morning) — lag 1 by
+# construction. 23:03 lands mid-US-session and is safe ONLY because of the
+# session-close filter (quant-core sessionClosed, applied at the fetch/upsert
+# boundary in screen:daily): Yahoo's still-forming bar never enters the store,
+# so the guard screens the previous COMPLETED US session. Screening a
+# just-opened partial bar is the failure mode that would quietly poison the
+# sample instead of protecting it.
 set -uo pipefail
 
 ROOT="/Users/yongouyang/projects/agentic-trading"

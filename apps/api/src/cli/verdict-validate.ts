@@ -45,9 +45,10 @@ export const PRIMARY_HORIZON = 20;
 export const DEFAULT_TARGET_IC = 0.1;
 /**
  * How many calendar days late a run may be and still count as a prospective
- * observation. 1 accommodates the US lane's own convention — it runs at 06:10 HKT
- * on the morning after the US close, so `runDate = entry + 1` is *prompt* — while
- * rejecting anything later.
+ * observation. 1 accommodates the US lane's own convention — the evening chain
+ * (20:30 HKT) screens the PREVIOUS US session, which closed 04:00/05:00 HKT
+ * that morning, so `runDate = entry + 1` is *prompt* — while rejecting
+ * anything later.
  *
  * This exists because the evening catch-up slot (20:30 daily, including weekends)
  * can legitimately run a session two or more days behind: a Sunday catch-up of

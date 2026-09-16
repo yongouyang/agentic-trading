@@ -50,6 +50,7 @@ import {
   runChecks,
   runScreen,
   sessionClosed,
+  YAHOO_KNOWN_GAPS,
   type Bar,
   type CorporateAction,
   type Market,
@@ -191,7 +192,10 @@ export function assessLaneDegraded(input: {
   };
 }
 
-function loadUniverse(dataDir: string, lane: Lane): UniverseEntry[] {
+/** Exported since 2026-09-14: the ops:catchup guard's expected-session probe
+ *  reuses the committed universe JSONs to pick its probe symbols, so the probe
+ *  always names real lane members rather than a second hardcoded list. */
+export function loadUniverse(dataDir: string, lane: Lane): UniverseEntry[] {
   const raw = JSON.parse(readFileSync(path.join(dataDir, `universe.${lane}.json`), "utf8"));
   return raw.symbols as UniverseEntry[];
 }
@@ -313,10 +317,36 @@ async function runLane(
 
     // Full-window rewrite (self-healing, phase-1-spec §2): replace bars,
     // upsert dividend events by (instrumentId, date, type). A successful
-    // Yahoo fetch reclaims series ownership (single-source invariant, §A.2).
-    await prisma.bar.deleteMany({ where: { instrumentId: instrument.id } });
+    // Yahoo fetch reclaims series ownership (single-source invariant, §A.2) —
+    // EXCEPT curated YAHOO_KNOWN_GAPS sessions: by definition those dates are
+    // eastmoney-rescued (Yahoo drops the session or serves a demonstrably
+    // defective bar), so the stored rescue survives the rewrite and a fresh
+    // Yahoo bar on such a date (the phantom class) is dropped. Without this
+    // guard every daily rewrite silently undid the rescues (learned
+    // 2026-09-15: the 0941.HK phantom returned the day after its 09-06
+    // rescue, and only the weekly eastmoney sentinel leg noticed).
+    const knownGaps = YAHOO_KNOWN_GAPS.get(entry.symbol);
+    const writableBars = knownGaps?.size ? bars.filter((b) => !knownGaps.has(b.date)) : bars;
+    const droppedKnownGap = bars.length - writableBars.length;
+    let preservedKnownGap = 0;
+    if (knownGaps?.size) {
+      preservedKnownGap = await prisma.bar.count({
+        where: { instrumentId: instrument.id, date: { in: [...knownGaps] } },
+      });
+      if (droppedKnownGap || preservedKnownGap) {
+        const parts: string[] = [];
+        if (preservedKnownGap) parts.push(`preserved ${preservedKnownGap} eastmoney-rescued session(s)`);
+        if (droppedKnownGap) parts.push(`dropped ${droppedKnownGap} fresh Yahoo bar(s) on curated defect date(s)`);
+        warnings.push(`${entry.symbol}: YAHOO_KNOWN_GAPS guard — ${parts.join("; ")} (${[...knownGaps].join(",")})`);
+      }
+    }
+    await prisma.bar.deleteMany({
+      where: knownGaps?.size
+        ? { instrumentId: instrument.id, date: { notIn: [...knownGaps] } }
+        : { instrumentId: instrument.id },
+    });
     await prisma.bar.createMany({
-      data: bars.map((b) => ({
+      data: writableBars.map((b) => ({
         instrumentId: instrument.id,
         date: b.date,
         open: b.open,
@@ -453,9 +483,9 @@ async function runLane(
   }
 
   // The session actually screened = the newest bar date any name contributed.
-  // Recorded because the run's timestamp cannot identify it (the US lane runs at
-  // 06:10 HKT on the previous night's close), and the catch-up guard needs to
-  // know whether the store holds a session nobody has screened yet.
+  // Recorded because the run's timestamp cannot identify it (the US lane
+  // screens the PREVIOUS US session in the evening), and the catch-up guard
+  // needs to know whether a completed session nobody has screened exists.
   const screenedThrough = inputs.reduce((acc, i) => {
     const d = i.rawBars[i.rawBars.length - 1]?.date;
     return d && d > acc ? d : acc;

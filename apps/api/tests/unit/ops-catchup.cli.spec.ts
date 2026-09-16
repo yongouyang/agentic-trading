@@ -5,12 +5,24 @@
  * NOTHING when it is not. A guard that over-runs duplicates a session and inflates
  * the Phase-5 accrual; one that under-runs silently loses an observation.
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { NEEDS_RUN, decideLane, parseCatchupArgs, renderCatchup, runCatchup, type CatchupReport } from "../../src/cli/ops-catchup.js";
+import { DataOutcome } from "@agentic-trading/quant-core";
+import {
+  NEEDS_RUN,
+  decideLane,
+  makeExpectedSessionProbe,
+  parseCatchupArgs,
+  renderCatchup,
+  runCatchup,
+  type CatchupReport,
+} from "../../src/cli/ops-catchup.js";
 
 describe("ops:catchup — when to run", () => {
   it("runs when the store holds a session nobody screened", () => {
-    const l = decideLane("US", "2026-09-11", "2026-09-10", null, true);
+    const l = decideLane("US", "2026-09-11", "2026-09-10", null, true, null);
     expect(l.needsRun).toBe(true);
     expect(l.reason).toMatch(/SCREEN leg one session behind/);
   });
@@ -18,7 +30,7 @@ describe("ops:catchup — when to run", () => {
   it("does NOT run when the newest session is screened AND chain-deep-dived", () => {
     // The healthy-day case: this is what makes the second slot a no-op rather
     // than a duplicate run.
-    const l = decideLane("HK", "2026-09-11", "2026-09-11", null, true);
+    const l = decideLane("HK", "2026-09-11", "2026-09-11", null, true, null);
     expect(l.needsRun).toBe(false);
     expect(l.reason).toMatch(/up to date/);
   });
@@ -27,13 +39,13 @@ describe("ops:catchup — when to run", () => {
     // The 2026-09-12 production miss: HK screened 09-11, machine off for both
     // chain slots, no chain deep-dive attached — screen-only logic said
     // "up to date" and the verdict leg stayed permanently behind.
-    const l = decideLane("HK", "2026-09-11", "2026-09-11", null, false);
+    const l = decideLane("HK", "2026-09-11", "2026-09-11", null, false, null);
     expect(l.needsRun).toBe(true);
     expect(l.reason).toMatch(/DEEP-DIVE leg behind/);
   });
 
   it("screen-behind wins regardless of the deep-dive state", () => {
-    const l = decideLane("US", "2026-09-11", "2026-09-10", null, false);
+    const l = decideLane("US", "2026-09-11", "2026-09-10", null, false, null);
     expect(l.needsRun).toBe(true);
     expect(l.reason).toMatch(/SCREEN leg/);
   });
@@ -41,16 +53,160 @@ describe("ops:catchup — when to run", () => {
   it("runs when the run ledger cannot say which session it screened", () => {
     // Pre-column rows carry ''. A duplicate costs minutes; a lost observation is
     // unrecoverable, so unknown fails toward running.
-    expect(decideLane("US", "2026-09-11", null, null, null).needsRun).toBe(true);
+    expect(decideLane("US", "2026-09-11", null, null, null, null).needsRun).toBe(true);
   });
 
   it("does not run with no stored bars at all", () => {
-    expect(decideLane("HK", null, null, null, null).needsRun).toBe(false);
+    expect(decideLane("HK", null, null, null, null, null).needsRun).toBe(false);
   });
 
   it("is strictly ordered: equal dates are caught up, never re-run", () => {
-    expect(decideLane("US", "2026-09-10", "2026-09-10", null, true).needsRun).toBe(false);
-    expect(decideLane("US", "2026-09-09", "2026-09-10", null, true).needsRun).toBe(false); // store behind a run: not our problem
+    expect(decideLane("US", "2026-09-10", "2026-09-10", null, true, null).needsRun).toBe(false);
+    expect(decideLane("US", "2026-09-09", "2026-09-10", null, true, null).needsRun).toBe(false); // store behind a run: not our problem
+  });
+});
+
+describe("ops:catchup — the expected-session probe (2026-09-14)", () => {
+  // The 2026-09-14 incident: machine powered off all day, nothing fetched, so
+  // latestBar == lastScreened and the store legs read "up to date" while that
+  // day's completed HK session went unscreened. The probe asks the PROVIDER
+  // which sessions are complete, so it fires even when the store is stale —
+  // or empty.
+
+  it("runs when the probe sees a completed session newer than last screened — even with a stale store", () => {
+    const l = decideLane("HK", "2026-09-11", "2026-09-11", null, true, "2026-09-14");
+    expect(l.needsRun).toBe(true);
+    expect(l.reason).toMatch(/session 2026-09-14 complete but only screened through 2026-09-11/);
+    expect(l.reason).toMatch(/probe, not store/);
+    expect(l.expectedSession).toBe("2026-09-14");
+  });
+
+  it("runs when the probe sees a completed session and the store is EMPTY (the incident shape)", () => {
+    const l = decideLane("HK", null, null, null, null, "2026-09-14");
+    expect(l.needsRun).toBe(true);
+    expect(l.reason).toMatch(/screened through nothing/);
+  });
+
+  it("does NOT run when the probe's expected session equals last screened", () => {
+    const l = decideLane("HK", "2026-09-14", "2026-09-14", null, true, "2026-09-14");
+    expect(l.needsRun).toBe(false);
+    expect(l.reason).toMatch(/up to date/);
+  });
+
+  it("does NOT run when the probe is BEHIND last screened (a rescreen healed ahead of the provider's newest close)", () => {
+    const l = decideLane("US", "2026-09-11", "2026-09-11", null, true, "2026-09-10");
+    expect(l.needsRun).toBe(false);
+  });
+
+  it("a null probe answer preserves the pre-probe behaviour exactly", () => {
+    // Stale-looking-but-equal store + null probe ⇒ the old "up to date".
+    expect(decideLane("HK", "2026-09-11", "2026-09-11", null, true, null).needsRun).toBe(false);
+    // And the old blind spot stays blind without the probe (regression pin).
+    expect(decideLane("HK", "2026-09-11", "2026-09-11", null, true, null).reason).toMatch(/up to date/);
+  });
+
+  it("the probe leg wins over every store leg (screen current + deep-dive done still runs)", () => {
+    const l = decideLane("US", "2026-09-11", "2026-09-11", null, true, "2026-09-12");
+    expect(l.needsRun).toBe(true);
+    expect(l.reason).toMatch(/probe, not store/);
+  });
+
+  it("runCatchup wires the probe's answer into the decision", async () => {
+    const prisma = {
+      bar: { findFirst: async () => ({ date: "2026-09-11" }) },
+      screenRun: {
+        findFirst: async () => ({ id: 18, sessionDate: "2026-09-11", runAt: new Date("2026-09-11T08:50:00Z") }),
+      },
+      deepDiveRun: { findFirst: async () => ({ id: 7 }) },
+    } as any;
+    const withoutProbe = await runCatchup(prisma, ["HK"]);
+    expect(withoutProbe.lanes[0]!.needsRun).toBe(false);
+    expect(withoutProbe.lanes[0]!.expectedSession).toBeNull();
+
+    const withProbe = await runCatchup(prisma, ["HK"], async () => "2026-09-14");
+    expect(withProbe.lanes[0]!.expectedSession).toBe("2026-09-14");
+    expect(withProbe.lanes[0]!.needsRun).toBe(true);
+    expect(withProbe.needsRun).toBe(true);
+
+    // A probe that FAILED (null) must not change the store-only verdict.
+    const failedProbe = await runCatchup(prisma, ["HK"], async () => null);
+    expect(failedProbe.lanes[0]!.needsRun).toBe(false);
+  });
+});
+
+describe("ops:catchup — makeExpectedSessionProbe", () => {
+  function fixtureUniverse(symbols: string[]): string {
+    const dir = mkdtempSync(path.join(tmpdir(), "catchup-probe-"));
+    writeFileSync(
+      path.join(dir, "universe.hk.json"),
+      JSON.stringify({ symbols: symbols.map((s) => ({ symbol: s, name: s, currency: "HKD", kind: "stock" })) }),
+    );
+    return dir;
+  }
+
+  const ok = (symbol: string, dates: string[]) =>
+    ({
+      symbol,
+      outcome: DataOutcome.OK,
+      bars: dates.map((d) => ({ date: d, open: 1, high: 1, low: 1, close: 1, volume: 1 })),
+      corporateActions: [],
+      droppedPhantomBars: [],
+      repairedBars: [],
+      droppedNullBars: [],
+      levelBreakDropped: [],
+      levelBreakWarnings: [],
+      caDegraded: false,
+      splitCount: 0,
+    }) as any;
+
+  it("returns the max CLOSED bar date across the probe names; a still-forming bar never counts", async () => {
+    // 2026-09-14 21:00 HKT: HK's 09-14 session closed 16:10 HKT; a 09-15 bar
+    // (data glitch) is not closed and must be excluded.
+    const now = new Date("2026-09-14T13:00:00Z");
+    const service = {
+      getDailyBars: async (symbol: string) =>
+        symbol === "0700.HK" ? ok(symbol, ["2026-09-11", "2026-09-14", "2026-09-15"]) : ok(symbol, ["2026-09-12"]),
+    };
+    const probe = makeExpectedSessionProbe(service, now, fixtureUniverse(["0700.HK", "0005.HK", "0941.HK", "1299.HK"]));
+    expect(await probe("HK")).toBe("2026-09-14");
+  });
+
+  it("skips failed names and non-OK outcomes; total failure degrades to null", async () => {
+    const now = new Date("2026-09-14T13:00:00Z");
+    const service = {
+      getDailyBars: async (symbol: string) => {
+        if (symbol === "0700.HK") throw new Error("http-429");
+        if (symbol === "0005.HK") return { ...ok(symbol, []), outcome: DataOutcome.FETCH_FAILED };
+        return ok(symbol, ["2026-09-11"]);
+      },
+    };
+    const probe = makeExpectedSessionProbe(service, now, fixtureUniverse(["0700.HK", "0005.HK", "0941.HK"]));
+    expect(await probe("HK")).toBe("2026-09-11");
+
+    const allBroken = makeExpectedSessionProbe(
+      { getDailyBars: async () => Promise.reject(new Error("down")) },
+      now,
+      fixtureUniverse(["0700.HK"]),
+    );
+    expect(await allBroken("HK")).toBeNull();
+  });
+
+  it("probes only the first PROBE_SYMBOLS names of the lane's universe", async () => {
+    const seen: string[] = [];
+    const service = {
+      getDailyBars: async (symbol: string) => {
+        seen.push(symbol);
+        return ok(symbol, ["2026-09-11"]);
+      },
+    };
+    const probe = makeExpectedSessionProbe(service, new Date("2026-09-14T13:00:00Z"), fixtureUniverse(["a", "b", "c", "d"]));
+    await probe("HK");
+    expect(seen).toEqual(["a", "b", "c"]);
+  });
+
+  it("an unreadable universe file yields null, never a throw", async () => {
+    const probe = makeExpectedSessionProbe({ getDailyBars: async () => ok("x", ["2026-09-11"]) }, new Date(), "/nonexistent");
+    expect(await probe("HK")).toBeNull();
   });
 });
 
@@ -75,8 +231,8 @@ describe("ops:catchup — surfaces", () => {
       asOf: "x",
       needsRun: true,
       lanes: [
-        decideLane("US", "2026-09-11", "2026-09-10", null, true),
-        decideLane("HK", "2026-09-11", "2026-09-11", null, true),
+        decideLane("US", "2026-09-11", "2026-09-10", null, true, null),
+        decideLane("HK", "2026-09-11", "2026-09-11", null, true, null),
       ],
     };
     const text = renderCatchup(r);

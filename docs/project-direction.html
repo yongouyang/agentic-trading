@@ -191,7 +191,7 @@
       <h4>It is not</h4>
       <ul>
         <li><b>Not a dealer.</b> No broker integration and no order execution in v1. Position tracking exists only as <b>manual trade-journal attribution</b> (<code>journal:link</code> — a CSV in, a decision-versus-list report out; FIFO lots, open positions marked to market): analytics, not portfolio management, and no orders.<br><span class="srcline">architecture-v1 §9; <code>packages/quant-core/src/journal.ts</code></span></li>
-        <li><b>Not intraday.</b> Daily bars only; installed runs at <b>16:50 HKT</b> (HK) and <b>06:10 HKT</b> (US), plus a guarded <b>20:30 HKT</b> catch-up slot — six jobs, not two.<br><span class="srcline">architecture-v1 §5, §5.1; <code>scripts/launchd/*.plist</code></span></li>
+        <li><b>Not intraday.</b> Daily bars only; one guarded evening pipeline at <b>20:30 HKT</b> (+<b>23:03 HKT</b> second chance) — since 2026-09-14 the only daily run, the 16:50/06:10 jobs removed.<br><span class="srcline">architecture-v1 §5, §5.1; <code>scripts/launchd/*.plist</code></span></li>
         <li><b>Not a black box.</b> Deterministic quant core is the trusted layer; <i>agents propose, the quant core disposes</i>. Every verdict is auditable to its exact prompt.</li>
         <li><b>Not a promise of alpha.</b> Six months in, no edge is validated. §5 states what is actually known.</li>
       </ul>

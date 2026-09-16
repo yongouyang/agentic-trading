@@ -37,7 +37,7 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 | Output | Interactive chat/session in a local web UI, with charts, tables, signals; plus a daily report view |
 | Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); either covers both markets for the future paper→live path |
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
-| Cadence | **Daily after close** — installed **16:50 HKT** (HK) and **06:10 HKT** (post US close), plus guarded evening catch-up slots at **20:30 + 23:03 HKT** (§5.1; since 2026-09-13 the evening catch-up is the realistic daily run — the machine is usually off at the morning/afternoon slots, which stay armed as bonuses) |
+| Cadence | **Daily after close** — one guarded evening pipeline at **20:30 HKT** (+**23:03 HKT** second chance): HK's same-day session, the US lane's previous session (§5.1; since 2026-09-14 this is THE daily run — the 16:50/06:10 jobs were removed, the machine is realistically only on in the evening — and the `ops:catchup` guard probes the provider for completed sessions, so a power-off day can no longer read as "up to date") |
 | LLM providers | Kimi (Moonshot) as workhorse; budget/open models (DeepSeek/Qwen) optional for cheap summarization. OpenAI-compatible client, swappable via env vars |
 | Universe | **Large/liquid only (~800 tickers)**: S&P 500 + Nasdaq 100 + ~50 major US ETFs; HSI + HS Tech constituents + liquid HK ETFs (HK 141 as of 2026-09-12 — see `universe.hk.json._meta` for the refresh and the HSI-source warning) |
 | Agent depth | **Lean pipeline** (~6–8 LLM calls/stock): News/Sentiment Analyst + Fundamentals Analyst → Bull vs Bear debate → structured verdict |
@@ -322,7 +322,7 @@ same-provider for both lanes when it runs on US names).
 ## 5. Daily pipeline
 
 ```
-16:50 HKT (HK close) / 06:10 HKT (US close)   ← installed times per §5.1
+20:30 HKT (+ 23:03 HKT second chance)        ← installed times per §5.1
   1. Update **raw** OHLCV + corporate actions for ~800 tickers (Yahoo; rescue
      paths per §4.1) → re-derive the adjusted series locally (R1/R3)
   2. Data-quality gate (Day 17 checklist) → typed DataOutcome per ticker;
@@ -334,6 +334,20 @@ same-provider for both lanes when it runs on US names).
        confirmation, volatility/Sharpe bounds (Day 12)
      → ranked shortlist, top N per market (`SCREEN_PARAMS.topN` = 40 US / 40 HK
        measurement breadth; the dashboard presents `displayTopN` = 10 US / 5 HK)
+
+     Hypothesized economic mechanism (charter §5.3, 2026-09-15 — the hypothesis
+     Phase 4/5 tests, not an established result):
+     mom60 (w 0.50) — medium-term momentum rides investor underreaction:
+     anchoring and gradual information diffusion (plus institutional herding)
+     make prices drift for months after fundamentals shift. mom20 (w 0.25) —
+     the same underreaction at monthly scale, but noisier and more
+     reversal-prone, hence half weight. sharpe252 (w 0.25) — return per unit
+     of volatility rewards steady compounders over jumpy gainers; economically
+     a quality/predictability tilt (the low-volatility anomaly: lottery-demand
+     leaves steady names underpriced). Trend alignment (gate, close > SMA50 >
+     SMA200) — requires the drift to be established at two timescales,
+     filtering falling-knife bounces where positive momentum is an artifact
+     inside a downtrend.
   4. Lean LLM deep-dive per candidate (~6–8 calls each):
        News/Sentiment Analyst + Fundamentals Analyst (parallel)
        → Bull vs Bear debate (2 rounds)
@@ -360,7 +374,7 @@ for debate + verdict.
 
 ### 5.1 Scheduling (launchd, installed 2026-09-06)
 
-Seven user LaunchAgents (`scripts/launchd/`, installed into
+Five user LaunchAgents (`scripts/launchd/`, installed into
 `~/Library/LaunchAgents` by `scripts/launchd/install.sh`; stdout/stderr →
 `logs/` at the repo root). launchd, not cron, because macOS cron silently
 skips jobs missed while asleep; StartCalendarInterval catches up after wake.
@@ -410,16 +424,25 @@ runs by `sessionDate`, never `runAt`; health also prints the rescreenable-hole
 count per lane, informationally — holes are recoverable, so they never move a
 lane's level.
 
-**Cadence re-declared 2026-09-13.** The machine is normally OFF at the 06:10
-(US) and 16:50 (HK) slots, so the **guarded evening catch-up is the realistic
-daily run**; the morning/afternoon jobs stay armed but are opportunistic
-bonuses — they can satisfy a lane's expectation early, they can never be
-"missed". `ops:health` was re-declared to match (it previously counted
-06:10/16:50 as expected, which made the report permanently red — the exact
-failure class R0 was built to kill): per lane, the expected event is one
-guarded evening catch-up, and a lane counts a **missed evening** only when it
-was still *behind* (the `ops:catchup` definition: store newer than the newest
-screened session, or the newest screen lacking a complete chain deep-dive)
+**Cadence re-declared 2026-09-13, finalized 2026-09-14.** The 2026-09-13
+re-declaration had made the guarded evening catch-up the *realistic* daily run
+while keeping the 06:10/16:50 jobs armed as bonuses. On 2026-09-14 the
+morning/afternoon jobs were **removed outright** — the machine is
+realistically only on in the evening, so the guarded evening run
+(`daily-catchup`, 20:30 + 23:03 HKT) is now THE daily pipeline for both
+lanes: at 20:30 HKT the HK lane's same-day session is complete, and the US
+lane processes the **previous** US session (closed 04:00/05:00 HKT that
+morning, lag 1 by construction). The same day's incident forced the guard
+fix: powered off until 20:05 HKT, nothing ever fetched, the store ended at
+2026-09-11 — equal to the last screened session — and the store-only guard
+read "up to date" while that day's completed HK session went unscreened.
+`ops:catchup` therefore no longer trusts the store alone: it **probes the
+provider** (daily bars for the first 3 universe names, newest bar date whose
+session has closed per quant-core `sessionClosed`) for the newest completed
+session and runs the chain whenever that is newer than the newest screened
+session. Truth-based, no holiday calendar — on a holiday the provider simply
+returns the previous trading day. `ops:health` continues to count a **missed
+evening** only when a lane was still *behind* (the `ops:catchup` definition)
 after the evening's slots (20:30 and 23:03, last slot + 6h grace) of a day on
 which the store held a completed unscreened session. Session → expected
 evening: HK the **same** evening (bars are storable from 16:10 HKT, lag 0);
@@ -438,13 +461,11 @@ enters the store — so the guard screens the previous **completed** US session
 
 | Label | Runs | Schedule (HKT) |
 |---|---|---|
-| `daily-hk` | `scripts/daily-chain.sh hk` — `screen:daily --market hk` then `screen:deep-dive` (candidate breadth from `SCREEN_PARAMS.topN`) | Mon–Fri 16:50 |
-| `daily-us` | `scripts/daily-chain.sh us` — same, US lane | Tue–Sat 06:10 |
-| `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 08:47 |
-| `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 09:17 |
-| `weekly-validation` | `scripts/weekly-validation.sh` — the two validation clocks, `verdict:validate` (Phase-5 readiness + projection watch) and `phase4c:accrual`, as a weekly artifact (`logs/validation-digest-<date>.json`) so the Phase-5 A3 re-pricing signal cannot accrue unnoticed | Sun 09:47 |
-| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`) | **20:30 + 23:03 daily** |
-| `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 07:15, 17:30 daily |
+| `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 20:47 |
+| `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 21:17 |
+| `weekly-validation` | `scripts/weekly-validation.sh` — the two validation clocks, `verdict:validate` (Phase-5 readiness + projection watch) and `phase4c:accrual`, as a weekly artifact (`logs/validation-digest-<date>.json`) so the Phase-5 A3 re-pricing signal cannot accrue unnoticed | Sun 21:47 |
+| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`, which probes the provider for the newest completed session). **Since 2026-09-14 this is THE daily pipeline** (the 06:10/16:50 `daily-hk`/`daily-us` jobs were removed) | **20:30 + 23:03 daily** |
+| `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 22:35 daily (since 2026-09-14; was 07:15, 17:30) |
 
 ### 5.2 Failure visibility (R0, 2026-09-10)
 
@@ -473,8 +494,9 @@ It is lane-scoped so a stale HK lane cannot fail the US chain.
 **Health model.** Per lane: newest complete run, newest screen run, store data
 cutoff, missed evening catch-ups, and stale `running` rows. Cadence is
 weekday-arithmetic over the **guarded evening catch-up** (re-declared
-2026-09-13, see §5.1): the 06:10/16:50 jobs are opportunistic bonuses that are
-never "missed"; a lane is missed only when still behind (stale screen, or the
+2026-09-13, finalized 2026-09-14 — the 06:10/16:50 jobs were removed that
+day, so the evening run is the ONLY daily run, see §5.1): a lane is missed
+only when still behind (stale screen, or the
 newest screen lacking a complete chain deep-dive) after an evening's
 20:30/23:03 slots on a day the store held a completed unscreened session — HK
 sessions due the same evening, US the following one — with **no**

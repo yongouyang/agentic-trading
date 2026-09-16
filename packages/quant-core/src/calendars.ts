@@ -169,16 +169,25 @@ export const HKEX_KNOWN_HALF_DAYS: ReadonlySet<string> = new Set(["2022-01-31"])
 
 /** Yahoo session defects confirmed against TWO independent carriers (eastmoney
  *  fqt=0 raw + tencent session dates, both serving the day while fresh Yahoo
- *  either drops it or serves a demonstrably wrong bar — measured 2026-09-06).
+ *  either drops it or serves a demonstrably wrong bar — measured 2026-09-06;
+ *  2026-09-14 added 2026-09-15 after that evening's sentinel showed eastmoney
+ *  AND tencent carrying the session while fresh Yahoo's full-window pull
+ *  omits it for both ETFs).
  *  Two shapes: a MISSING session (2800.HK/3195.HK entries) or a flat
  *  zero-volume stale phantom repeating a prior close on a full trading session
  *  (0941.HK 2024-01-15: Yahoo pinned 65.05, the 01-11 close; eastmoney shows
  *  close 65.75 on ~10M shares). These sessions are rescued from eastmoney raw
  *  bars (§A path), so a stored bar on such a date is eastmoney-sourced and
- *  must not count as a yahoo-rewrite divergence — by absence OR by mismatch. */
+ *  must not count as a yahoo-rewrite divergence — by absence OR by mismatch.
+ *  The same registry guards the ingest rewrite (daily-screen / repair:store):
+ *  a successful Yahoo fetch must NOT overwrite the rescued bar on these dates
+ *  (learned 2026-09-15: before the guard, every daily rewrite silently
+ *  re-imported the 0941.HK phantom and dropped the 2025-10-24 / 2026-03-06
+ *  rescues — the eastmoney sentinel leg, running weekly, was the only
+ *  witness). */
 export const YAHOO_KNOWN_GAPS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ["2800.HK", new Set(["2025-10-24"])],
-  ["3195.HK", new Set(["2025-10-24", "2026-03-06"])],
+  ["2800.HK", new Set(["2025-10-24", "2026-09-14"])],
+  ["3195.HK", new Set(["2025-10-24", "2026-03-06", "2026-09-14"])],
   ["0941.HK", new Set(["2024-01-15"])],
 ]);
 
