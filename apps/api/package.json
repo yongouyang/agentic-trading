@@ -16,6 +16,7 @@
     "screen:rescreen": "tsx src/cli/rescreen.ts",
     "screen:sentinel": "tsx src/cli/sentinel.ts",
     "report:correlation": "tsx src/cli/correlation-report.ts",
+    "report:cost": "tsx src/cli/cost-report.ts",
     "backtest:screen": "tsx src/cli/backtest-screen.ts",
     "ops:health": "tsx src/cli/ops-health.ts",
     "import:databento": "tsx src/cli/import-databento.ts",

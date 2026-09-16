@@ -493,13 +493,17 @@ It is lane-scoped so a stale HK lane cannot fail the US chain.
 
 **Spend (K3, added 2026-09-16).** The health report also carries a month-to-date
 cost reading computed from the decision log (`ops/cost.ts` over
-`AgentDecision.usageJson`). It is **informational only** — it contributes no
-reason and cannot move a level, like the rescreenable-holes line — and it prints
-tokens instead of dollars when `LLM_PRICE_*` is unset, because prices are a
-provider fact that belongs in `.env`, not in code. Rows written before the
-prompt-cache split was captured are labelled `UPPER BOUND`, and a month that
-straddles a model switch publishes its model mix (see K3 in the charter for the
-measured cache-hit reasoning).
+`AgentDecision.usageJson`), and `report:cost` is the full read (per run, per role,
+per name, and the marginal price of extra breadth). Both are **informational
+only** — no reason, no level — and both print tokens instead of dollars when
+`LLM_PRICE_*` is unset, because prices are a provider fact that belongs in `.env`,
+not in code. Prices are tiered (peak/off-peak, classified per row from its own
+timestamp in UTC, since DeepSeek bills peak at double). Attribution is first-use:
+a decision belongs to the earliest run that referenced it, so per-run rows
+reconcile with the month total and a cache-replayed re-run costs $0. Rows written
+before the prompt-cache split was captured are labelled `UPPER BOUND`, and a
+month that straddles a model switch publishes its model mix (see K3 in the
+charter for the measured cache-hit reasoning).
 
 **Health model.** Per lane: newest complete run, newest screen run, store data
 cutoff, missed evening catch-ups, and stale `running` rows. Cadence is

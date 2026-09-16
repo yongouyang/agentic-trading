@@ -774,7 +774,9 @@ describe("computeHealth — K3 cost line (informational only)", () => {
     bars: { HK: "2026-09-14" },
   };
   const NOW = hkt("2026-09-14T21:30:00");
-  const ROW = { model: "deepseek-flash", agent: "bull", usageJson: JSON.stringify({ promptTokens: 1520, completionTokens: 32, promptCacheHitTokens: 1280, promptCacheMissTokens: 240 }) };
+  // `createdAt` drives the peak/off-peak tier, so it is required, not decorative:
+  // 12:30 UTC is 20:30 HKT, the chain slot, and therefore off-peak.
+  const ROW = { model: "deepseek-flash", agent: "bull", createdAt: new Date("2026-09-14T12:30:00Z"), usageJson: JSON.stringify({ promptTokens: 1520, completionTokens: 32, promptCacheHitTokens: 1280, promptCacheMissTokens: 240 }) };
 
   /** Prices are read from process.env by design (config, never a default), so the
    *  tests set and then clear them. */
@@ -840,7 +842,7 @@ describe("computeHealth — K3 cost line (informational only)", () => {
 
   it("labels a pre-cache-split reading an upper bound instead of presenting it as measured", async () => {
     await withPrices({ LLM_PRICE_INPUT_PER_MTOK: "0.15", LLM_PRICE_OUTPUT_PER_MTOK: "0.6" }, async () => {
-      const row = { model: "k3-256k", agent: "bull", usageJson: JSON.stringify({ promptTokens: 1520, completionTokens: 32 }) };
+      const row = { model: "k3-256k", agent: "bull", createdAt: new Date("2026-09-14T12:30:00Z"), usageJson: JSON.stringify({ promptTokens: 1520, completionTokens: 32 }) };
       const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [row] }), { now: NOW, reportsDir });
       expect(r.cost!.upperBound).toBe(true);
       expect(r.cost!.cacheHitRate).toBeNull();
@@ -850,7 +852,7 @@ describe("computeHealth — K3 cost line (informational only)", () => {
 
   it("names the model mix when a month straddles the switch, instead of blending two price lists", async () => {
     await withPrices({ LLM_PRICE_INPUT_PER_MTOK: "0.15", LLM_PRICE_OUTPUT_PER_MTOK: "0.6", LLM_PRICE_CACHE_HIT_PER_MTOK: "0.003" }, async () => {
-      const k3 = { model: "k3-256k", agent: "bull", usageJson: JSON.stringify({ promptTokens: 1000, completionTokens: 100 }) };
+      const k3 = { model: "k3-256k", agent: "bull", createdAt: new Date("2026-09-14T12:30:00Z"), usageJson: JSON.stringify({ promptTokens: 1000, completionTokens: 100 }) };
       const r = await computeHealth(stubPrisma({ ...CLOSED_DAY, costRows: [k3, ROW] }), { now: NOW, reportsDir });
       expect(r.cost!.modelMix.map((m) => m.model)).toEqual(["k3-256k", "deepseek-flash"]);
       const out = renderHealth(r);

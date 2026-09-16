@@ -5,6 +5,76 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-16 (cost tracking phase 3) — `report:cost`: the breadth price tag exists, and the per-run rows reconcile
+
+**Prices, from the provider rather than from memory.** Read
+`api-docs.deepseek.com/quick_start/pricing` (2026-09-16) and the earlier guess was
+wrong in two ways. `deepseek-flash` = DeepSeek-V4.1-Flash: cache-miss input
+$0.15, cache-hit input $0.003, output $0.60 per 1M — and **peak is double** that,
+where peak is **01:00–04:00 and 06:00–10:00 UTC, Monday–Friday**. Converting to
++08:00 gives HKT peak = 09:00–12:00 and 14:00–18:00 weekdays, so **the chain's
+20:30 HKT slot is 12:30 UTC = off-peak** (as is 23:03 HKT = 15:03 UTC). I had
+told the user the opposite, carrying over the older 16:30–00:30 UTC window; the
+page settles it, and two consequences follow: weekends are always off-peak, and
+the *retired* 16:50 HKT HK job would have been peak. `.env` now carries both
+tiers, and the weekday test is done in **UTC** — HKT 00:00–08:00 is the previous
+UTC day, so a Monday 07:00 HKT call is a Sunday call.
+
+**The CLI** (`cli/cost-report.ts`, `pnpm -C apps/api report:cost`): header (month,
+cap, MTD, calls, tokens) · basis line · cache line (measured rate, no-cache
+counterfactual) · tier line · per-run table · per-role table with chat broken out ·
+model mix · per-name figures · **breadth price** · `--json` · `--month` · dated
+`reports/cost-<month>.json` artifact. Exit code stays 0 over cap by decision — the
+cap is a discipline signal, not a data-integrity failure.
+
+**First-use attribution, validated against real data.** A decision hash belongs to
+the earliest run that referenced it, so per-run rows reconcile with the month
+total; the store already contained the proving case — SQL found **14 hashes shared
+between runs 1 and 2**, and the live report shows run #2 as `0 calls · $0.00 · 14
+replayed from cache (free)`. That is the truth of an app-level cache replay, and
+it is why the alternative (count a shared hash in every referencing run) was
+declined. `loadRunRefs` deliberately loads **all history** with no lower bound:
+window-scoped loading would hand a hash to a later run whenever its true owner
+fell outside the window, inflating that run.
+
+**First live readings (2026-09, HKT):** $1.00 MTD vs the $10 cap (set by user
+decision that day, to be adjusted as burn accumulates) · 1,929 calls · 3.73M in /
+736k out · **$0.0036 per name** (13,490 in / 2,617 out tokens) · per role bear
+$0.30 › bull $0.27 › verdict $0.22 › news $0.11 › fundamentals $0.10 › chat $0.00 ·
+model mix k3-256k 1,914 vs deepseek-flash 15 · **+20 names/lane/night ≈ $0.14/night,
+$3.08/month**. That last number is the price tag the HK breadth question (charter
+§6's open item) was missing, and it says breadth is cheap — the constraint there is
+statistical, not financial. Every dollar figure is an UPPER BOUND today: no row
+yet carries the cache split, so the discount only appears from the next chain run.
+
+**Honest accounting of a non-zero remainder.** `other (chat + decisions no run
+owns)` reads $0.02, and it is not a bug: 40 k3 decisions created 2026-09-10
+08:35–08:37 HKT have **no run row at all** — a deep-dive killed mid-flight before
+W2 started writing the run row first, which is exactly the failure mode W2 was
+added to stop. They were billed, so they belong in the month total, and no run can
+claim them. Recorded on the field so a future reader does not mistake it for
+attribution error.
+
+**A real reporting bug the tests caught:** with prices unset the formatter still
+printed `$0.00` in the run and role columns. That is not "no data", it is a wrong
+number — spend happened, it just cannot be priced — so every money column now
+degrades to an em dash, and a test asserts no `$<digit>` appears anywhere in the
+unpriced output. Two further defects fixed at the same pass: per-name values were
+rendered at 2 dp (`$0.00`, hiding the whole signal) and the run table showed UTC
+dates in an HKT-framed report.
+
+**Tests:** api 608 → **627** (+15 unit: tier boundaries incl. the UTC-weekday edge,
+both window edges, peak/unpriced-peak pricing, no-cache counterfactual, first-use
+ownering, both loaders; +4 integration on a seeded throwaway db: the reconciliation
+invariant, the artifact, the unpriced guard, and a 00:30 HKT run landing in the
+right HKT month), web 107, agents 51, tsc clean.
+
+**Next:** all four cost-tracking phases are now built. Watch the first post-switch
+chain run — that is when the cache split, and therefore a measured rather than
+upper-bound dollar figure, appears.
+
+---
+
 ## 2026-09-16 (cost tracking, phases 1-2 + 4-5) — K3 stops being an estimate: the cache split is captured, and the spend line cannot lie or move a level
 
 **Why this was cheap to build:** the measurement base already existed and was
