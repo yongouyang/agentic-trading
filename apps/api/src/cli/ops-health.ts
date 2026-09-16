@@ -49,6 +49,12 @@ function renderLane(l: LaneHealth): string[] {
       ` · data through ${l.dataThrough ?? "—"} · missed ${l.expectedRunsMissed}`,
   ];
   for (const r of l.reasons) lines.push(`    - ${r}`);
+  // Informational only (2026-09-16): a PARTIAL name failure is real lost sample
+  // but must not move the level — the leg ran and re-running would loop. Printed
+  // so the loss is visible instead of living only in the run's exit code.
+  if (l.deepDiveFailed != null && l.deepDiveFailed > 0 && l.deepDiveTopN != null && l.deepDiveFailed < l.deepDiveTopN) {
+    lines.push(`    · ${l.deepDiveFailed}/${l.deepDiveTopN} names of the newest chain deep-dive have no verdict (ad-hoc recovery: --market ${l.market.toLowerCase()} --symbol <SYM,...>)`);
+  }
   // Informational only: holes are recoverable (screen:rescreen), so they are
   // never a reason and never move the level.
   if (l.rescreenableHoles > 0) {

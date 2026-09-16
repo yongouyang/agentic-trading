@@ -35,8 +35,13 @@ STUB
 chmod +x "$TMP/bin/pnpm"
 
 # --- stub curl: the LLM preflight probe ---
+# Records its argv when CURL_ARGS_FILE is set, so a test can assert WHAT the probe
+# asked for. The stub used to fail on nothing but the returned status, which is
+# why a hardcoded `"model":"k3-256k"` survived the DeepSeek switch: every test
+# case here returned 200 regardless of the payload.
 cat > "$TMP/bin/curl" <<'STUB'
 #!/usr/bin/env bash
+[ -n "${CURL_ARGS_FILE:-}" ] && printf '%s\n' "$@" > "$CURL_ARGS_FILE"
 echo "${STUB_HTTP:-200}"
 STUB
 chmod +x "$TMP/bin/curl"
@@ -96,6 +101,29 @@ if grep -q "ops:health -- --lane hk" "$TMP/lane.log"; then
   pass=$((pass+1)); printf 'ok   %-52s\n' "post-condition health check is lane-scoped (hk)"
 else
   fail=$((fail+1)); printf 'FAIL %-52s\n' "post-condition health check is lane-scoped (hk)"
+fi
+
+# The probe must ask for the CONFIGURED model (task 2026-09-16 P0): a hardcoded
+# model literal sends a request the provider rejects with 400, which skips the
+# deep-dive leg while the screen leg keeps working.
+PATH="$TMP/bin:$PATH" HOME="$TMP/home" CURL_ARGS_FILE="$TMP/curl.args" \
+  STUB_SCREEN_RC=0 STUB_DD_RC=0 STUB_HEALTH_RC=0 STUB_HTTP=200 \
+  bash "$REPO/scripts/daily-chain.sh" us >/dev/null 2>&1
+ENV_MODEL=$(grep -E '^LLM_ANALYST_MODEL=' "$REPO/.env" 2>/dev/null | head -1 | cut -d= -f2-)
+if [ -n "$ENV_MODEL" ] && grep -q "\"model\":\"$ENV_MODEL\"" "$TMP/curl.args"; then
+  pass=$((pass+1)); printf 'ok   %-52s\n' "probe asks for the .env model ($ENV_MODEL)"
+else
+  fail=$((fail+1)); printf 'FAIL %-52s\n' "probe asks for the .env model"
+  printf '     payload: %s\n' "$(tr '\n' ' ' <"$TMP/curl.args")"
+fi
+
+# ...and no provider model literal may appear in an EXECUTABLE line (comments may
+# quote the 2026-09-16 400 verbatim). This is the class-level guard: the payload
+# assertion above passes for any hardcoded value that happens to match .env.
+if grep -vE '^[[:space:]]*#' "$REPO/scripts/daily-chain.sh" | grep -qE 'k3-256k|deepseek-(flash|v4-pro)'; then
+  fail=$((fail+1)); printf 'FAIL %-52s\n' "no hardcoded provider model in the chain"
+else
+  pass=$((pass+1)); printf 'ok   %-52s\n' "no hardcoded provider model in the chain"
 fi
 
 echo

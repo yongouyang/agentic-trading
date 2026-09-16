@@ -33,6 +33,11 @@ interface RunRow {
   source?: "chain" | "adhoc";
   /** Set when this deep-dive is attached to a screen run (the verdict leg). */
   screenRunId?: number;
+  /** Breadth and failures of the leg (2026-09-16). Absent in these fixtures means
+   *  "a clean 40-name leg"; the stub fills the defaults so a test only states
+   *  them when it is testing the zero-verdict / partial-failure distinction. */
+  topN?: number;
+  failed?: number;
 }
 interface ScreenRow {
   id: number;
@@ -45,7 +50,7 @@ interface ScreenRow {
 }
 
 function stubPrisma(opts: { runs?: RunRow[]; screens?: ScreenRow[]; bars?: Record<string, string | string[]>; running?: RunRow[] } = {}) {
-  const runs = opts.runs ?? [];
+  const runs = (opts.runs ?? []).map((r) => ({ topN: 40, failed: 0, ...r }));
   const screens = opts.screens ?? [];
   const bars = opts.bars ?? {};
   const running = opts.running ?? [];
@@ -154,6 +159,40 @@ describe("computeHealth — lane cadence (guarded evening catch-up)", () => {
     );
     expect(lane(r, "HK").level).toBe("healthy");
     expect(lane(r, "HK").expectedRunsMissed).toBe(0);
+  });
+
+  // 2026-09-16: `DeepDiveRun.status = "complete"` is written even when EVERY
+  // name failed, so this is the case both guards used to read as a healthy leg
+  // while the sample stopped accruing (the quota-wall class).
+  it("a chain deep-dive that produced ZERO verdicts is an ALERT, not a healthy leg", async () => {
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 7, market: "HK", runAt: hkt("2026-09-14T20:50:00"), source: "chain", screenRunId: 15, topN: 40, failed: 40 }],
+        screens: [{ id: 15, market: "HK", runAt: hkt("2026-09-14T20:40:00"), sessionDate: "2026-09-14" }],
+        bars: { HK: "2026-09-14" },
+      }),
+      { now: hkt("2026-09-14T21:30:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.level).toBe("alert");
+    expect(hk.reasons.join(" ")).toMatch(/0 of 40 verdicts/);
+    expect(hk.deepDiveFailed).toBe(40);
+    expect(hk.deepDiveTopN).toBe(40);
+  });
+
+  it("a partially failed deep-dive stays HEALTHY but publishes the loss", async () => {
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 7, market: "HK", runAt: hkt("2026-09-14T20:50:00"), source: "chain", screenRunId: 15, topN: 23, failed: 1 }],
+        screens: [{ id: 15, market: "HK", runAt: hkt("2026-09-14T20:40:00"), sessionDate: "2026-09-14" }],
+        bars: { HK: "2026-09-14" },
+      }),
+      { now: hkt("2026-09-14T21:30:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.level).toBe("healthy");
+    expect(hk.deepDiveFailed).toBe(1);
+    expect(hk.deepDiveTopN).toBe(23);
   });
 
   it("genuinely missed day: the evening slots passed and the lane is still behind → counted (1 = WARN)", async () => {

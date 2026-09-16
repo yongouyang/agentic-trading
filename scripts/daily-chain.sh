@@ -42,28 +42,37 @@ SCREEN_RC=$?
 echo "screen:daily exit=$SCREEN_RC"
 
 # --- LLM auth preflight ---
-# Static key first (durable fix 2026-09-09: Moonshot platform key in .env —
-# same precedence as resolveApiKey in cli/deep-dive.ts and chat-config.ts);
-# fall back to the rotating Kimi CLI OAuth token + coding endpoint.
+# Key, endpoint AND probe model all come from .env, so the probe cannot drift
+# from the configured provider. Measured 2026-09-16: this probe hardcoded
+# `"model":"k3-256k"` (plus `reasoning_effort`), so after the deep-dive moved to
+# DeepSeek the probe answered http=400 ("The supported API model names are
+# deepseek-flash, deepseek-v4-pro, but you passed k3-256k.") and the deep-dive
+# leg was skipped EVERY night while the screen leg kept succeeding — H2's accrual
+# clock stops dead, and the skipped-leg path is only a 2-missed-evening health
+# reason. Never hardcode a provider fact here: the chain is provider-agnostic by
+# design (`LLM_*` are env vars), and the stub-curl tests below cannot see the
+# payload, so only a static check keeps this from recurring.
 ENV_KEY=$(grep -E '^LLM_API_KEY=.+' "$ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)
-if [ -n "$ENV_KEY" ]; then
-  TOKEN="$ENV_KEY"
-  BASE_URL=$(grep -E '^LLM_BASE_URL=' "$ROOT/.env" | head -1 | cut -d= -f2-)
-  HINT="check LLM_API_KEY in .env"
-else
-  TOKEN=$(node -e "try{process.stdout.write(JSON.parse(require('fs').readFileSync(process.env.HOME+'/.kimi-code/credentials/kimi-code.json','utf8')).access_token)}catch(e){process.exit(1)}" 2>/dev/null)
-  BASE_URL="https://api.kimi.com/coding/v1"
-  HINT="run any kimi command to refresh the token"
-fi
+BASE_URL=$(grep -E '^LLM_BASE_URL=' "$ROOT/.env" | head -1 | cut -d= -f2-)
+PROBE_MODEL=$(grep -E '^LLM_ANALYST_MODEL=' "$ROOT/.env" | head -1 | cut -d= -f2-)
+# k3-256k (the previous profile) 400s on temperature != 1; DeepSeek accepts 1.
+# Read it rather than assume it, defaulting to the value both profiles accept.
+PROBE_TEMP=$(grep -E '^LLM_TEMPERATURE=' "$ROOT/.env" | head -1 | cut -d= -f2-)
+: "${PROBE_TEMP:=1}"
+TOKEN="$ENV_KEY"
 if [ -z "$TOKEN" ]; then
-  echo "PREFLIGHT FAIL: no LLM key (LLM_API_KEY in .env or Kimi CLI OAuth token) — skipping deep-dive ($HINT)"
+  echo "PREFLIGHT FAIL: no LLM key — skipping deep-dive (set LLM_API_KEY in .env)"
+  exit 3
+fi
+if [ -z "$PROBE_MODEL" ] || [ -z "$BASE_URL" ]; then
+  echo "PREFLIGHT FAIL: LLM_BASE_URL/LLM_ANALYST_MODEL missing from .env — skipping deep-dive (both are required by cli/deep-dive.ts too)"
   exit 3
 fi
 HTTP=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$BASE_URL/chat/completions" \
   -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
-  -d '{"model":"k3-256k","messages":[{"role":"user","content":"OK"}],"max_tokens":1,"temperature":1,"reasoning_effort":"low"}')
+  -d "{\"model\":\"$PROBE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"OK\"}],\"max_tokens\":1,\"temperature\":$PROBE_TEMP}")
 if [ "$HTTP" != "200" ]; then
-  echo "PREFLIGHT FAIL: llm auth probe http=$HTTP — skipping deep-dive ($HINT, then rerun: pnpm -C apps/api screen:deep-dive -- --market $LANE)"
+  echo "PREFLIGHT FAIL: llm auth probe http=$HTTP on model $PROBE_MODEL — skipping deep-dive (check LLM_API_KEY/LLM_BASE_URL/LLM_ANALYST_MODEL in .env, then rerun: pnpm -C apps/api screen:deep-dive -- --market $LANE)"
   exit 3
 fi
 

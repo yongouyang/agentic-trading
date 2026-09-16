@@ -5,6 +5,101 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-16 (the same evening, after the DeepSeek switch) — P0 chain preflight fixed, A6 re-baselined to A7, and the guards learn that "complete" ≠ "produced verdicts"
+
+### P0 — the chain would have skipped the deep-dive every night (measured, not guessed)
+
+`scripts/daily-chain.sh` ran a cheap auth preflight before the deep-dive leg, and
+its probe body hardcoded `"model":"k3-256k"` plus `reasoning_effort`. After the
+DeepSeek switch that is a 400, so the leg would have been skipped **every night**
+while the screen leg kept succeeding — H2's accrual clock stops dead, and the
+skipped-leg path only becomes a health reason on the *second* missed evening.
+Reproduced verbatim before fixing: `The supported API model names are
+deepseek-flash, deepseek-v4-pro, but you passed k3-256k.`
+
+**Fixed:** the probe now reads `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_ANALYST_MODEL`
+and `LLM_TEMPERATURE` from `.env` (missing values fail loudly with exit 3 before
+the request), and the dead Kimi-OAuth fallback branch is gone — it pointed at a
+quota-blocked credential and would have 403'd. Verified live: `http=200` on
+`deepseek-flash`.
+
+**Test gap closed, which matters more than the fix:** the shell suite stubs `curl`
+to print 200 regardless of the payload, so *no* payload bug could ever fail it.
+The stub now records its argv, the suite asserts the probe asks for the `.env`
+model, and a second check forbids any provider model literal in an executable
+line of the chain (comments may quote the 400 verbatim). daily-chain 11 → 13
+cases.
+
+### A6 → A7: the frozen model stack is re-baselined, and it is a re-baseline not a pooling
+
+A6 froze the H2 treatment to `k3-256k` ×3 and excludes+counts anything else. The
+switch therefore forked the treatment silently: k3 cannot produce another
+observation (weekly quota exhausted), so keeping the freeze would not have slowed
+H2 — it would have stopped it. Accrued counts, chain runs with `status: ok`: **151
+post-gate** k3 verdicts (runs 11–15) plus **87 pre-gate** rows verified by
+decision hash.
+
+**Decision (user, 2026-09-16, pre-label):** re-baseline `SAMPLE_MODEL_STACK` to
+`deepseek-flash` ×3 and let the k3 era CLOSE as an excluded sub-sample. Pooling
+was the alternative and was declined: H2's statistic groups by date
+(`verdict-ic.ts`) so a switch changes the *sequence* of daily ICs rather than any
+single day's, which makes pooling arguable — but "arguable" is the standard A6
+rejects, and the prize is small. `days` counts (lane, session) dates, so the k3
+prospective era is 3 HK + 2 US sessions plus ~5 legacy evenings: **~8–10
+lane-days of the 157 (pooled) / 318 (per-lane) needed, 3–6 % of the horizon,
+~1–2 weeks elapsed.** Buying treatment homogeneity for ~5 % of the clock is the
+trade this project's rules say to take. Recorded as **Phase-5 A7**, with the
+architecture §7 A6 note amended.
+
+**Live effect, counted rather than dropped** (`verdict:validate`, before → after):
+`otherModelExcluded` 0 → **151**, `legacyModelVerified` 87 → **0**,
+`legacyModelUnverifiable` 0 → **87**, `pendingLabel` 238 → **0**. The k3 rows are
+still in the store and A6 records the model per verdict, so the closed sub-sample
+stays re-scorable if the question is ever asked. The window that made this
+legitimate (`labelled: 0`) closes when the first 20d label matures (~mid-October).
+
+### The guards: `status: "complete"` is not "the leg produced verdicts"
+
+`runDeepDiveBatch` flips `status: "complete"` unconditionally, so a run in which
+every name failed read as full coverage to both `ops:health` and `ops:catchup`.
+Tonight's 4 lost names were the *partial* case (37/40 US, 22/23 HK), but the same
+code path hides the total case — an expired key or dead provider produces a
+"complete" run with zero verdicts and the sample silently stops accruing.
+
+**New `deepDiveCovers(topN, failed)` in `ops/health.ts`, used by both guards:**
+
+- **zero verdicts (`failed === topN`)** → the leg is NOT covered: the lane reads
+  behind, the 23:03 second chance and the next evening retry it, and health raises
+  an ALERT-level reason of its own (not merely "one evening late").
+- **`topN === 0`** (no picks that evening) → covered. Calling it behind would
+  re-run the lane forever.
+- **partial failure** → deliberately still covered: the leg ran, the session was
+  seen, and re-running to chase a permanently-failing name would loop every night.
+  Its cost is published instead — new `deepDiveFailed`/`deepDiveTopN` on
+  `LaneHealth`, printed as `N/M names of the newest chain deep-dive have no
+  verdict` with the ad-hoc recovery command.
+
+Live proof on tonight's real losses: `HK · 1/23`, `US · 3/40` — the four names
+from this evening, visible in one command instead of by reading the run ledger.
+No re-dive CLI was added: `--symbol` already recovers them ad hoc, and a late
+verdict is excluded from the sample by the promptness gate by design, so recovery
+is for the read, not the statistic.
+
+**Tests:** api 578 → **585** (+2 A7: k3 post-gate excluded / k3 pre-gate
+unverifiable; +3 catchup: zero-verdict behind, partial not, topN 0 covered; +2
+health: zero-verdict ALERT, partial HEALTHY with the count), agents **47**,
+daily-chain **13**, tsc clean both.
+
+**Next:** tonight's 23:03 slot should no-op (both lanes were up to date at 21:00);
+tomorrow 20:30 is the first full 63-name chain run on DeepSeek and the first live
+exercise of the fixed preflight — watch that verdicts actually accrue and that
+`otherModelExcluded` stays at the 151 closed k3 rows. Still open from the review:
+cost tracking (now metered spend, no USD anywhere), L6 wiring, HK breadth vs the
+pooled projection (charter §6's open question), locking K1–K5, and the stale
+charter/architecture statements about Kimi.
+
+---
+
 ## 2026-09-16 — deep-dive provider switched Kimi → DeepSeek (quota wall), plus the two ways deepseek-flash broke the verdict contract
 
 **Trigger.** Tonight's chain (20:30/20:43 HKT, runs 14/15) completed BOTH lanes and

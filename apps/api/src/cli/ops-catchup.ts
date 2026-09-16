@@ -56,6 +56,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DataOutcome, sessionClosed, type Market } from "@agentic-trading/quant-core";
 import { getMarketDataDeps } from "../market-data/market-data.deps.js";
+import { deepDiveCovers } from "../ops/health.js";
 import { MarketDataService } from "../market-data/market-data.service.js";
 import { PrismaService } from "../prisma.service.js";
 import { loadUniverse, type Lane } from "./daily-screen.js";
@@ -219,7 +220,7 @@ export function decideLane(
       lastRunAt,
       expectedSession,
       needsRun: true,
-      reason: `screen current through ${lastScreened} but no complete chain deep-dive for that session — DEEP-DIVE leg behind`,
+      reason: `screen current through ${lastScreened} but no complete chain deep-dive that produced verdicts for that session (never ran, or every name failed) — DEEP-DIVE leg behind`,
     };
   }
   return {
@@ -275,16 +276,20 @@ export async function runCatchup(
     const chainDeepDive = run
       ? await prisma.deepDiveRun.findFirst({
           where: { screenRunId: run.id, status: "complete", source: "chain" },
-          select: { id: true },
+          select: { id: true, topN: true, failed: true },
         })
       : null;
+    // "Complete" is not the same as "produced verdicts": a run in which every
+    // name failed reads as complete (2026-09-16, see deepDiveCovers). Such a run
+    // leaves the lane behind, so the next slot retries the leg.
+    const covered = chainDeepDive != null && deepDiveCovers(chainDeepDive.topN, chainDeepDive.failed);
     lanes.push(
       decideLane(
         market,
         bar?.date ?? null,
         run?.sessionDate || null,
         newest?.runAt ? newest.runAt.toISOString() : null,
-        run ? chainDeepDive != null : null,
+        run ? covered : null,
         expectedSession,
       ),
     );

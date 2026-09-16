@@ -590,8 +590,12 @@ budget guard.)*
 
 *Amended 2026-09-13 (Phase-5 A6): `Verdict` also carries the model stack
 (`models: { analyst, debate, verdict }`); the Phase-5 sample gate pins it
-(k3-256k ×3, exact match) exactly as it pins `PROMPT_VERSION` — one treatment
-per sample in model identity too.*
+exactly as it pins `PROMPT_VERSION` — one treatment per sample in model identity
+too. Re-baselined 2026-09-16 (**A7**) from k3-256k to `deepseek-flash` ×3 after
+the Kimi weekly quota wall left k3-256k unable to produce another observation;
+the accrued k3 verdicts (151 post-gate + 87 pre-gate) close as an EXCLUDED
+sub-sample rather than being pooled, at a recorded cost of ~8-10 lane-days of the
+157-day pooled horizon.*
 
 ## 8. UI (apps/web)
 

@@ -83,21 +83,27 @@ export const SAMPLE_PROMPT_VERSION = "v1";
 
 /**
  * The sample must be ONE treatment in model identity exactly as in prompt
- * identity (Phase-5 amendment A6, 2026-09-13, pre-label): the deciding sample
- * is pinned to the frozen stack k3-256k on all three roles. A verdict produced
- * by any other model is excluded and counted, never pooled — a model change
- * shows up as a jump in `otherModelExcluded`, not as a silent treatment swap.
+ * identity (Phase-5 amendments A6, 2026-09-13, and A7, 2026-09-16 — both
+ * pre-label). A verdict produced by any other model is excluded and counted,
+ * never pooled: a model change shows up as a jump in `otherModelExcluded`, not
+ * as a silent treatment swap. Exact string match, deliberately — whether a new
+ * model is "the same treatment" is a decision for the moment it appears, never
+ * the gate's call.
  *
- * Exact string match, deliberately: whether a new model is "the same
- * treatment" is a decision for the moment it appears, never the gate's call.
+ * A6 froze k3-256k on all three roles and verified the then-accrued sample
+ * against it (all 838 AgentDecision rows; see A6's one-time table). A7
+ * re-baselined the stack to DeepSeek `deepseek-flash` after the Kimi weekly
+ * quota wall lost 4 of 63 names on 2026-09-16 and the local profile moved onto
+ * the provider `architecture-v1.md` §7 already pinned for deploy.
  *
- * Verified against the store at freeze time: all 838 AgentDecision rows across
- * every role are "k3-256k" (see the one-time verification table in A6), so
- * pre-gate verdicts lacking the field are *verified* against their recorded
- * AgentDecision hashes, not defaulted — anything unresolvable or mismatched is
- * excluded as `legacyModelUnverifiable`.
+ * A7 is a RE-BASELINE, **not** a pooling: the k3 era is a closed sub-sample.
+ * Those rows now mismatch — post-gate verdicts are counted as
+ * `otherModelExcluded`, and pre-gate verdicts as `legacyModelUnverifiable`
+ * (their decision hashes still resolve to k3-256k, which is no longer in the
+ * frozen set). Cost, recorded rather than hidden: ~8-10 lane-days of accrued
+ * sample (~3-6 % of the 157-day pooled horizon) leave the deciding statistic.
  */
-export const SAMPLE_MODEL_STACK = { analyst: "k3-256k", debate: "k3-256k", verdict: "k3-256k" } as const;
+export const SAMPLE_MODEL_STACK = { analyst: "deepseek-flash", debate: "deepseek-flash", verdict: "deepseek-flash" } as const;
 
 /** Calendar-day difference between two ISO dates (b − a). */
 export function daysBetweenIso(a: string, b: string): number {

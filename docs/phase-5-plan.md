@@ -184,6 +184,48 @@ a jump in `otherModelExcluded`, never as silent pooling. Consequence, stated
 once as it was for prompts: **switching a role's model resets this clock**,
 because the accrued verdicts stop counting.
 
+### Amendment of 2026-09-16 (pre-label — the verified `labelled` count is 0)
+
+**A7 — the frozen model stack is re-baselined to `deepseek-flash`; the k3-256k
+era closes as an excluded sub-sample, not a pooled one.**
+
+Why now, and why this is not goalpost movement: on 2026-09-16 the Kimi Code
+subscription hit its weekly (7-day) quota wall and lost 4 of 63 names on that
+evening's chain (`MSFT`/`LH`/`TRGP` http-403, `3968.HK` http-400), with every
+later probe returning `access_terminated_error`. **k3-256k cannot produce another
+observation**, so keeping A6's freeze would not have slowed H2's clock — it would
+have stopped it. The local profile moved onto the provider
+`architecture-v1.md` §7 already pins for deploy (`deepseek-flash`, "DeepSeek V4.1
+Flash"), so local and deploy are now the same stack.
+
+The decision, taken with the accrued counts on the table (chain runs, `status:
+ok`): **151** post-gate k3-256k verdicts (runs 11–15) plus **87** pre-gate rows
+verified by decision hash. Two readings were available — pool them as "the same
+treatment" and keep the accrued sample, or re-baseline and close the k3 era.
+
+Chosen: **re-baseline, no pooling.** H2's statistic is a per-date cross-sectional
+rank IC (`quant-core/verdict-ic.ts` groups by date, so a model switch changes the
+*sequence* of daily ICs rather than any single day's), which makes pooling
+arguable — but "arguable" is the standard A6 rejects, and the prize is small:
+`days` counts (lane, session) dates, so the k3 prospective era is 3 HK + 2 US
+sessions plus ~5 legacy evenings, i.e. **~8–10 lane-days out of the 157 (pooled) /
+318 (per-lane) needed — 3–6 % of the horizon, ~1–2 weeks elapsed**. Buying
+treatment homogeneity for ~5 % of the clock is the trade this project's rules say
+to take.
+
+**Consequences, counted rather than silent:** `SAMPLE_MODEL_STACK` is
+`deepseek-flash` ×3; accrued k3 verdicts now mismatch and are counted
+(`otherModelExcluded` post-gate, `legacyModelUnverifiable` pre-gate — their
+hashes still resolve to k3-256k, which is no longer in the frozen set), so
+`verdict:validate` reports the k3 era as excluded instead of dropping it. A6
+already records the model per verdict, so the closed sub-sample stays re-scorable
+if the question is ever asked. `labelled` is still 0 — no outcome existed to be
+informed by — and that window closes when the first 20d label matures (~mid-October).
+
+**What this does NOT license:** trading back to k3 if the quota resets, or any
+future provider switch inside the sample, without the same explicit dated
+amendment. The gate is unchanged and still excludes by exact string match.
+
 ## Why this round
 
 Phases 4 and 4b established that the **deterministic screen is not resolvable**

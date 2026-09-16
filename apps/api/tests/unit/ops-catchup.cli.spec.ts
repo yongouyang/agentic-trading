@@ -117,7 +117,7 @@ describe("ops:catchup — the expected-session probe (2026-09-14)", () => {
       screenRun: {
         findFirst: async () => ({ id: 18, sessionDate: "2026-09-11", runAt: new Date("2026-09-11T08:50:00Z") }),
       },
-      deepDiveRun: { findFirst: async () => ({ id: 7 }) },
+      deepDiveRun: { findFirst: async () => ({ id: 7, topN: 40, failed: 0 }) },
     } as any;
     const withoutProbe = await runCatchup(prisma, ["HK"]);
     expect(withoutProbe.lanes[0]!.needsRun).toBe(false);
@@ -251,7 +251,7 @@ describe("ops:catchup — surfaces", () => {
             ? { id: 18, sessionDate: "2026-09-11", runAt: new Date("2026-09-11T08:50:00Z") }
             : { id: 19, sessionDate: "", runAt: new Date("2026-09-11T11:00:00Z") },
       },
-      deepDiveRun: { findFirst: async () => ({ id: 7 }) }, // a complete chain deep-dive exists
+      deepDiveRun: { findFirst: async () => ({ id: 7, topN: 40, failed: 0 }) }, // a complete chain deep-dive exists
     } as any;
     const r = await runCatchup(prisma, ["US"]);
     expect(r.lanes[0]!.needsRun).toBe(false);
@@ -260,27 +260,60 @@ describe("ops:catchup — surfaces", () => {
 });
 
 describe("ops:catchup — the verdict leg (provenance)", () => {  /** Stub store: screen current through 09-11; deepDiveRun rows filtered the
-   *  way Prisma would (status + source + attached screenRunId). */
-  function stubWithDeepDives(deepDives: { screenRunId: number; status: string; source: string }[]) {
+   *  way Prisma would (status + source + attached screenRunId). `topN`/`failed`
+   *  default to a fully-successful 40-name leg; a test that cares about the
+   *  zero-verdict case (`deepDiveCovers`, 2026-09-16) passes them explicitly. */
+  function stubWithDeepDives(deepDives: { screenRunId: number; status: string; source: string; topN?: number; failed?: number }[]) {
     return {
       bar: { findFirst: async () => ({ date: "2026-09-11" }) },
       screenRun: {
         findFirst: async () => ({ id: 18, sessionDate: "2026-09-11", runAt: new Date("2026-09-11T08:50:00Z") }),
       },
       deepDiveRun: {
-        findFirst: async ({ where }: any) =>
-          deepDives.find(
+        findFirst: async ({ where }: any) => {
+          const hit = deepDives.find(
             (d) =>
               d.screenRunId === where.screenRunId &&
               (!where.status || d.status === where.status) &&
               (!where.source || d.source === where.source),
-          ) ?? null,
+          );
+          return hit ? { topN: 40, failed: 0, ...hit } : null;
+        },
       },
     } as any;
   }
 
   it("screen current + complete chain deep-dive → up to date", async () => {
     const r = await runCatchup(stubWithDeepDives([{ screenRunId: 18, status: "complete", source: "chain" }]), ["HK"]);
+    expect(r.lanes[0]!.needsRun).toBe(false);
+  });
+
+  // 2026-09-16: `complete` is written even when every name failed, so a run with
+  // zero verdicts must leave the lane BEHIND — otherwise the sample stops
+  // accruing while the guard reports "up to date". A partial failure is the
+  // opposite call: the leg ran, so it must NOT trigger a re-run loop.
+  it("a chain deep-dive that produced ZERO verdicts leaves the lane behind", async () => {
+    const r = await runCatchup(
+      stubWithDeepDives([{ screenRunId: 18, status: "complete", source: "chain", topN: 40, failed: 40 }]),
+      ["HK"],
+    );
+    expect(r.lanes[0]!.needsRun).toBe(true);
+    expect(r.lanes[0]!.reason).toMatch(/DEEP-DIVE leg behind/);
+  });
+
+  it("a partially failed chain deep-dive still counts as coverage (no re-run loop)", async () => {
+    const r = await runCatchup(
+      stubWithDeepDives([{ screenRunId: 18, status: "complete", source: "chain", topN: 40, failed: 3 }]),
+      ["HK"],
+    );
+    expect(r.lanes[0]!.needsRun).toBe(false);
+  });
+
+  it("a lane with no picks that evening is covered, not behind forever", async () => {
+    const r = await runCatchup(
+      stubWithDeepDives([{ screenRunId: 18, status: "complete", source: "chain", topN: 0, failed: 0 }]),
+      ["HK"],
+    );
     expect(r.lanes[0]!.needsRun).toBe(false);
   });
 
@@ -346,7 +379,9 @@ describe("ops:catchup — rescreen rows must not make the lane read as behind", 
     deepDiveRun: {
       // The chain verdict is attached to the run that screened 09-11.
       findFirst: async ({ where }: any) =>
-        where.screenRunId === 18 && where.status === "complete" && where.source === "chain" ? { id: 7 } : null,
+        where.screenRunId === 18 && where.status === "complete" && where.source === "chain"
+          ? { id: 7, topN: 40, failed: 0 }
+          : null,
     },
   } as any;
 

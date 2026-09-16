@@ -118,6 +118,30 @@ export const PROJECTION_WATCH_RATIO = 1.5;
 
 export type HealthLevel = "healthy" | "warn" | "alert";
 
+/** Does a chain deep-dive actually COVER the verdict leg for its session?
+ *
+ * `status: "complete"` is written unconditionally by `runDeepDiveBatch`
+ * (`cli/deep-dive.ts`), so a run in which EVERY name failed still reads as a
+ * successful leg to both guards. Measured 2026-09-16: the Kimi weekly quota wall
+ * failed 4 of 63 names mid-evening — partial, so the leg genuinely ran. But when
+ * the quota is already gone at the start of a run, or the key expires between
+ * the preflight and the first call, all 40 fail and the run still reports
+ * complete: the sample silently stops accruing while health stays green. That is
+ * the case this predicate closes, and it is why "produced zero verdicts" must
+ * count as NOT covered so the 23:03 slot and the next evening retry it.
+ *
+ * `topN === 0` (a lane with no picks that evening) IS coverage — there was
+ * nothing to deep-dive, and calling it behind would re-run the lane forever.
+ *
+ * A PARTIAL failure deliberately still counts as coverage: the leg ran, the
+ * session was seen, and re-running to chase a permanently-failing name would
+ * loop every night. Its cost is surfaced instead of actioned — `HealthLane`
+ * carries `deepDiveFailed`/`deepDiveTopN` so the loss is visible without
+ * inventing work. */
+export function deepDiveCovers(topN: number, failed: number): boolean {
+  return topN === 0 || failed < topN;
+}
+
 export interface LaneHealth {
   market: "HK" | "US";
   level: HealthLevel;
@@ -136,6 +160,11 @@ export interface LaneHealth {
    *  `screen:rescreen --market <lane> --holes` — holes never change the level
    *  (the level system is for action-needed-now). */
   rescreenableHoles: number;
+  /** Names the newest chain deep-dive could not verdict, out of its breadth
+   *  (2026-09-16). Informational: a partial failure is real lost sample, but it
+   *  must not re-run the lane. `null` when no chain run exists. */
+  deepDiveFailed: number | null;
+  deepDiveTopN: number | null;
 }
 
 export interface JobHealth {
@@ -353,13 +382,16 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     ]);
     const run = chainRun ?? anyRun;
     // Verdict leg: the newest screen must carry a COMPLETE chain-source
-    // deep-dive — an ad-hoc run does not count (same policy as ops:catchup).
+    // deep-dive that actually produced verdicts — an ad-hoc run does not count
+    // (same policy as ops:catchup), and neither does a chain run whose every
+    // name failed (deepDiveCovers, 2026-09-16).
     const chainDeepDive = screenRun
       ? await prisma.deepDiveRun.findFirst({
           where: { screenRunId: screenRun.id, status: "complete", source: "chain" },
-          select: { id: true },
+          select: { id: true, topN: true, failed: true },
         })
       : null;
+    const chainCovers = chainDeepDive != null && deepDiveCovers(chainDeepDive.topN, chainDeepDive.failed);
 
     const staleCutoff = new Date(now.getTime() - STALE_RUNNING_HOURS * 3600 * 1000);
     const stale = await prisma.deepDiveRun.findFirst({
@@ -383,7 +415,7 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
       // conservative bound; the "no complete run" alert covers the never-ran.
       pending.add(expectedEvening(market, storeThrough));
     }
-    if (lastScreened && !chainDeepDive) pending.add(expectedEvening(market, lastScreened));
+    if (lastScreened && !chainCovers) pending.add(expectedEvening(market, lastScreened));
     const missed = missedEvenings(market, [...pending], now);
 
     // Rescreenable holes (INFORMATIONAL ONLY — never a reason, never a level):
@@ -410,6 +442,16 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     if (stale) {
       reasons.push(`run ${stale.id} has been 'running' since ${stale.runAt.toISOString()} — crashed or killed`);
     }
+    // A leg that ran and produced NOTHING is not "one evening late" — it is a
+    // failed leg, so it is an alert-level reason of its own rather than riding
+    // the missed-evening count. Partial failures stay informational (below) to
+    // avoid a re-run loop on a permanently-failing name.
+    if (chainDeepDive && !chainCovers) {
+      reasons.push(
+        `newest chain deep-dive (run ${chainDeepDive.id}) completed with 0 of ${chainDeepDive.topN} verdicts — ` +
+          `the verdict leg produced nothing; the next slot will retry it`,
+      );
+    }
 
     // Warn is the catch-up-on-wake case: a lane can be one evening late and be
     // perfectly healthy (tonight's 20:30/23:03 slots should recover it). Only
@@ -428,6 +470,8 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
       expectedRunsMissed: missed,
       staleRunning: stale ? { id: stale.id, runAt: stale.runAt.toISOString() } : null,
       rescreenableHoles,
+      deepDiveFailed: chainDeepDive?.failed ?? null,
+      deepDiveTopN: chainDeepDive?.topN ?? null,
     });
   }
 

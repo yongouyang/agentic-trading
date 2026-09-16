@@ -262,17 +262,41 @@ describe("provenance gate — an operator run is not a prospective observation",
 });
 
 
-describe("treatment gate — one model stack per sample (Phase-5 A6)", () => {
-  const FROZEN = { analyst: "k3-256k", debate: "k3-256k", verdict: "k3-256k" };
+describe("treatment gate — one model stack per sample (Phase-5 A6, re-baselined by A7)", () => {
+  const FROZEN = { analyst: "deepseek-flash", debate: "deepseek-flash", verdict: "deepseek-flash" };
 
-  it("pins the frozen stack to k3-256k on all three roles", () => {
+  it("pins the frozen stack to deepseek-flash on all three roles (A7 re-baseline)", () => {
     expect(SAMPLE_MODEL_STACK).toEqual(FROZEN);
   });
 
   it("reads the model stack from the verdict blob; a partial stack reads as absent", () => {
     const v = convictionOf(JSON.stringify({ conviction: 0.4, promptVersion: "v1", models: FROZEN }));
     expect(v.models).toEqual(FROZEN);
-    expect(convictionOf(JSON.stringify({ conviction: 0.4, promptVersion: "v1", models: { analyst: "k3-256k" } })).models).toBeNull();
+    expect(convictionOf(JSON.stringify({ conviction: 0.4, promptVersion: "v1", models: { analyst: "deepseek-flash" } })).models).toBeNull();
+  });
+
+  // A7 closes the k3 era rather than pooling it. Both halves are pinned here
+  // because they are the whole content of the amendment: accrued k3 verdicts
+  // stop counting, and the accrual lost is ~8-10 lane-days.
+  it("excludes a k3-256k verdict written before the re-baseline instead of pooling it", async () => {
+    const k3 = { analyst: "k3-256k", debate: "k3-256k", verdict: "k3-256k" };
+    const prisma = stubWith([
+      { symbol: "AAA", verdictJson: JSON.stringify({ conviction: 0.5, rating: "buy", promptVersion: "v1", models: k3 }) },
+    ]);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.otherModelExcluded).toBe(1);
+    expect(lane.pendingLabel).toBe(0);
+  });
+
+  it("treats a pre-gate k3-256k verdict as unverifiable now that the stack moved", async () => {
+    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6", "h7"].map((hash) => ({ hash, model: "k3-256k" }));
+    const prisma = stubWith([legacyVerdict(JSON.stringify(decisions.map((d) => d.hash)))], decisions);
+    const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
+    const lane = r.lanes[0]!;
+    expect(lane.legacyModelUnverifiable).toBe(1);
+    expect(lane.legacyModelVerified).toBe(0);
+    expect(lane.pendingLabel).toBe(0);
   });
 
   const stubWith = (reports: unknown[], decisions: { hash: string; model: string }[] = []) =>
@@ -320,8 +344,8 @@ describe("treatment gate — one model stack per sample (Phase-5 A6)", () => {
   });
 
   it("verifies a pre-gate verdict against its AgentDecision rows and counts it legacyModelVerified", async () => {
-    // 7 hashes = the full non-ETF call set; every one resolves to k3-256k.
-    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6", "h7"].map((hash) => ({ hash, model: "k3-256k" }));
+    // 7 hashes = the full non-ETF call set; every one resolves to the frozen stack.
+    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6", "h7"].map((hash) => ({ hash, model: "deepseek-flash" }));
     const prisma = stubWith([legacyVerdict(JSON.stringify(decisions.map((d) => d.hash)))], decisions);
     const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
     const lane = r.lanes[0]!;
@@ -334,7 +358,7 @@ describe("treatment gate — one model stack per sample (Phase-5 A6)", () => {
   it("verifies an ETF legacy verdict on the subset of roles present (no fundamentals hash)", async () => {
     // ETFs skip the fundamentals analyst, so the rule is "every hash PRESENT
     // verifies", never "every role is present".
-    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6"].map((hash) => ({ hash, model: "k3-256k" }));
+    const decisions = ["h1", "h2", "h3", "h4", "h5", "h6"].map((hash) => ({ hash, model: "deepseek-flash" }));
     const prisma = stubWith([legacyVerdict(JSON.stringify(decisions.map((d) => d.hash)))], decisions);
     const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
     expect(r.lanes[0]!.legacyModelVerified).toBe(1);
@@ -354,8 +378,8 @@ describe("treatment gate — one model stack per sample (Phase-5 A6)", () => {
 
   it("excludes a legacy verdict whose recorded model is off the frozen stack", async () => {
     const decisions = [
-      { hash: "h1", model: "k3-256k" },
-      { hash: "h2", model: "k3" }, // exact match only — no equivalence rules
+      { hash: "h1", model: "deepseek-flash" },
+      { hash: "h2", model: "deepseek-v4-pro" }, // exact match only — no equivalence rules
     ];
     const prisma = stubWith([legacyVerdict(JSON.stringify(["h1", "h2"]))], decisions);
     const r = await runValidation(prisma, { json: false, markets: ["US"], targetIc: 0.1 });
