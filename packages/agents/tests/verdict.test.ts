@@ -57,6 +57,46 @@ describe("parseVerdict — schema violations", () => {
     if (!r.ok) expect(r.error).toContain("JSON.parse failed");
   });
 
+  // Regression: the verbatim shape deepseek-flash produced on 2026-09-16
+  // (one real response, complete object, thesis wrapped across raw lines).
+  it("accepts raw newlines inside string values", () => {
+    const r = parseVerdict(
+      `{
+  "rating": "buy",
+  "conviction": 0.25,
+  "abstain": false,
+  "thesis": "The bull edges this debate: 1H26 revenue inflected to +3.9% y/y after FY25's decline.
+Credit quality is described as stable and the 44% net margin is a genuine franchise.
+This is a mild, not a high-conviction, positive stance.",
+  "keyRisks": ["NIM compression"],
+  "invalidationConditions": ["price closes under the 200-day SMA"]
+}`,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.verdict.thesis).toContain("mild");
+      expect(r.verdict.rating).toBe("buy");
+    }
+  });
+
+  it("accepts unescaped quotes inside string values", () => {
+    // Verbatim from the same 2026-09-16 response: the model quoted a phrase
+    // without escaping it, which ends the string early for JSON.parse.
+    const r = parseVerdict(
+      `{"rating": "buy", "conviction": 0.25, "abstain": false,
+        "thesis": "The bull edges this debate: the "one half is not a trend" objection cuts both ways.",
+        "keyRisks": ["NIM compression"],
+        "invalidationConditions": ["price closes under the 200-day SMA"]}`,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.verdict.thesis).toContain('"one half is not a trend"');
+  });
+
+  it("still fails a truncated response (no closing brace) instead of half-parsing it", () => {
+    const r = parseVerdict('{\n  "rating": "neutral",\n  "thesis": "This is a genuinely\n');
+    expect(r).toEqual({ ok: false, error: "no JSON object found in response" });
+  });
+
   it("conviction bounds are inclusive", () => {
     for (const c of [-1, 1]) {
       const r = parseVerdict(JSON.stringify({ ...VALID, conviction: c }));

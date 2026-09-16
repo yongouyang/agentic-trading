@@ -68,12 +68,61 @@ function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
+/** Repair the loose-but-complete JSON that DeepSeek `deepseek-flash` emits
+ *  (measured 2026-09-16, the switch away from Kimi's exhausted quota). Two
+ *  shapes, both seen in ONE real name: raw newlines inside string values, and
+ *  unescaped `"` around quoted phrases inside the thesis (`the "one half is not
+ *  a trend" objection`). The object was never truncated — but JSON.parse
+ *  rejects both, and the single repair round repeated the same violation, so
+ *  the verdict was lost.
+ *
+ *  This relaxes SYNTAX ONLY: the schema contract in parseVerdict (rating enum,
+ *  conviction bounds, non-empty thesis, string arrays) stays strict. A quote
+ *  closes a string only when the next non-whitespace character is a structural
+ *  delimiter (`,` `}` `]` `:`) or the input ends; anything else is content and
+ *  gets escaped. A content quote directly followed by a delimiter is still
+ *  misread as structural — that degrades to the pre-existing parse error, never
+ *  to a silently wrong verdict. */
+export function repairJsonStrings(json: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i]!;
+    if (!inString) {
+      out += ch;
+      if (ch === '"') inString = true;
+      continue;
+    }
+    if (ch === "\\") {
+      out += ch + (json[i + 1] ?? "");
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < json.length && " \t\n\r".includes(json[j]!)) j++;
+      const next = json[j];
+      if (next === undefined || ",}]:".includes(next)) {
+        out += ch;
+        inString = false;
+      } else out += '\\"'; // inner quote → escape it
+      continue;
+    }
+    if (ch.charCodeAt(0) < 0x20) {
+      out += ch === "\n" ? "\\n" : ch === "\r" ? "\\r" : ch === "\t" ? "\\t" : `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 export function parseVerdict(text: string): ParseVerdictResult {
   const candidate = extractJsonCandidate(text);
   if (!candidate) return { ok: false, error: "no JSON object found in response" };
   let obj: unknown;
   try {
-    obj = JSON.parse(candidate);
+    obj = JSON.parse(repairJsonStrings(candidate));
   } catch (e) {
     return { ok: false, error: `JSON.parse failed: ${(e as Error).message}` };
   }

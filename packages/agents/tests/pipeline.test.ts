@@ -90,6 +90,13 @@ describe("runDeepDive — happy path", () => {
     expect(log.recorded).toBe(7);
   });
 
+  it("gives both roles headroom for hidden reasoning tokens", async () => {
+    const client = new FakeClient((req) => (req.model === "m-verdict" ? VERDICT_JSON : "text"));
+    await runDeepDive(deps(client, memoryLog()), CTX, { isEtf: false });
+    // Order: fundamentals, news, bull, bear, bull, bear, verdict.
+    expect(client.requests.map((q) => q.maxTokens)).toEqual([4096, 4096, 4096, 4096, 4096, 4096, 3072]);
+  });
+
   it("debate round 2 sees round 1 text", async () => {
     const client = new FakeClient((req) => (req.model === "m-verdict" ? VERDICT_JSON : "text"));
     await runDeepDive(deps(client, memoryLog()), CTX, { isEtf: false });

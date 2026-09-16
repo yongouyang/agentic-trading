@@ -107,7 +107,14 @@ export async function runDeepDive(deps: DeepDiveDeps, ctx: DeepDiveContext, opts
     const req: LlmRequest = {
       model,
       messages: [{ role: "system", content: prompts.system }, { role: "user", content: prompts.user }, ...extraMessages],
-      maxTokens: agent === "verdict" ? 1024 : 2048,
+      // Role token budgets MUST cover hidden reasoning: DeepSeek's flash/pro
+      // models bill reasoning_tokens against max_tokens (measured 2026-09-16 —
+      // at 1024 the whole budget went to reasoning and `content` came back
+      // EMPTY with finish_reason=length; the news analyst was silently
+      // truncated at exactly 2048). Measured flash usage: 1172 reasoning +
+      // ~900 answer for a verdict, so 3072/4096 leaves real headroom. These
+      // are caps, not charges: only actual output is billed.
+      maxTokens: agent === "verdict" ? 3072 : 4096,
     };
     const res = await client.chat(req);
     calls++;

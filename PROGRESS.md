@@ -5,6 +5,78 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-16 — deep-dive provider switched Kimi → DeepSeek (quota wall), plus the two ways deepseek-flash broke the verdict contract
+
+**Trigger.** Tonight's chain (20:30/20:43 HKT, runs 14/15) completed BOTH lanes and
+both run rows say `status=complete`, but 4 of 63 names have no verdict: HK
+`3968.HK: failed:llm-http-400`, US `MSFT|LH|TRGP: failed:llm-http-403`. The 403s
+were the Kimi Code **weekly (7-day) usage limit** — re-probed the endpoint and read
+the body: `"You've reached your weekly (7-day) usage limit"`,
+`type=access_terminated_error`. Confirmed, not inferred: the client records only
+`http-<status>` in `DeepDiveReport.status`, so the body had to be fetched
+separately. Timeline fits — HK plus the first ~37 US names ran on quota, it ran
+dry at the tail (pool concurrency 4, last three names 403'd together). The
+mid-list `3968.HK` 400 is a DIFFERENT cause (400 = bad request, names after it
+succeeded); un-diagnosable while quota was blocked, and moot after the switch.
+
+**Switch (config only — `.env` is gitignored and was the whole change).**
+`LLM_BASE_URL=https://api.deepseek.com`, static `LLM_API_KEY`, model
+**`deepseek-flash`** for all three roles. `GET /models` on this key returns exactly
+`['deepseek-flash', 'deepseek-v4-pro']` — the `deepseek-chat` name I first
+suggested is NOT in it (would 400), so model IDs must be read from the provider,
+never assumed. Removed `LLM_API_KEY_FILE` (the rotating Kimi OAuth store: dead
+weight once `LLM_API_KEY` is static, and a silent fallback to a quota-blocked
+credential on any typo) and `LLM_REASONING_EFFORT` (Kimi-only knob). Also
+confirmed `.env.local` is read by NOTHING in this path — `loadEnvFiles()` reads
+`apps/api/.env` then root `.env`, and `scripts/daily-chain.sh`'s preflight greps
+root `.env` — and that shell env beats `.env` (Node `loadEnvFile` does not
+override; verified, or a stale exported var would silently win).
+
+**Two measured incompatibilities, both found by testing rather than reading.**
+1. **`deepseek-flash` bills hidden reasoning against `max_tokens`**
+   (`completion_tokens_details.reasoning_tokens`). The caps were sized for a model
+   that doesn't do this: at the verdict role's 1024 the ENTIRE budget went to
+   reasoning and `content` came back empty with `finish_reason=length`; the news
+   analyst was silently truncated at exactly `completionTokens=2048`. Raised to
+   `verdict 3072 / others 4096` (`packages/agents/src/pipeline.ts`) — caps, not
+   charges, so this is free unless a model rambles. Post-fix measured usage: worst
+   role 1818, verdict 1810.
+2. **Its verdict JSON is complete but syntactically loose**: raw newlines inside
+   string values, and unescaped `"` around quoted phrases (`the "one half is not a
+   trend" objection`). `JSON.parse` rejects both, and the single repair round
+   repeated the same violation, so the name was lost. New `repairJsonStrings()` in
+   `packages/agents/src/verdict.ts` (one pass, no new dependency): escapes control
+   chars inside strings and treats a quote as structural only when the next
+   non-whitespace char is `,` `}` `]` `:` or input ends. **Syntax only** — the
+   schema contract (rating enum, conviction bounds, non-empty thesis, string
+   arrays) stays strict, and a truncated response is still refused rather than
+   half-parsed. Replayed against the two verbatim failed responses from tonight:
+   the complete one now parses (rating/conviction/6 risks intact, inner quotes
+   preserved), the truncated one still fails loudly.
+
+**Verified end to end.** `screen:deep-dive --market hk --symbol 3968.HK`:
+`ok (7 calls)` — the name tonight's run lost. Run 17 (adhoc) holds it; HK's guard
+row is still chain run 14, so the ledger is unchanged. DeepSeek flash also runs
+~0.5–8 s/call vs Kimi, and there is no longer a quota wall to hit.
+
+**Tests:** agents 43 → **47** (+3 verdict: raw newlines, unescaped inner quotes,
+truncated-still-refused; +1 pipeline: per-role caps), api **578** (unchanged), tsc
+clean both, `packages/agents` dist rebuilt (the API consumes it from `dist/`).
+
+**Open findings — deliberately not fixed in this session.**
+- `DeepDiveRun.status` is flipped to `complete` even when EVERY name failed, so
+  `ops:health` and `ops:catchup`'s verdict-leg check both read a fully-failed night
+  as healthy. Tonight's 3 lost names will never be re-dived: run 15 is `complete`,
+  and `screen:rescreen` only recomputes screens. `LH` had never appeared in a
+  top-40 before, so it is a true hole in the Phase-5 sample; `MSFT`/`TRGP` have
+  run-13 verdicts. Fix would be: mark name-failed runs distinctly (or feed
+  `failed` into health) + a re-dive-failed-names path.
+- `.env`'s comment block still describes the Kimi subscription profile (values are
+  DeepSeek) — user-owned file, left alone.
+- Next real check: tomorrow's 20:30 chain on DeepSeek, first full 63-name run.
+
+---
+
 ## 2026-09-15 (Round 2) — charter §5.3 MEDIUMs CLOSED: mechanism sentences written, diversification measured for the first time
 
 Both Stage-1-permitted charter findings executed (nothing forbidden touched:
