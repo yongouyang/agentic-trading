@@ -21,8 +21,10 @@ succeeded); un-diagnosable while quota was blocked, and moot after the switch.
 
 **Switch (config only — `.env` is gitignored and was the whole change).**
 `LLM_BASE_URL=https://api.deepseek.com`, static `LLM_API_KEY`, model
-**`deepseek-flash`** for all three roles. `GET /models` on this key returns exactly
-`['deepseek-flash', 'deepseek-v4-pro']` — the `deepseek-chat` name I first
+**`deepseek-flash`** for all three roles — DeepSeek V4.1 Flash, ~4× faster and
+cheaper than the other DeepSeek models (user, 2026-09-16), so the fast tier costs
+no quality and analyst/debate/verdict stay on it. `GET /models` on this key
+returns exactly `['deepseek-flash', 'deepseek-v4-pro']` — the `deepseek-chat` name I first
 suggested is NOT in it (would 400), so model IDs must be read from the provider,
 never assumed. Removed `LLM_API_KEY_FILE` (the rotating Kimi OAuth store: dead
 weight once `LLM_API_KEY` is static, and a silent fallback to a quota-blocked
