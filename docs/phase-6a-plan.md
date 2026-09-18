@@ -269,6 +269,29 @@ reported an exact `0.000e+00` rather than a residue near the tolerance. Both
 consequences point the same way: the anchor is not only a bias of unknown size in
 the X variable, it also degrades the sharpest correctness test this phase has.
 
+**A third consequence, measured — and it is not small (2026-09-18, A6 gate).** The
+distortion at a date T is exactly a per-symbol constant rescaling of the price
+columns, so the class of affected alphas is decidable: rescale each symbol's OHLC by
+a factor drawn from the measured spread (0.80–1.00 against the real p10 0.848 /
+median 0.937), re-run the bridge, and compare the cross-section per date — the rank
+is what the IC reads. On **31 alphas spanning all three contributing zoos: 9 moved
+(rank ρ < 0.999) and 3 of those catastrophically** — `alpha101_015` ρ **0.4412** on
+1250/1250 dates, `alpha101_092` 0.6701, `alpha101_045` 0.8507. For those, the
+cross-section at every date is dominated by the per-symbol dividend factor rather
+than by the signal, so an IC computed from it would be measuring a per-symbol
+fixed effect built out of POST-T data — look-ahead in X, not merely noise.
+(`alpha101_021`, `academic_smb`, `academic_illiq`, `alpha101_029`, `alpha101_008`
+and `alpha101_037` moved too, all at ρ ≥ 0.9947 and most on a minority of dates.)
+
+**A first, 11-alpha sample of the same probe reported 10 of 11 unchanged, and the
+conclusion drawn from it — that the effect was "approximately nil" — was wrong.
+The sample was simply too small and its stride happened to select overwhelmingly
+scale-invariant alphas. Recorded here because the correction is the point: the
+cheap measurement was cheap for a reason.** The wider run is the one that counts,
+and it makes the anchor a decision rather than a disclosure: a sweep that shipped
+the labels of `alpha101_015` under this panel would be reporting a number about
+dividends as if it were about momentum.
+
 ## Build order (fast tier once locked)
 
 | # | Step | Deliverable | Exit criterion |

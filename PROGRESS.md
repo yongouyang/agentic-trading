@@ -69,8 +69,14 @@ a helper the parser never called, so `readNumberCsv` silently accepted a headerl
 file and read its first row as dates. The test caught it; the check now sits in the
 single code path both readers use.
 
-**Next:** A6, gated on nothing — see the anchor measurement recorded against
-amendment A2-1.
+**Next:** A6, **gated on the anchor decision** (see `docs/phase-6a-plan.md` amendment
+A2-1, third consequence). An 11-alpha sensitivity probe said the panel's dividend
+anchor left 10 of 11 cross-sections untouched; a 31-alpha run said **9 of 31 moved
+and 3 catastrophically** (rank ρ 0.44 / 0.67 / 0.85 — for those alphas the IC would
+be measuring a per-symbol dividend factor built from post-T data). The small sample
+was too small and its stride picked scale-invariant alphas; the conclusion it
+supported was wrong and is corrected in the plan. A6 does not run until the panel's
+adjustment convention is decided.
 
 ---
 
