@@ -1,0 +1,34 @@
+== PHASE 4c TRACK A — VENDOR SCREEN REPLAY ==
+window 2022-09-01 … 2022-12-31 (84 sessions, design half; test half starts 2024-09-03) · SCREEN_PARAMS as shipped
+hypothesis: H1-GENERALITY — fresh names, spent regime; this is never 'validated on fresh data'.
+
+LOADER MANIFEST (audit trail):
+  universe: 1490 symbols / 1844 survivor series → 1469 series loaded (1722824 bars)
+  quarantined (gap > 14d, vendor+symbol): 27
+  dual-feed symbols: 348 — one feed by bar count (xnas 1018 · xnys 451 total incl. single-feed)
+  splits: 208 events across 163 symbols (registry + detector rows: CDTX 2024-04-24 factor 0.0526316; QXO 2024-07-30 factor 5.33333)
+  dividends: 904 symbols covered (17249 Yahoo events, nominal at ex-date, scaled onto the split basis); 111 residual symbols on price returns (disclosed upward bias, ≤ ~0.1%/yr)
+  n/a (vendor lane — always false)
+
+IC (deciding statistic next session; the bar is NOT yet locked — these are design-half measurements only):
+  mean 20d rank IC -0.0575 · ICIR -0.285 · NW t -0.85 (lag 20) · 84 days · breadth 100
+  SE: naive 0.02204 · heuristic 0.04915 · realized NW 0.06791 (df 3.2)
+   5d: IC -0.0468 · t -1.39 · spread -0.30%
+  20d: IC -0.0575 · t -0.85 · spread -0.78%
+  60d: IC -0.1423 · t -3.94 · spread -2.08%
+  by year: 2022 -0.0575 (84d)
+GATE 2 (falsification-only; carries the dividend upward-bias disclosure): portfolio -8.38% vs equal-weight eligible -5.60% → differential -2.78% · NW t -0.92 (lag 20)
+  yearly differential: 2022 -2.73%
+  exclusion census (descriptive): 106830 first-failures vs 8597 eligible → 92.6% rejected
+    LOW_LIQUIDITY            49029  (584/day)
+    BEARISH_ALIGNMENT        37349  (445/day)
+    HIGH_VOLATILITY           8647  (103/day)
+    DEEP_DRAWDOWN             5681  (68/day)
+    INSUFFICIENT_HISTORY      4174  (50/day)
+    NON_POSITIVE_SHARPE       1208  (14/day)
+    NEGATIVE_MOMENTUM          742  (9/day)
+
+Pre-registered caveats:
+  · Gate 2 passes are never confirmations; the differential is biased UPWARD by the dividend residual (≤ ~0.1%/yr).
+  · adv20 is venue-distorted (no consolidated tape); delisting returns are undefined (a series just stops).
+  · Split/ticker-identity risk: quarantined + P2/P3-classified (residual ≈ 0); see the manifest.

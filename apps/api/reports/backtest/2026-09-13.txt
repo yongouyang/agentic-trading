@@ -1,0 +1,139 @@
+== PHASE 4b — SCREEN BACKTEST (H1), CALIBRATION REPAIRED ==
+window 2022-09-12 … 2026-09-11 (1004 sessions) · screen parameters UNTUNED (SCREEN_PARAMS as shipped)
+
+--- US ---
+GATE 1 (decides)   mean 20d IC 0.0140 · ICIR 0.087 · NW t 0.94 (lag 20) · 984 days · breadth 180
+                   bar: IC >= 0.02 AND t >= 2 → FAIL
+                   power floor: this lane can only detect IC >= 0.0297 at t=2
+                   SE triple: naive 0.00513 · heuristic 0.01065 · realized NW 0.01486 (df 48.2)
+                   SE by lag: 5→0.01090 · 20→0.01486 · 60→0.01447 — the floor is a lag-20 result
+                   mean IC 95% CI [-0.0159, 0.0439] at q=2.010 — approximate (NW + normal)
+   5d: IC 0.0107 · ICIR 0.059 · t 1.10 · spread +0.17% (55% days positive)
+       prop spread +0.15% · NW t 1.44 · mean cutoff 18 of 180 names
+  20d: IC 0.0140 · ICIR 0.087 · t 0.94 · spread +0.82% (60% days positive)
+       prop spread +0.64% · NW t 1.66 · mean cutoff 18 of 180 names
+  60d: IC -0.0086 · ICIR -0.056 · t -0.37 · spread +2.17% (54% days positive)
+       prop spread +1.47% · NW t 1.14 · mean cutoff 18 of 180 names
+  by year: 2022 -0.0528 (78d) · 2023 0.0185 (250d) · 2024 0.0316 (252d) · 2025 0.0343 (250d) · 2026 -0.0211 (154d)
+GATE 2 (base) portfolio +91.07% vs benchmark +49.29% → differential +41.78% · Sharpe 0.84 · MDD -18.51% · trades 943 · hold 15d · turnover 30.9x
+GATE 2 (2x  ) portfolio +77.85% vs benchmark +49.29% → differential +28.56% · Sharpe 0.76 · MDD -18.90% · trades 943 · hold 15d · turnover 30.9x
+  differential interval (D2) daily arithmetic mean +0.03% · TE(iid) +15.84%/yr · IR 0.50 · NW t 1.20 (lag 20)
+     3.98y · implied t from IR 0.99 · HAC NW t 1.20 · the gap is the HAC factor (ir*sqrt(y) != nw t)
+     vs INDEX (pre-registered 2nd benchmark): portfolio − index = -5.12% (index +96.19%)
+     decomposition: sd(portfolio) +22.30%/yr · sd(benchmark) +12.93%/yr · corr 0.717 · sd(diff) +15.84%/yr · mean/sd(diff) 0.497
+     the benchmark is the screen's OWN eligible set, equal-weighted and cost-free — so this differential mostly measures portfolio construction
+     (concentration, hysteresis, T+1 fills, costs), not the screen's selection.
+     conventions: benchmark is cost-free, always fully invested, rebalanced daily over the PREVIOUS day's eligible set;
+                  the portfolio holds idle cash, pays costs, and fills at T+1 open; totalReturn includes terminal liquidation costs the daily series does not.
+     lag sensitivity: t(5) 1.07 · t(20) 1.20 · t(60) 1.25 — descriptive; if these disagree, report that rather than pick a lag
+  yearly differential: 2022 -3.26% · 2023 +6.67% · 2024 +4.66% · 2025 +19.91% · 2026 +1.31%
+  buy & hold reference: +96.19%
+  exclusion census (D3, descriptive): 372367 first-failures vs 180706 eligible observations → 67.3% of screenable observations rejected
+    basis=first_failure: runScreen records ONE reason per name, so this is which gate rejects FIRST, not which gate binds —
+    it cannot support "relaxing a gate raises breadth by Y".
+    BEARISH_ALIGNMENT       302411  (81.2% of rejections, 301/day)
+    HIGH_VOLATILITY          22841  (6.1% of rejections, 23/day)
+    DEEP_DRAWDOWN            18197  (4.9% of rejections, 18/day)
+    NEGATIVE_MOMENTUM        15294  (4.1% of rejections, 15/day)
+    NON_POSITIVE_SHARPE      10348  (2.8% of rejections, 10/day)
+    LOW_LIQUIDITY             1693  (0.5% of rejections, 2/day)
+    INSUFFICIENT_HISTORY      1583  (0.4% of rejections, 2/day)
+    by year: 2022 BEARISH_ALIGNMENT 28906 · 2023 BEARISH_ALIGNMENT 82236 · 2024 BEARISH_ALIGNMENT 61215 · 2025 BEARISH_ALIGNMENT 79260 · 2026 BEARISH_ALIGNMENT 50794  (dominant reason)
+  marginal census (descriptive; basis=independent_evaluation): every gate evaluated per name, so any-fail ≥ first-failure and only SOLE-fail counts are recoverable breadth
+    BEARISH_ALIGNMENT      any-fail  335374 (334.0/day) · sole-fail   76416 → eligible-if-relaxed 256.1/day
+    NEGATIVE_MOMENTUM      any-fail  223243 (222.4/day) · sole-fail   13994 → eligible-if-relaxed 193.9/day
+    NON_POSITIVE_SHARPE    any-fail  164290 (163.6/day) · sole-fail   10348 → eligible-if-relaxed 190.3/day
+    DEEP_DRAWDOWN          any-fail   28978 (28.9/day) · sole-fail    1680 → eligible-if-relaxed 181.7/day
+    HIGH_VOLATILITY        any-fail   22916 (22.8/day) · sole-fail    4841 → eligible-if-relaxed 184.8/day
+    LOW_LIQUIDITY          any-fail    1693 (1.7/day) · sole-fail     595 → eligible-if-relaxed 180.6/day
+    INSUFFICIENT_HISTORY   any-fail    1583 (1.6/day) · sole-fail    1583 → eligible-if-relaxed 181.6/day
+VERDICT US: insufficient_evidence
+  note: power note: this lane's own NW SE implies it can only detect mean 20d IC >= 0.0297 at t=2, which is ABOVE the 0.02 magnitude bar — the bar was unreachable in this lane, so FAIL is insufficient evidence, not evidence of no edge.
+  note: SE triple: naive 0.00513 · heuristic 0.01065 · realized NW 0.01486 (df 48.2) · 95% CI on mean IC [-0.0159, 0.0439] (NW SE · t-quantile from icPower)
+  note: Gate 2 is NOT falsified — a pre-registered non-falsification, never a confirmation. The Phase-4 claim that this gate can never confirm (IR >= 0.985) is WITHDRAWN: that IR was assumed, never measured. See the differential interval in gate2Base.
+--- HK ---
+GATE 1 (decides)   mean 20d IC -0.0199 · ICIR -0.074 · NW t -0.81 (lag 20) · 900 days · breadth 25
+                   bar: IC >= 0.02 AND t >= 2 → FAIL
+                   power floor: this lane can only detect IC >= 0.0493 at t=2
+                   SE triple: naive 0.00893 · heuristic 0.03014 · realized NW 0.02465 (df 44.0)
+                   SE by lag: 5→0.01790 · 20→0.02465 · 60→0.02473 — the floor is a lag-20 result
+                   mean IC 95% CI [-0.0696, 0.0298] at q=2.015 — approximate (NW + normal)
+   5d: IC -0.0218 · ICIR -0.074 · t -1.36 · spread -0.09% (47% days positive)
+       prop spread +0.09% · NW t 0.50 · mean cutoff 5 of 25 names
+  20d: IC -0.0199 · ICIR -0.074 · t -0.81 · spread +0.07% (53% days positive)
+       prop spread +0.76% · NW t 1.34 · mean cutoff 5 of 25 names
+  60d: IC -0.0501 · ICIR -0.188 · t -1.37 · spread +0.42% (53% days positive)
+       prop spread +2.45% · NW t 1.56 · mean cutoff 5 of 25 names
+  by year: 2022 -0.1435 (24d) · 2023 -0.0074 (236d) · 2024 0.0026 (243d) · 2025 -0.0265 (246d) · 2026 -0.0455 (151d)
+GATE 2 (base) portfolio +11.29% vs benchmark +38.43% → differential -27.14% · Sharpe 0.24 · MDD -29.39% · trades 777 · hold 15d · turnover 26.1x
+GATE 2 (2x  ) portfolio -10.61% vs benchmark +38.43% → differential -49.03% · Sharpe -0.02 · MDD -34.56% · trades 770 · hold 15d · turnover 25.9x
+  differential interval (D2) daily arithmetic mean -0.02% · TE(iid) +9.28%/yr · IR -0.59 · NW t -1.20 (lag 20)
+     3.87y · implied t from IR -1.16 · HAC NW t -1.20 · the gap is the HAC factor (ir*sqrt(y) != nw t)
+     vs INDEX (pre-registered 2nd benchmark): portfolio − index = -42.80% (index +54.08%)
+     decomposition: sd(portfolio) +21.09%/yr · sd(benchmark) +20.73%/yr · corr 0.902 · sd(diff) +9.28%/yr · mean/sd(diff) -0.591
+     the benchmark is the screen's OWN eligible set, equal-weighted and cost-free — so this differential mostly measures portfolio construction
+     (concentration, hysteresis, T+1 fills, costs), not the screen's selection.
+     conventions: benchmark is cost-free, always fully invested, rebalanced daily over the PREVIOUS day's eligible set;
+                  the portfolio holds idle cash, pays costs, and fills at T+1 open; totalReturn includes terminal liquidation costs the daily series does not.
+     lag sensitivity: t(5) -1.11 · t(20) -1.20 · t(60) -1.16 — descriptive; if these disagree, report that rather than pick a lag
+  yearly differential: 2022 +6.18% · 2023 -7.39% · 2024 -4.60% · 2025 -24.72% · 2026 +2.15%
+  buy & hold reference: +54.08%
+  exclusion census (D3, descriptive): 100954 first-failures vs 23547 eligible observations → 81.1% of screenable observations rejected
+    basis=first_failure: runScreen records ONE reason per name, so this is which gate rejects FIRST, not which gate binds —
+    it cannot support "relaxing a gate raises breadth by Y".
+    BEARISH_ALIGNMENT        44334  (43.9% of rejections, 45/day)
+    LOW_LIQUIDITY            29706  (29.4% of rejections, 30/day)
+    HIGH_VOLATILITY          12201  (12.1% of rejections, 13/day)
+    DEEP_DRAWDOWN             8523  (8.4% of rejections, 9/day)
+    NEGATIVE_MOMENTUM         2672  (2.6% of rejections, 3/day)
+    INSUFFICIENT_HISTORY      2538  (2.5% of rejections, 3/day)
+    NON_POSITIVE_SHARPE        980  (1.0% of rejections, 1/day)
+    by year: 2022 BEARISH_ALIGNMENT 2959 · 2023 BEARISH_ALIGNMENT 10739 · 2024 BEARISH_ALIGNMENT 9938 · 2025 BEARISH_ALIGNMENT 10185 · 2026 BEARISH_ALIGNMENT 10513  (dominant reason)
+  marginal census (descriptive; basis=independent_evaluation): every gate evaluated per name, so any-fail ≥ first-failure and only SOLE-fail counts are recoverable breadth
+    BEARISH_ALIGNMENT      any-fail   81737 (83.7/day) · sole-fail   10847 → eligible-if-relaxed 35.2/day
+    NEGATIVE_MOMENTUM      any-fail   57898 (59.3/day) · sole-fail    2503 → eligible-if-relaxed 26.7/day
+    NON_POSITIVE_SHARPE    any-fail   42043 (43.1/day) · sole-fail     980 → eligible-if-relaxed 25.1/day
+    LOW_LIQUIDITY          any-fail   29706 (30.4/day) · sole-fail    6925 → eligible-if-relaxed 31.2/day
+    DEEP_DRAWDOWN          any-fail   18037 (18.5/day) · sole-fail     565 → eligible-if-relaxed 24.7/day
+    HIGH_VOLATILITY        any-fail   13350 (13.7/day) · sole-fail    2429 → eligible-if-relaxed 26.6/day
+    INSUFFICIENT_HISTORY   any-fail    2538 (2.6/day) · sole-fail    2538 → eligible-if-relaxed 26.7/day
+VERDICT HK: insufficient_evidence
+  note: power note: this lane's own NW SE implies it can only detect mean 20d IC >= 0.0493 at t=2, which is ABOVE the 0.02 magnitude bar — the bar was unreachable in this lane, so FAIL is insufficient evidence, not evidence of no edge.
+  note: SE triple: naive 0.00893 · heuristic 0.03014 · realized NW 0.02465 (df 44.0) · 95% CI on mean IC [-0.0696, 0.0298] (NW SE · t-quantile from icPower)
+  falsified: [1x base costs] portfolio +11.3% vs benchmark +38.4% — differential -27.1%
+  falsified: [2x base costs] portfolio -10.6% vs benchmark +38.4% — differential -49.0%
+
+DESCRIPTIVE weight sweep (US, mean 20d IC) — NOT a gate, do not tune from this:
+  mom60 0.40 / mom20 0.15 / sharpe 0.45 → IC 0.0195 · t 1.26
+  mom60 0.40 / mom20 0.25 / sharpe 0.35 → IC 0.0198 · t 1.30
+  mom60 0.40 / mom20 0.35 / sharpe 0.25 → IC 0.0185 · t 1.24
+  mom60 0.50 / mom20 0.15 / sharpe 0.35 → IC 0.0147 · t 0.98
+  mom60 0.50 / mom20 0.25 / sharpe 0.25 → IC 0.0140 · t 0.94   <-- SHIPPED
+  mom60 0.50 / mom20 0.35 / sharpe 0.15 → IC 0.0128 · t 0.86
+  mom60 0.60 / mom20 0.15 / sharpe 0.25 → IC 0.0098 · t 0.66
+  mom60 0.60 / mom20 0.25 / sharpe 0.15 → IC 0.0091 · t 0.62
+  mom60 0.60 / mom20 0.35 / sharpe 0.05 → IC 0.0073 · t 0.50
+  shipped combo ranks 5/9 by mean IC; best is 0.0198 (spread 0.0058 over shipped)
+DESCRIPTIVE weight sweep (HK, mean 20d IC) — NOT a gate, do not tune from this:
+  mom60 0.40 / mom20 0.15 / sharpe 0.45 → IC 0.0124 · t 0.46
+  mom60 0.40 / mom20 0.25 / sharpe 0.35 → IC 0.0038 · t 0.15
+  mom60 0.40 / mom20 0.35 / sharpe 0.25 → IC 0.0007 · t 0.03
+  mom60 0.50 / mom20 0.15 / sharpe 0.35 → IC -0.0154 · t -0.59
+  mom60 0.50 / mom20 0.25 / sharpe 0.25 → IC -0.0199 · t -0.81   <-- SHIPPED
+  mom60 0.50 / mom20 0.35 / sharpe 0.15 → IC -0.0197 · t -0.82
+  mom60 0.60 / mom20 0.15 / sharpe 0.25 → IC -0.0367 · t -1.43
+  mom60 0.60 / mom20 0.25 / sharpe 0.15 → IC -0.0377 · t -1.50
+  mom60 0.60 / mom20 0.35 / sharpe 0.05 → IC -0.0348 · t -1.39
+  shipped combo ranks 6/9 by mean IC; best is 0.0124 (spread 0.0323 over shipped)
+
+REPLAY vs PRODUCTION (item 3) — the census for one stored session, production vs replay:
+  US: MATCH against ScreenRun 19 (2026-09-11) · inputs 555 replay vs 555 stored `ok`
+  HK: MATCH against ScreenRun 18 (2026-09-11) · inputs 131 replay vs 131 stored `ok`
+
+Pre-registered limitations:
+  · Gate 2 is falsification-only: passing means 'not falsified', never 'confirmed'.
+    The Phase-4 justification for that ('IR >= 0.985' assumed, not measured) is WITHDRAWN — see the differential interval above.
+  · Gate 1's FAIL is `insufficient_evidence` wherever the lane's own SE puts the 0.02 bar out of reach — that is not evidence of no edge.
+  · Survivorship — the store holds today's universe; results are upper bounds, claims are relative.
+  · SCREEN_PARAMS were designed with knowledge of this period, so this is not a clean prospective test.
+  · D3's census and D4's proportional spread are DESCRIPTIVE; this window is spent for both.

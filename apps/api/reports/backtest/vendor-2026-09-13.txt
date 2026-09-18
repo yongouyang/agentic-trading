@@ -1,0 +1,42 @@
+== PHASE 4c TRACK A — VENDOR SCREEN REPLAY ==
+window 2022-09-01 … 2024-08-30 (502 sessions, design half; test half starts 2024-09-03) · SCREEN_PARAMS as shipped
+hypothesis: H1-GENERALITY — fresh names, spent regime; this is never 'validated on fresh data'.
+
+LOADER MANIFEST (audit trail):
+  universe: 1490 symbols / 1844 survivor series → 1469 series loaded (1722824 bars)
+  quarantined (gap > 14d, vendor+symbol): 27
+  dual-feed symbols: 348 — one feed by bar count (xnas 1018 · xnys 451 total incl. single-feed)
+  splits: 208 events across 163 symbols (registry + detector rows: CDTX 2024-04-24 factor 0.0526316; QXO 2024-07-30 factor 5.33333)
+  dividends: 904 symbols covered (17249 Yahoo events, nominal at ex-date, scaled onto the split basis); 111 residual symbols on price returns (disclosed upward bias, ≤ ~0.1%/yr)
+  n/a (vendor lane — always false)
+
+IC (deciding statistic next session; the bar is NOT yet locked — these are design-half measurements only):
+  mean 20d rank IC -0.0138 · ICIR -0.097 · NW t -0.71 (lag 20) · 502 days · breadth 237
+  SE: naive 0.00640 · heuristic 0.01298 · realized NW 0.01956 (df 24.1)
+   5d: IC -0.0108 · t -0.89 · spread -0.08%
+  20d: IC -0.0138 · t -0.71 · spread -0.05%
+  60d: IC -0.0386 · t -1.42 · spread +0.65%
+  by year: 2022 -0.0575 (84d) · 2023 -0.0086 (250d) · 2024 0.0001 (168d)
+GATE 2 (falsification-only; carries the dividend upward-bias disclosure): portfolio +15.01% vs equal-weight eligible +12.82% → differential +2.19% · NW t 0.31 (lag 20)
+  yearly differential: 2022 -2.73% · 2023 +10.35% · 2024 -4.80%
+  exclusion census (descriptive): 578858 first-failures vs 123135 eligible → 82.5% rejected
+    LOW_LIQUIDITY           286617  (571/day)
+    BEARISH_ALIGNMENT       205144  (409/day)
+    HIGH_VOLATILITY          33174  (66/day)
+    DEEP_DRAWDOWN            17800  (35/day)
+    INSUFFICIENT_HISTORY     16941  (34/day)
+    NEGATIVE_MOMENTUM        10372  (21/day)
+    NON_POSITIVE_SHARPE       8810  (18/day)
+  marginal census (descriptive; basis=independent_evaluation): 578858 rejected vs 123135 eligible — any-fail counts names per gate failed, sole-fail = only failure
+    BEARISH_ALIGNMENT      any-fail  422699 (842.0/day) · sole-fail   50440 → eligible-if-relaxed 345.8/day
+    LOW_LIQUIDITY          any-fail  286617 (571.0/day) · sole-fail   76749 → eligible-if-relaxed 398.2/day
+    NEGATIVE_MOMENTUM      any-fail  275753 (549.3/day) · sole-fail    9205 → eligible-if-relaxed 263.6/day
+    NON_POSITIVE_SHARPE    any-fail  222294 (442.8/day) · sole-fail    8810 → eligible-if-relaxed 262.8/day
+    DEEP_DRAWDOWN          any-fail   93836 (186.9/day) · sole-fail    1924 → eligible-if-relaxed 249.1/day
+    HIGH_VOLATILITY        any-fail   84524 (168.4/day) · sole-fail    6366 → eligible-if-relaxed 258.0/day
+    INSUFFICIENT_HISTORY   any-fail   16941 (33.7/day) · sole-fail   16941 → eligible-if-relaxed 279.0/day
+
+Pre-registered caveats:
+  · Gate 2 passes are never confirmations; the differential is biased UPWARD by the dividend residual (≤ ~0.1%/yr).
+  · adv20 is venue-distorted (no consolidated tape); delisting returns are undefined (a series just stops).
+  · Split/ticker-identity risk: quarantined + P2/P3-classified (residual ≈ 0); see the manifest.

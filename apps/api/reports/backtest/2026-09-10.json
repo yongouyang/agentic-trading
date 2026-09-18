@@ -1,0 +1,547 @@
+{
+  "generatedAt": "2026-09-10T16:02:23.914Z",
+  "window": {
+    "start": "2022-09-08",
+    "end": "2026-09-09",
+    "sessions": 1003
+  },
+  "lanes": [
+    {
+      "market": "US",
+      "gate1": {
+        "market": "US",
+        "primaryHorizon": 20,
+        "meanIc": 0.014519076301173658,
+        "icir": 0.0900775166119734,
+        "nwT": 0.9748259282756586,
+        "nwSe": 0.014894019414169698,
+        "days": 983,
+        "meanBreadth": 179.91047812817905,
+        "detectableIc": 0.029788038828339396,
+        "minIc": 0.02,
+        "minT": 2,
+        "passed": false,
+        "horizons": [
+          {
+            "horizon": 5,
+            "meanIc": 0.011206144758547323,
+            "icir": 0.06193134805987741,
+            "nwT": 1.156096889566943,
+            "nwSe": 0.009693084428888119,
+            "days": 998,
+            "spreadMean": 0.0017577512377348885,
+            "spreadPositiveShare": 0.5533199195171026
+          },
+          {
+            "horizon": 20,
+            "meanIc": 0.014519076301173658,
+            "icir": 0.0900775166119734,
+            "nwT": 0.9748259282756586,
+            "nwSe": 0.014894019414169698,
+            "days": 983,
+            "spreadMean": 0.008258796801262552,
+            "spreadPositiveShare": 0.5985699693564862
+          },
+          {
+            "horizon": 60,
+            "meanIc": -0.008026082343870426,
+            "icir": -0.05165888912004844,
+            "nwT": -0.34880764434156225,
+            "nwSe": 0.02301005288751946,
+            "days": 943,
+            "spreadMean": 0.021905927725451187,
+            "spreadPositiveShare": 0.54419595314164
+          }
+        ],
+        "byYear": [
+          {
+            "year": "2022",
+            "meanIc": -0.04691598031805337,
+            "days": 80
+          },
+          {
+            "year": "2023",
+            "meanIc": 0.01851055412792186,
+            "days": 250
+          },
+          {
+            "year": "2024",
+            "meanIc": 0.03157213786743998,
+            "days": 252
+          },
+          {
+            "year": "2025",
+            "meanIc": 0.034309050023962714,
+            "days": 250
+          },
+          {
+            "year": "2026",
+            "meanIc": -0.020765227490516815,
+            "days": 151
+          }
+        ]
+      },
+      "gate2Base": {
+        "market": "US",
+        "costLabel": "base",
+        "portfolio": {
+          "totalReturn": 0.8894678377905645,
+          "annualizedReturn": 0.17335456457548393,
+          "maxDrawdown": -0.18506460476334807,
+          "maxDrawdownSessions": 160,
+          "sharpe": 0.8300293079858352,
+          "winRate": 0.41764080765143463,
+          "plRatio": 2.0390648698108396,
+          "tradeCount": 941,
+          "avgHoldingSessions": 14.710945802337939,
+          "turnover": 30.83318599154496,
+          "sessions": 1003
+        },
+        "benchmarkReturn": 0.5091695240213394,
+        "differential": 0.38029831376922507,
+        "falsified": false,
+        "reasons": []
+      },
+      "gate2Double": {
+        "market": "US",
+        "costLabel": "2x",
+        "portfolio": {
+          "totalReturn": 0.7590032152740851,
+          "annualizedReturn": 0.15245061663311943,
+          "maxDrawdown": -0.1889762378416895,
+          "maxDrawdownSessions": 189,
+          "sharpe": 0.7500343066154148,
+          "winRate": 0.4155154091392136,
+          "plRatio": 2.0079983979507294,
+          "tradeCount": 941,
+          "avgHoldingSessions": 14.710945802337939,
+          "turnover": 30.830311687491335,
+          "sessions": 1003
+        },
+        "benchmarkReturn": 0.5091695240213394,
+        "differential": 0.24983369125274568,
+        "falsified": false,
+        "reasons": []
+      },
+      "yearly": [
+        {
+          "year": "2022",
+          "portfolio": -0.06332025358331961,
+          "benchmark": 0.0015321638590222175,
+          "differential": -0.06485241744234183
+        },
+        {
+          "year": "2023",
+          "portfolio": 0.2084429664322618,
+          "benchmark": 0.14175204095137683,
+          "differential": 0.06669092548088495
+        },
+        {
+          "year": "2024",
+          "portfolio": 0.20281877926841285,
+          "benchmark": 0.15619885562082558,
+          "differential": 0.04661992364758727
+        },
+        {
+          "year": "2025",
+          "portfolio": 0.25812011166578475,
+          "benchmark": 0.05900410227205821,
+          "differential": 0.19911600939372653
+        },
+        {
+          "year": "2026",
+          "portfolio": 0.10360280629092578,
+          "benchmark": 0.07788183049940578,
+          "differential": 0.025720975791519995
+        }
+      ],
+      "verdict": "h1_revised",
+      "notes": [
+        "Gate 2 is NOT falsified — that is not a confirmation. Portfolio-level alpha over this window would need IR >= 0.985 to reach t = 2."
+      ]
+    },
+    {
+      "market": "HK",
+      "gate1": {
+        "market": "HK",
+        "primaryHorizon": 20,
+        "meanIc": -0.01922610462988754,
+        "icir": -0.07181763909991518,
+        "nwT": -0.7796003919765239,
+        "nwSe": 0.02466148661257535,
+        "days": 898,
+        "meanBreadth": 25.485523385300667,
+        "detectableIc": 0.0493229732251507,
+        "minIc": 0.02,
+        "minT": 2,
+        "passed": false,
+        "horizons": [
+          {
+            "horizon": 5,
+            "meanIc": -0.020983557831672592,
+            "icir": -0.07079917741651783,
+            "nwT": -1.3071116309461903,
+            "nwSe": 0.0160533785599345,
+            "days": 913,
+            "spreadMean": -0.0008169208318526699,
+            "spreadPositiveShare": 0.47020933977455714
+          },
+          {
+            "horizon": 20,
+            "meanIc": -0.01922610462988754,
+            "icir": -0.07181763909991518,
+            "nwT": -0.7796003919765239,
+            "nwSe": 0.02466148661257535,
+            "days": 898,
+            "spreadMean": 0.0009110202305871565,
+            "spreadPositiveShare": 0.5297029702970297
+          },
+          {
+            "horizon": 60,
+            "meanIc": -0.050018781865339715,
+            "icir": -0.18779141622812137,
+            "nwT": -1.3606751480526067,
+            "nwSe": 0.036760267090147423,
+            "days": 858,
+            "spreadMean": 0.004375384634676071,
+            "spreadPositiveShare": 0.5297113752122241
+          }
+        ],
+        "byYear": [
+          {
+            "year": "2022",
+            "meanIc": -0.14351551226551224,
+            "days": 24
+          },
+          {
+            "year": "2023",
+            "meanIc": -0.007383435270452499,
+            "days": 236
+          },
+          {
+            "year": "2024",
+            "meanIc": 0.002560310117709871,
+            "days": 243
+          },
+          {
+            "year": "2025",
+            "meanIc": -0.026429850234287202,
+            "days": 246
+          },
+          {
+            "year": "2026",
+            "meanIc": -0.04160128282153545,
+            "days": 149
+          }
+        ]
+      },
+      "gate2Base": {
+        "market": "HK",
+        "costLabel": "base",
+        "portfolio": {
+          "totalReturn": 0.1264519280147136,
+          "annualizedReturn": 0.031221692058073236,
+          "maxDrawdown": -0.2939484223000245,
+          "maxDrawdownSessions": 497,
+          "sharpe": 0.2562344512053332,
+          "winRate": 0.3247422680412371,
+          "plRatio": 2.423914719432703,
+          "tradeCount": 776,
+          "avgHoldingSessions": 15.052835051546392,
+          "turnover": 26.055861274247487,
+          "sessions": 976
+        },
+        "benchmarkReturn": 0.4009642275008243,
+        "differential": -0.27451229948611067,
+        "falsified": true,
+        "reasons": [
+          "[1x base costs] portfolio +12.6% vs benchmark +40.1% — differential -27.5%"
+        ]
+      },
+      "gate2Double": {
+        "market": "HK",
+        "costLabel": "2x",
+        "portfolio": {
+          "totalReturn": -0.09982115101692679,
+          "annualizedReturn": -0.026787122132127972,
+          "maxDrawdown": -0.3456282442692452,
+          "maxDrawdownSessions": 523,
+          "sharpe": -0.015068081094117903,
+          "winRate": 0.3025974025974026,
+          "plRatio": 2.482826097528993,
+          "tradeCount": 770,
+          "avgHoldingSessions": 15.094805194805195,
+          "turnover": 25.923638494577506,
+          "sessions": 976
+        },
+        "benchmarkReturn": 0.4009642275008243,
+        "differential": -0.5007853785177511,
+        "falsified": true,
+        "reasons": [
+          "[2x base costs] portfolio -10.0% vs benchmark +40.1% — differential -50.1%"
+        ]
+      },
+      "yearly": [
+        {
+          "year": "2022",
+          "portfolio": -0.037460486939311255,
+          "benchmark": -0.0938476529479153,
+          "differential": 0.05638716600860405
+        },
+        {
+          "year": "2023",
+          "portfolio": -0.16965839475733213,
+          "benchmark": -0.09576609341836329,
+          "differential": -0.07389230133896885
+        },
+        {
+          "year": "2024",
+          "portfolio": 0.15732595140424444,
+          "benchmark": 0.203288860744417,
+          "differential": -0.04596290934017255
+        },
+        {
+          "year": "2025",
+          "portfolio": 0.24762231768523457,
+          "benchmark": 0.4948069301811966,
+          "differential": -0.24718461249596202
+        },
+        {
+          "year": "2026",
+          "portfolio": -0.02164668834714234,
+          "benchmark": -0.04941700822461226,
+          "differential": 0.027770319877469918
+        }
+      ],
+      "verdict": "h1_revised",
+      "notes": []
+    }
+  ],
+  "indexReturns": {
+    "US": 1.018191404373367,
+    "HK": 0.5597535628746533
+  },
+  "skippedNoBars": 9,
+  "weightSweep": {
+    "US": [
+      {
+        "weights": {
+          "mom60": 0.4,
+          "mom20": 0.15,
+          "sharpe252": 0.44999999999999996
+        },
+        "meanIc": 0.019859235844812643,
+        "icir": 0.12356265879254953,
+        "nwT": 1.279752868164839,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.4,
+          "mom20": 0.25,
+          "sharpe252": 0.35
+        },
+        "meanIc": 0.020250086907176133,
+        "icir": 0.12492862650210972,
+        "nwT": 1.3300436434061247,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.4,
+          "mom20": 0.35,
+          "sharpe252": 0.25
+        },
+        "meanIc": 0.018957569979917967,
+        "icir": 0.11648036127839968,
+        "nwT": 1.2746568627584622,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.5,
+          "mom20": 0.15,
+          "sharpe252": 0.35
+        },
+        "meanIc": 0.015165420877465835,
+        "icir": 0.09506866995961516,
+        "nwT": 1.005817944452947,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.5,
+          "mom20": 0.25,
+          "sharpe252": 0.25
+        },
+        "meanIc": 0.014519076301173658,
+        "icir": 0.0900775166119734,
+        "nwT": 0.9748259282756586,
+        "days": 983,
+        "isShipped": true
+      },
+      {
+        "weights": {
+          "mom60": 0.5,
+          "mom20": 0.35,
+          "sharpe252": 0.15000000000000002
+        },
+        "meanIc": 0.013265083991445381,
+        "icir": 0.08130993466554524,
+        "nwT": 0.8967330008776562,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.6,
+          "mom20": 0.15,
+          "sharpe252": 0.25
+        },
+        "meanIc": 0.010298719407267521,
+        "icir": 0.06495459861560975,
+        "nwT": 0.6954276783279557,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.6,
+          "mom20": 0.25,
+          "sharpe252": 0.15000000000000002
+        },
+        "meanIc": 0.00962874675565112,
+        "icir": 0.05979888826978438,
+        "nwT": 0.6509668223451004,
+        "days": 983,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.6,
+          "mom20": 0.35,
+          "sharpe252": 0.050000000000000044
+        },
+        "meanIc": 0.007809310635241563,
+        "icir": 0.04842642941319148,
+        "nwT": 0.5280880555522061,
+        "days": 983,
+        "isShipped": false
+      }
+    ],
+    "HK": [
+      {
+        "weights": {
+          "mom60": 0.4,
+          "mom20": 0.15,
+          "sharpe252": 0.44999999999999996
+        },
+        "meanIc": 0.01317792567538421,
+        "icir": 0.048795795917159386,
+        "nwT": 0.49462135930304163,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.4,
+          "mom20": 0.25,
+          "sharpe252": 0.35
+        },
+        "meanIc": 0.004668031799839486,
+        "icir": 0.0173913164531414,
+        "nwT": 0.18425437712153356,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.4,
+          "mom20": 0.35,
+          "sharpe252": 0.25
+        },
+        "meanIc": 0.0015543422436286795,
+        "icir": 0.005746332981398664,
+        "nwT": 0.06489601928948288,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.5,
+          "mom20": 0.15,
+          "sharpe252": 0.35
+        },
+        "meanIc": -0.014636944308362987,
+        "icir": -0.054177314967046156,
+        "nwT": -0.5572158375031905,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.5,
+          "mom20": 0.25,
+          "sharpe252": 0.25
+        },
+        "meanIc": -0.019227664273789646,
+        "icir": -0.07182311750952411,
+        "nwT": -0.7796534301430557,
+        "days": 898,
+        "isShipped": true
+      },
+      {
+        "weights": {
+          "mom60": 0.5,
+          "mom20": 0.35,
+          "sharpe252": 0.15000000000000002
+        },
+        "meanIc": -0.018931763096104254,
+        "icir": -0.06916406863776091,
+        "nwT": -0.7863847755766256,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.6,
+          "mom20": 0.15,
+          "sharpe252": 0.25
+        },
+        "meanIc": -0.03599452408534036,
+        "icir": -0.1318728370492363,
+        "nwT": -1.4006542585486974,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.6,
+          "mom20": 0.25,
+          "sharpe252": 0.15000000000000002
+        },
+        "meanIc": -0.03697061250797029,
+        "icir": -0.13400972061699537,
+        "nwT": -1.4675687809062194,
+        "days": 898,
+        "isShipped": false
+      },
+      {
+        "weights": {
+          "mom60": 0.6,
+          "mom20": 0.35,
+          "sharpe252": 0.050000000000000044
+        },
+        "meanIc": -0.03422682188687813,
+        "icir": -0.12204173252482918,
+        "nwT": -1.3672282269204497,
+        "days": 898,
+        "isShipped": false
+      }
+    ]
+  }
+}

@@ -32,6 +32,11 @@ coverage/
 # slide image archives (extracted docs live in docs/)
 knowledge-base/
 
-# Phase 1 daily-screen report artifacts
-apps/api/reports/
+# Phase 1 daily-screen report artifacts — ignored as a class, EXCEPT the
+# backtest/ directory: those artifacts are the frozen reference numbers every
+# pre-registered verdict points at (a bar, an SE, a detection floor), so they
+# must survive this disk. `*` (not `reports/`) is deliberate — a negated path
+# cannot be re-included while a parent directory is excluded.
+apps/api/reports/*
+!apps/api/reports/backtest/
 __pycache__/
