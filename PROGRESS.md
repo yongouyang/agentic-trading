@@ -5,6 +5,84 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (Phase-6A A2 EXECUTED — the panels exist and the masks agree with production exactly; plus a look-ahead channel the locked plan had not named)
+
+Fast-tier execution of `docs/phase-6a-plan.md` step A2, plus two disclosures its
+real-data run forced. No product code touched.
+
+**Both exit criteria met.** `pnpm -C apps/api panel:export --market all` wrote
+`apps/api/reports/factor-panels/<lane>-<fingerprint>/` with `close,open,high,low,
+volume,eligible` CSVs and a manifest — US `2021-09-20…2026-09-17` (1254 sessions,
+555 symbols, 689,572 bars) and HK `2021-09-13…2026-09-18` (1232 sessions, 145
+symbols, 166,277 bars). Both lanes carry their full stored history, not just the
+replay window, so the 251/252 pre-window sessions are free alpha warmup. A second
+identical run wrote **nothing** — the re-export is a no-op, which is the criterion.
+
+**U2 reconciles exactly, and against the right field.** The first run reported
+MISMATCH on both lanes, and the bug was mine: I compared the mask's U2 count to the
+stored `ok`, which is the number of names production **fed** to the screen (555 US /
+141 HK), not the number that passed. Production's eligible count is recoverable from
+its own persisted first-failure census as `ok − Σcensus`, and against that the
+numbers are exact: **US 111 = 111** and **HK 23 = 23**, with all 40 and all 23 stored
+ranked names respectively marked U2 and no differences at all. Two independent
+confirmations fall out of the same artifacts: mean U2 breadth is **180.2/session
+(US)** and **25.8 (HK)**, matching the Phase-4 replay's measured 180/25; and U1
+reconciles for US (552 = 552).
+
+**A2-2 — U1 spans the store, production spans the index list.** HK's mask reports
+U1 116 against a stored floor of 113, and the gap has a named cause, verified rather
+than inferred: `universe.hk.json` holds 141 symbols while the store holds 145 HK
+instruments all with bars, and the difference is exactly the four names Phase-5 A5
+removed from the index and left in the store — `0268.HK` Kingdee, `0780.HK`
+Tongcheng Travel, `0881.HK` Zhongsheng, `3888.HK` Kingsoft. Three of them clear U1's
+gates. That follows from U1's locked definition (history + `adv20`, no index
+membership), so it is registered as limitation 11 rather than "fixed": **U1 is a
+superset of the names the shipped screen can rank**, and every HK artifact has to
+say so.
+
+**A2-1 — the dividend anchor is look-ahead, and it is now measured.**
+`deriveAdjustedBars` back-adjusts from the last bar, so a value at T carries the
+symbol's dividends that ex-date *after* T. The project already relies on this
+convention and it is safe where it is used for a stated reason — a forward return is
+a ratio of two adjusted values, so factors outside the interval cancel. A factor
+*value* has no such cancellation. What survives is exact: the distortion is a
+per-symbol constant at fixed T, so every within-symbol ratio (and therefore every
+`ts_mean`/`ts_std`/`ts_corr`/`ts_rank` alpha) is PIT-safe, while cross-sectional
+`rank`/`zscore` alphas are not — so the cross-sectional spread is the number that
+matters. Measured at the replay window's start, over the names priced that day:
+**US p10 0.8484 · median 0.9367** (547 names), **HK p10 0.7624 · median 0.8824** (130
+names). It is now a field in every manifest, `adjustment.futureDividendFactor`, and
+pre-registered limitation 10. Recorded as disclosed-not-fixed because the
+alternatives are not free: raw prices remove the leakage *and* the dividend return
+(the larger error, itself dividend-yield-correlated), and a PIT-correct adjusted
+panel is not expressible as one matrix. **Flagged to the user** — this is the only
+item in the phase a fork change could remove rather than just price.
+
+**The mask's alphabet is fixed in the plan:** `0` evaluated and not U1 · `1` U1 only
+· `2` U1 and U2 · blank outside the replay window (*not evaluated*, which is not the
+same as `0`). One column carries both universes because `U2 ⊆ U1` holds by
+construction — a name that passed every gate failed neither the history nor the
+liquidity gate — and U1 is read off the replay's failure sets rather than recomputed,
+so no second indicator implementation exists to drift.
+
+**Deliverables.** `packages/quant-core/src/replay.ts` gains the `excludedReasons`
+opt-in (absent when unset, not empty, so the Phase-4/4b/4c artifacts' input is
+byte-identical); `apps/api/src/backtest/panel-export.ts` (panels + mask + manifest +
+reconciliation); `apps/api/src/cli/panel-export.ts` and `pnpm -C apps/api
+panel:export`; amendments A2-1/A2-2 plus limitations 10/11 in `docs/phase-6a-plan.md`.
+
+**Tests:** quant-core 191 → **194** (+3: the opt-in is absent by default with the key
+list asserted, failure sets recorded, censuses identical either way), api 627 →
+**639** (+12 on the pure half: mask nesting, `cellNum` determinism, CSV
+reproducibility, fingerprint sensitivity, the anchor measurement, and the
+`ok`-vs-eligible reconciliation regression). tsc clean.
+
+**Next (fast tier):** A3 `apps/api/scripts/alpha-bridge.py` — one `date × symbol`
+CSV per alpha plus `bridge-manifest.json`, no network, re-run byte-identical, and a
+deliberately broken alpha skipped with a reason rather than crashing.
+
+---
+
 ## 2026-09-18 (Phase-6A A1 EXECUTED — the zoo is materialised and computes on python 3.13 + pandas 3; and the clean alpha set was 4 too high in each lane)
 
 Fast-tier execution of `docs/phase-6a-plan.md` step A1, plus the two corrections its

@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { Bar, CorporateAction } from "../src/types.js";
 import { Market, SCREEN_PARAMS, ScreenInput, runScreen } from "../src/screening.js";
 import { deriveAdjustedBars } from "../src/adjustment.js";
-import { SymbolSeries, buildForwardSeries, forwardReturn, replayScreen, exclusionCensus, marginalCensus, type ReplayDay } from "../src/replay.js";
+import { REPLAY_TRUNCATION_BARS, SymbolSeries, buildForwardSeries, forwardReturn, replayScreen, exclusionCensus, marginalCensus, type ReplayDay } from "../src/replay.js";
 import {
   icSeries,
   icStats,
@@ -131,6 +131,58 @@ describe("replay — point-in-time correctness", () => {
     const withOld = replayScreen([T], [series("AAA", "US", ds, closes, [oldDiv])]);
     const without = replayScreen([T], [series("AAA", "US", ds, closes)]);
     expect(withOld[0]!.ranked).toEqual(without[0]!.ranked);
+  });
+});
+
+describe("replay — the excludedReasons opt-in (Phase 6A A2) is off by default", () => {
+  const ds = dates(300);
+  const T = ds[260]!;
+  // One eligible name and two rejected for different reasons, so the map has
+  // something to drop: POOR is turned down on liquidity, SHORT on history.
+  const good = series("GOOD", "US", ds, rising(300));
+  const poor = series("POOR", "US", ds, rising(300), [], undefined);
+  const poorThin = { ...poor, symbol: "POOR", bars: barsFrom(ds, rising(300), 1_000) };
+  const short = { ...series("SHORT", "US", ds, rising(300)), bars: barsFrom(ds.slice(200), rising(100), 5_000_000) };
+
+  it("omits the field entirely when unset — the historical artifacts' input", () => {
+    const days = replayScreen([T], [good, poorThin, short]);
+    expect("excludedReasons" in days[0]!).toBe(false);
+    // Byte-identical in the strongest sense available: the default day object is
+    // deep-equal to one built with the option off, key for key.
+    expect(days[0]).toEqual(replayScreen([T], [good, poorThin, short], REPLAY_TRUNCATION_BARS, {})[0]);
+    expect(Object.keys(days[0]!).sort()).toEqual([
+      "date",
+      "excludedByReason",
+      "excludedCount",
+      "excludedMarginal",
+      "excludedSole",
+      "ranked",
+    ]);
+  });
+
+  it("records each rejected name's FULL failure set when set", () => {
+    const day = replayScreen([T], [good, poorThin, short], REPLAY_TRUNCATION_BARS, { excludedReasons: true })[0]!;
+    expect(day.ranked.map((p) => p.symbol)).toEqual(["GOOD"]);
+    const reasons = day.excludedReasons!;
+    expect(Object.keys(reasons).sort()).toEqual(["POOR", "SHORT"]);
+    // The thin name fails on liquidity but nothing else: it is therefore U1-
+    // eligible, which is the whole point of carrying the set rather than the
+    // first failure. Its `reason` (first failure) is the same string, so the two
+    // fields agree here and the SET is what adds information.
+    expect(reasons.POOR).toEqual(["LOW_LIQUIDITY"]);
+    expect(reasons.SHORT).toEqual(["INSUFFICIENT_HISTORY"]);
+    // A name that is invisible at T (no bars yet) appears in neither list.
+    const late = { ...series("LATE", "US", ds, rising(300)), bars: barsFrom(ds.slice(295), rising(5), 5_000_000) };
+    const day2 = replayScreen([T], [good, poorThin, short, late], REPLAY_TRUNCATION_BARS, { excludedReasons: true })[0]!;
+    expect("LATE" in day2.excludedReasons!).toBe(false);
+    expect(day2.excludedReasons!.POOR).toEqual(["LOW_LIQUIDITY"]);
+  });
+
+  it("leaves the aggregate censuses identical whether or not the option is set", () => {
+    const off = replayScreen([T], [good, poorThin, short]);
+    const on = replayScreen([T], [good, poorThin, short], REPLAY_TRUNCATION_BARS, { excludedReasons: true });
+    const strip = (d: ReplayDay) => ({ ...d, excludedReasons: undefined });
+    expect(strip(on[0]!)).toEqual(off[0]!);
   });
 });
 

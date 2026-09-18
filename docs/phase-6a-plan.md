@@ -173,12 +173,95 @@ The design half is thereby spent for this family and that is recorded, not hidde
 **HK has no confirmation stage** — the vendor archive is US-only, so HK alphas can
 never exceed `insufficient_evidence` in this phase, whatever the sweep prints.
 
+### Amendment A2-2 (2026-09-18) — U1 is a liquidity universe over the STORE, not over the index list
+
+A2's mask is computed over every stored instrument with ≥ 1 bar, because U1's
+locked definition is "PIT ≥ 252 bars **and** `adv20` ≥ floor" and says nothing
+about index membership. Production's universe is the lane's universe file. The two
+coincide for US and differ for HK:
+
+| lane | panel symbols (store, with bars) | production universe | `ok` (names fed) | stored-eligible = `ok` − Σcensus | mask U2 |
+|---|---|---|---|---|---|
+| US | 555 | 555 | 555 | **111** | **111** ✓ |
+| HK | 145 | 141 | 141 | **23** | **23** ✓ |
+
+The 4 HK extras are exactly the names Phase-5 A5 removed from the index and left in
+the store: `0268.HK` Kingdee, `0780.HK` Tongcheng Travel, `0881.HK` Zhongsheng,
+`3888.HK` Kingsoft (verified against the store, not inferred: `universe.hk.json`
+holds 141 symbols, `Instrument where market='HK'` holds 145 with bars, and
+`store \ universe` is those four). Three of the four clear U1's gates, which is why
+HK's mask reads U1 **116** against a stored floor of **113** — a difference with a
+named cause, not a defect. Registered rather than absorbed: **U1 is a superset of
+the names the shipped screen can rank**, so every HK artifact must state that its
+book is marginally wider than the picker's.
+
+Also recorded, because the first A2 run printed it and it was wrong: the
+reconciliation compares U2 against `ok − Σ(first-failure census)`, **not** against
+`ok`. `ok` counts the names production *fed* to the screen (555 US / 141 HK), so the
+first version reported a false MISMATCH on both lanes. The check now reads: US
+stored-eligible 111 = mask 111 and HK 23 = 23, with all 40 and all 23 stored ranked
+names respectively marked U2; and U1 is *reported beside* production's floor rather
+than asserted equal, so a known universe difference cannot masquerade as a failure.
+
+**The mask's alphabet, fixed here** (one column carries both universes, because
+`U2 ⊆ U1` by construction — a name that passed every gate failed neither the
+history nor the liquidity gate): `0` evaluated and not U1 · `1` U1 only · `2` U1 and
+screen-eligible · **blank** outside the replay window, meaning *not evaluated*,
+which is not the same as `0`. A symbol with no bar at T is `0`, and the price CSVs
+show it as a blank cell, so the two cases stay distinguishable.
+
+### Amendment A2-1 (2026-09-18) — the panel's dividend anchor is not point-in-time, and its size is measured
+
+The locked plan says the panel is "dividend-adjusted OHLC (`deriveAdjustedBars`)",
+and that function is a **multiplicative back-adjustment anchored at the last bar of
+the series it is handed** (R1). Handing it the full history therefore makes the
+value at date T depend on dividends that ex-date *after* T — look-ahead in the X
+variable, in this project's own vocabulary.
+
+The convention is already relied on elsewhere and is safe **there** for a stated
+reason: a forward return is a ratio of two adjusted values, so every factor outside
+the interval cancels (`replay.ts` header note 3). A factor *value* has no such
+cancellation, so what survives has to be stated exactly:
+
+```
+adj(T) = raw(T) × Π{div ex-date > T} (1 − D/P_prev)
+```
+
+For a fixed T the distortion is a **per-symbol constant**, so (a) every date-to-date
+ratio *within* one symbol — and therefore every alpha built from `ts_mean`,
+`ts_std`, `ts_corr`, `ts_rank` or a difference of log prices — is exactly PIT-safe,
+while (b) any **cross-sectional** comparison at fixed T across symbols with
+different future dividend streams is not, which includes every `rank`/`zscore`
+alpha. The part that matters is therefore the cross-sectional *spread* of that
+factor, not its level. Measured on the session the sweep's first factor value is
+taken at (`replayWindow.start`), across the names priced that day:
+
+| lane | names | p10 | median | p90 |
+|---|---|---|---|---|
+| US | 547 | 0.8484 | 0.9367 | 1.0000 |
+| HK | 130 | 0.7624 | 0.8824 | 1.0000 |
+
+Read as: at the window start a US name's panel level sits ~6 % below its raw level
+on average and ~15 % below at the 10th percentile, purely from dividends that had
+not yet gone ex. The spread decays as T advances within the window (fewer future
+ex-dates remain), so the window start is the worst case. Both lanes are carried in
+`manifest.adjustment.futureDividendFactor`, so the number travels with the data
+rather than living in this paragraph.
+
+**Why this is disclosed rather than fixed.** The alternatives are not free: raw
+(unadjusted) prices remove the leakage *and* remove the dividend return from every
+momentum window, which is a larger and itself dividend-yield-correlated error; and
+a PIT-correct adjusted panel is not expressible as a single matrix, since the anchor
+moves with T. The phase plan locked `deriveAdjustedBars`, so A2 follows it. This is
+recorded as limitation 10 and flagged to the user, because it is the one item in
+this phase that a fork change could remove rather than merely price.
+
 ## Build order (fast tier once locked)
 
 | # | Step | Deliverable | Exit criterion |
 |---|---|---|---|
 | **A1** | ✅ **DONE 2026-09-18** — Vendor zoo + runtime (ops) | `git -C ~/vendor/Vibe-Trading sparse-checkout add agent/src/factors agent/src/config`; venv on python3.13 at `.tools/venv` (gitignored), pinned in `apps/api/scripts/requirements-alpha-bridge.txt`; `bottleneck` absent, so the pure-pandas fallback is the path that runs | met: `Registry.health()` = `loaded 462, failed 0, errors []`; 40/40 sampled clean alphas compute on a realistic panel (one real `compute()` per contributing zoo); zoo revision `899d3c7` |
-| **A2** | Panel export — `apps/api/src/backtest/panel-export.ts` | `apps/api/reports/factor-panels/<lane>-<fingerprint>/{close,open,high,low,volume,eligible,manifest}.{csv,json}`; fingerprint = lane + window + symbol/bar counts | re-export is a no-op; U1/U2 masks reconcile with a stored `ScreenRun` day |
+| **A2** | ✅ **DONE 2026-09-18** — Panel export | `apps/api/src/backtest/panel-export.ts` + `pnpm -C apps/api panel:export`; `apps/api/reports/factor-panels/<lane>-<fingerprint>/{close,open,high,low,volume,eligible}.csv + manifest.json`; fingerprint = panel range + symbol/bar counts + a digest of the symbol list | met: re-export is a no-op (second run writes nothing); **U2 reconciles exactly on both lanes** — US stored-eligible 111 = mask 111, HK 23 = 23, with all 40/23 stored ranked names marked U2; U1 reconciles for US (552 = 552) and is reported-not-asserted for HK (116 vs 113, cause named — amendment A2-2) |
 | **A3** | Bridge — `apps/api/scripts/alpha-bridge.py` | one `date × symbol` CSV per alpha (float32, NaN preserved) + `bridge-manifest.json` (alpha id, zoo id, zoo revision, warmup, `columns_required`, skipped + `SkipAlpha`/`RegistryError` reason) | no network; re-run is byte-identical; a deliberately broken alpha is skipped with a reason, not a crash |
 | **A4** | Consumer — `quant-core/src/replayFromPanel.ts` + `multipleTesting.ts` | panel + mask + dates → `ReplayDay[]`; BH FDR + `E[\|IC\|]` by luck | unit tests: FDR monotonicity/known small case; **look-ahead invariant** — recomputing alpha `f` on a panel truncated at T equals the prefix of the full run to 1e-9, and a hand-written look-ahead alpha fails the test |
 | **A5** | CLI — `pnpm -C apps/api backtest:factor` | `--market us\|hk\|all --zoo … --alpha <ids> --from/--to --json` → `reports/backtest/factor-<date>.{json,txt}` with per-alpha rows (IC, ICIR, NW t, spread, by-year, breadth/day, warmup, label, p, FDR) | artifact renders; a `--alpha` list of 3 runs end-to-end on both lanes |
@@ -210,6 +293,16 @@ session, not a rework.
    per-zoo provenance line travels in every artifact.
 9. **No production impact** — nothing in this phase changes `SCREEN_PARAMS`, the
    chain, the dashboard, or the deep-dive.
+10. **The panel's dividend anchor is not point-in-time** (added 2026-09-18, A2) —
+   `deriveAdjustedBars` back-adjusts from the latest bar, so a factor value at T
+   carries the symbol's dividends that ex-date after T. Ratios *within* a symbol
+   are exactly PIT-safe; cross-sectional level comparisons are not. Measured size
+   and the reasoning are in **amendment A2-1** — this is the one limitation in the
+   list that could be removed by a fork change rather than only disclosed.
+11. **U1 spans the store, production spans the index list** (added 2026-09-18,
+   A2-2) — U1 is defined by history + liquidity alone, so HK's mask carries 4 names
+   the shipped screen no longer ranks. HK artifacts must say their book is wider
+   than the picker's.
 
 ## Explicit non-goals
 

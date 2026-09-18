@@ -72,6 +72,27 @@ export interface ReplayDay {
   /** gate → count of names for which it is the ONLY failure — the exact set of
    *  names relaxing that gate alone would recover. */
   excludedSole: Record<Market, Record<string, number>>;
+  /** Phase 6A opt-in (see `ReplayOptions.excludedReasons`): symbol → that
+   *  name's FULL failure set. **ABSENT unless the option is set** — not empty,
+   *  absent — so a default replay is byte-identical to the one that produced the
+   *  Phase-4/4b/4c artifacts.
+   *
+   *  The per-day censuses above are aggregate COUNTS, so they cannot answer
+   *  "was name X eligible under a different gate set?" — which is exactly what
+   *  Phase 6A's liquidity universe U1 needs (a name is U1-eligible iff it failed
+   *  neither INSUFFICIENT_HISTORY nor LOW_LIQUIDITY). The failure sets are
+   *  already computed by `runScreen(allFailures)`; this only stops throwing
+   *  them away. */
+  excludedReasons?: Record<string, string[]>;
+}
+
+/** Options for `replayScreen`. */
+export interface ReplayOptions {
+  /** Record each rejected name's full failure set on every `ReplayDay` as
+   *  `excludedReasons`. Default off. Costs one small map per session; the
+   *  screen's own work is unchanged, because the replay already runs with
+   *  `allFailures: true` to build the marginal census. */
+  excludedReasons?: boolean;
 }
 
 /**
@@ -249,6 +270,7 @@ export function replayScreen(
   dates: string[],
   series: SymbolSeries[],
   truncationBars: number = REPLAY_TRUNCATION_BARS,
+  opts: ReplayOptions = {},
 ): ReplayDay[] {
   const n = series.length;
   const barPtr = new Int32Array(n).fill(-1);
@@ -303,11 +325,15 @@ export function replayScreen(
     const excludedByReason: Record<Market, Record<string, number>> = { US: {}, HK: {} };
     const excludedMarginal: Record<Market, Record<string, number>> = { US: {}, HK: {} };
     const excludedSole: Record<Market, Record<string, number>> = { US: {}, HK: {} };
+    // Opt-in only. `null` (not an empty object) when off, so the day carries no
+    // `excludedReasons` key at all and the default output is unchanged.
+    const failsBySymbol: Map<string, string[]> | null = opts.excludedReasons ? new Map() : null;
     for (const ex of screen.excluded) {
+      const fails = ex.reasons ?? [ex.reason];
+      if (failsBySymbol) failsBySymbol.set(ex.symbol, fails);
       const m = marketBySymbol.get(ex.symbol);
       if (!m) continue;
       excludedByReason[m][ex.reason] = (excludedByReason[m][ex.reason] ?? 0) + 1;
-      const fails = ex.reasons ?? [ex.reason];
       for (const gate of fails) {
         excludedMarginal[m][gate] = (excludedMarginal[m][gate] ?? 0) + 1;
       }
@@ -315,7 +341,9 @@ export function replayScreen(
         excludedSole[m][fails[0]!] = (excludedSole[m][fails[0]!] ?? 0) + 1;
       }
     }
-    days.push({ date, ranked: screen.ranked, excludedCount: screen.excluded.length, excludedByReason, excludedMarginal, excludedSole });
+    const day: ReplayDay = { date, ranked: screen.ranked, excludedCount: screen.excluded.length, excludedByReason, excludedMarginal, excludedSole };
+    if (failsBySymbol) day.excludedReasons = Object.fromEntries(failsBySymbol);
+    days.push(day);
   }
 
   return days;
