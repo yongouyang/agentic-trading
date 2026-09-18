@@ -5,6 +5,75 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (Phase-6A A5 EXECUTED — `backtest:factor` runs end-to-end on both lanes, and the first real run's own output caught three defects in its reporting)
+
+Fast-tier execution of `docs/phase-6a-plan.md` step A5. New
+`apps/api/src/backtest/panel-read.ts` (panel/signals CSVs → matrices) and
+`apps/api/src/cli/backtest-factor.ts` (`pnpm -C apps/api backtest:factor`). No
+product code touched.
+
+**Exit criterion met:** a 3-alpha list ran end-to-end on both lanes and
+`reports/backtest/factor-2026-09-18.{json,txt}` renders — per-alpha mean 20d IC,
+ICIR, NW t/SE/lag, CI, spread and proportional spread for 5/20/60d, by-year,
+breadth/day, declared `min_warmup_bars`, p, BH-adjusted p, `clearedFloor`, label,
+plus per-lane luck benchmarks, the promotion list and the provenance block (zoo
+digest, bridge version, python/pandas versions, the panel's own adjustment
+disclosure).
+
+**Three defects the first real run exposed, all in my own reporting.**
+
+1. **Breadth was divided by the wrong denominator.** It counted name-observations
+   over the panel's 1254 rows, but the mask is null for the 251 warmup sessions
+   ("not evaluated"), so US printed **438.0/day instead of the true 547.7**. The
+   denominator is now the sessions the mask is DEFINED on — and the corrected run
+   reads U1 547.7 / U2 180.2 (US) and U1 100.1 / U2 25.8 (HK), which is the third
+   independent reproduction of the Phase-4 breadth (180) and the A2 mask's own
+   numbers. That agreement is between three different code paths — production's
+   stored census, the A2 replay mask, and now the factor CLI — and it is the
+   cheapest evidence available that the whole panel pipeline is aimed correctly.
+2. **A duplicated luck-benchmark field**, both spelled `luckBenchmark`, so the
+   JSON silently carried one number twice under two names. Now
+   `luckBenchmarkAtLaneSe` (the pre-registered SE behind the power floor) and
+   `luckBenchmarkAtSweepSe` (what the alphas actually delivered) — and they
+   disagree (US 0.0281 vs 0.0426), which is information rather than noise.
+3. **`spreadSeriesProportional` was called twice per horizon**, once to collect
+   cutoffs and once for the value, on the same inputs.
+
+**The label rule is visibly doing work, not decorating.** Two live examples from
+the 3-alpha run: `academic_carhart_mom` on US U2 has mean 20d IC **+0.0348** with
+NW t 1.75 — above the 0.0297 floor, positively signed, and **p = 0.080**, so it
+fails the significance clause and stays `dead`. `academic_bab` on HK U1 has mean IC
+**+0.0881** with NW t **2.05**, i.e. **p = 0.040** — a raw p that clears 0.05 — and
+FDR moves it to **0.121**, so it is `dead` too. A sweep with no multiple-testing
+correction would have promoted both.
+
+**Two recorded deviations from the A5 row's flags.** `--zoo` is not implemented:
+the signals are already computed and bound to the panel, the zoo digest travels in
+the bridge manifest, and a flag that cannot change an answer is a knob pretending
+to be a control. And `--universe u1|u2|both` was **added**, because fork 1 requires
+U2 reported alongside the primary U1 and the row's flags had no way to ask for it.
+FDR is applied within each universe separately: they are different families of
+tests over different cross-sections, so pooling them would let a wide universe's
+results weaken a narrow one's correction.
+
+**Tests:** api 639 → **662** (+23) — 11 on the CSV reader (an empty cell must stay
+null and never become 0; a mask value outside 0/1/2 is refused rather than coerced;
+symbol-column drift throws; newest-panel resolution), 12 on the sweep's decisions
+(argument parsing, the label rule exhaustively over its three clauses, FDR
+monotonicity in q, `clearedFloor` kept auditable separately from the label, the
+20d/5d/60d warmup arithmetic, and the rendering's stated limitations). quant-core
+227, agents 51, web 107 unchanged; tsc clean.
+
+One near-miss worth recording: the reader's `date`-column check originally lived in
+a helper the parser never called, so `readNumberCsv` silently accepted a headerless
+file and read its first row as dates. The test caught it; the check now sits in the
+single code path both readers use.
+
+**Next:** A6, gated on nothing — see the anchor measurement recorded against
+amendment A2-1.
+
+---
+
 ## 2026-09-18 (Phase-6A A4 EXECUTED — the IC engine is fed from panels, BH FDR and the luck benchmark are in-repo, and the look-ahead harness is proven able to fail; the real zoo comes back clean)
 
 Fast-tier execution of `docs/phase-6a-plan.md` step A4. Pure quant-core: no product

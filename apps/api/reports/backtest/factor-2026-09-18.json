@@ -1,0 +1,1177 @@
+{
+  "generatedAt": "2026-09-18T13:58:01.235Z",
+  "primaryHorizon": 20,
+  "reportedHorizons": [
+    5,
+    20,
+    60
+  ],
+  "fdrQ": 0.05,
+  "promotionK": 20,
+  "lanes": [
+    {
+      "market": "US",
+      "panelDir": "/Users/yongouyang/projects/agentic-trading/apps/api/reports/factor-panels/us-2021-09-20_2026-09-17-1254s-555n-689572b-b1e4fbeabb44",
+      "panelFingerprint": "2021-09-20_2026-09-17-1254s-555n-689572b-b1e4fbeabb44",
+      "panelRange": {
+        "start": "2021-09-20",
+        "end": "2026-09-17",
+        "sessions": 1254
+      },
+      "replayWindow": {
+        "start": "2022-09-19",
+        "end": "2026-09-17",
+        "sessions": 1003
+      },
+      "window": {
+        "start": "2022-09-19",
+        "end": "2026-09-17",
+        "sessions": 1003
+      },
+      "universe": "U1",
+      "breadth": {
+        "meanU1": 547.6510468594217,
+        "meanU2": 180.22632103688935
+      },
+      "powerFloor": 0.0297,
+      "laneNwSe": 0.01486,
+      "luckBenchmarkAtLaneSe": 0.0281302545061772,
+      "luckBenchmarkAtSweepSe": 0.04264996215414624,
+      "luckBenchmarkSe": 0.02253013521336751,
+      "k": 6,
+      "fdrQ": 0.05,
+      "fdrDiscoveries": 0,
+      "labels": {
+        "alive": 0,
+        "reversed": 0,
+        "dead": 6
+      },
+      "rows": [
+        {
+          "id": "academic_bab",
+          "universe": "U1",
+          "days": 982,
+          "meanIc": -0.05414937225226487,
+          "icir": -0.18661523814705963,
+          "nwT": -1.5913842466958987,
+          "nwSe": 0.03402658557459781,
+          "sd": 0.2901658663564933,
+          "lag": 20,
+          "meanBreadth": 547.5773930753564,
+          "ciLo": -0.12255994244628907,
+          "ciHi": 0.014261197941759333,
+          "df": 48.1,
+          "quantile": 2.0105035236064177,
+          "p": 0.11152312740700819,
+          "fdrAdjusted": 0.33456938222102456,
+          "fdrReject": false,
+          "clearedFloor": true,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.06412091880304506,
+              "days": 72
+            },
+            {
+              "year": "2023",
+              "meanIc": -0.09852716082057944,
+              "days": 250
+            },
+            {
+              "year": "2024",
+              "meanIc": -0.03264047451634831,
+              "days": 252
+            },
+            {
+              "year": "2025",
+              "meanIc": -0.05163667059279455,
+              "days": 250
+            },
+            {
+              "year": "2026",
+              "meanIc": -0.017668480800263283,
+              "days": 158
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": -0.027431618663408357,
+              "nwT": -1.4867480578642358,
+              "days": 997,
+              "spreadMean": -0.0019984280719414623,
+              "spreadPositiveShare": 0.45135406218655966,
+              "spreadPropMean": -0.0019984280719414623,
+              "spreadPropNwT": -1.5868209491742657,
+              "meanCutoff": 55.33400200601805
+            },
+            {
+              "horizon": 20,
+              "meanIc": -0.05414937225226487,
+              "nwT": -1.5913842466958987,
+              "days": 982,
+              "spreadMean": -0.00793792492758368,
+              "spreadPositiveShare": 0.41446028513238287,
+              "spreadPropMean": -0.00793792492758368,
+              "spreadPropNwT": -1.6201833696833752,
+              "meanCutoff": 55.323828920570264
+            },
+            {
+              "horizon": 60,
+              "meanIc": -0.09865869381670143,
+              "nwT": -1.9467369266595926,
+              "days": 942,
+              "spreadMean": -0.025056952500679328,
+              "spreadPositiveShare": 0.32908704883227174,
+              "spreadPropMean": -0.025056952500679328,
+              "spreadPropNwT": -2.090355683073841,
+              "meanCutoff": 55.29511677282378
+            }
+          ],
+          "firstEvaluableSession": "2022-09-20",
+          "declaredMinWarmupBars": 253
+        },
+        {
+          "id": "academic_bab",
+          "universe": "U2",
+          "days": 982,
+          "meanIc": -0.05637835544558818,
+          "icir": -0.19047630126887166,
+          "nwT": -1.6426263744734404,
+          "nwSe": 0.03432208098062519,
+          "sd": 0.2959861939255419,
+          "lag": 20,
+          "meanBreadth": 180.90733197556008,
+          "ciLo": -0.12538302019463993,
+          "ciHi": 0.012626309303463576,
+          "df": 48.1,
+          "quantile": 2.0105035236064177,
+          "p": 0.10046026040924089,
+          "fdrAdjusted": 0.15069039061386133,
+          "fdrReject": false,
+          "clearedFloor": true,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.10515808317927972,
+              "days": 72
+            },
+            {
+              "year": "2023",
+              "meanIc": -0.09665154554463445,
+              "days": 250
+            },
+            {
+              "year": "2024",
+              "meanIc": -0.0491644538105152,
+              "days": 252
+            },
+            {
+              "year": "2025",
+              "meanIc": -0.03219721907169626,
+              "days": 250
+            },
+            {
+              "year": "2026",
+              "meanIc": -0.020193224964094172,
+              "days": 158
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": -0.031765735523325685,
+              "nwT": -1.6895833100634423,
+              "days": 997,
+              "spreadMean": -0.0011382777069793729,
+              "spreadPositiveShare": 0.46138415245737213,
+              "spreadPropMean": -0.0011382777069793729,
+              "spreadPropNwT": -1.0279592293087236,
+              "meanCutoff": 18.542627883650955
+            },
+            {
+              "horizon": 20,
+              "meanIc": -0.05637835544558818,
+              "nwT": -1.6426263744734404,
+              "days": 982,
+              "spreadMean": -0.0031241140394718,
+              "spreadPositiveShare": 0.4480651731160896,
+              "spreadPropMean": -0.0031241140394718,
+              "spreadPropNwT": -0.756057572494162,
+              "meanCutoff": 18.569246435845216
+            },
+            {
+              "horizon": 60,
+              "meanIc": -0.07649937718131763,
+              "nwT": -1.5300452399319158,
+              "days": 942,
+              "spreadMean": -0.01199592378561468,
+              "spreadPositiveShare": 0.3503184713375796,
+              "spreadPropMean": -0.01199592378561468,
+              "spreadPropNwT": -1.0679034032723356,
+              "meanCutoff": 18.479830148619957
+            }
+          ],
+          "firstEvaluableSession": "2022-09-20",
+          "declaredMinWarmupBars": 253
+        },
+        {
+          "id": "academic_carhart_mom",
+          "universe": "U1",
+          "days": 982,
+          "meanIc": 0.015754655485993883,
+          "icir": 0.08472536766475161,
+          "nwT": 0.7710741338382628,
+          "nwSe": 0.020432089204665906,
+          "sd": 0.18594968567540734,
+          "lag": 20,
+          "meanBreadth": 547.5773930753564,
+          "ciLo": -0.02532413185462757,
+          "ciHi": 0.05683344282661534,
+          "df": 48.1,
+          "quantile": 2.0105035236064177,
+          "p": 0.4406629913040934,
+          "fdrAdjusted": 0.6609944869561402,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.07252901826000596,
+              "days": 72
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.01314948119830634,
+              "days": 250
+            },
+            {
+              "year": "2024",
+              "meanIc": 0.06625558276876582,
+              "days": 252
+            },
+            {
+              "year": "2025",
+              "meanIc": -0.008022297442495952,
+              "days": 250
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.01718327978028399,
+              "days": 158
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": 0.021362303661318586,
+              "nwT": 1.721564237183761,
+              "days": 997,
+              "spreadMean": 0.003155142119584219,
+              "spreadPositiveShare": 0.5897693079237714,
+              "spreadPropMean": 0.003155142119584219,
+              "spreadPropNwT": 2.2983510772151448,
+              "meanCutoff": 55.33400200601805
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.015754655485993883,
+              "nwT": 0.7710741338382628,
+              "days": 982,
+              "spreadMean": 0.012017866709370809,
+              "spreadPositiveShare": 0.6313645621181263,
+              "spreadPropMean": 0.012017866709370809,
+              "spreadPropNwT": 2.227218984370157,
+              "meanCutoff": 55.323828920570264
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.02511081111690497,
+              "nwT": 0.829434642695815,
+              "days": 942,
+              "spreadMean": 0.03613593503309356,
+              "spreadPositiveShare": 0.6932059447983014,
+              "spreadPropMean": 0.03613593503309356,
+              "spreadPropNwT": 2.3615641638461025,
+              "meanCutoff": 55.29511677282378
+            }
+          ],
+          "firstEvaluableSession": "2022-09-20",
+          "declaredMinWarmupBars": 252
+        },
+        {
+          "id": "academic_carhart_mom",
+          "universe": "U2",
+          "days": 982,
+          "meanIc": 0.034753514322857525,
+          "icir": 0.1897498522463303,
+          "nwT": 1.7495832837110898,
+          "nwSe": 0.01986388110038459,
+          "sd": 0.18315436829822168,
+          "lag": 20,
+          "meanBreadth": 180.90733197556008,
+          "ciLo": -0.005182888621964615,
+          "ciHi": 0.07468991726767966,
+          "df": 48.1,
+          "quantile": 2.0105035236064177,
+          "p": 0.0801902462791346,
+          "fdrAdjusted": 0.15069039061386133,
+          "fdrReject": false,
+          "clearedFloor": true,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.12475579241916843,
+              "days": 72
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.0412808056977789,
+              "days": 250
+            },
+            {
+              "year": "2024",
+              "meanIc": 0.0836139912433082,
+              "days": 252
+            },
+            {
+              "year": "2025",
+              "meanIc": 0.02416333116218894,
+              "days": 250
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.0359405576640543,
+              "days": 158
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": 0.02922240842356612,
+              "nwT": 2.5337632037941673,
+              "days": 997,
+              "spreadMean": 0.002398075347639322,
+              "spreadPositiveShare": 0.563691073219659,
+              "spreadPropMean": 0.002398075347639322,
+              "spreadPropNwT": 1.8801516172090167,
+              "meanCutoff": 18.542627883650955
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.034753514322857525,
+              "nwT": 1.7495832837110898,
+              "days": 982,
+              "spreadMean": 0.011448134950300323,
+              "spreadPositiveShare": 0.6211812627291242,
+              "spreadPropMean": 0.011448134950300323,
+              "spreadPropNwT": 2.5205971387594905,
+              "meanCutoff": 18.569246435845216
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.027512389650698837,
+              "nwT": 0.7893481500837615,
+              "days": 942,
+              "spreadMean": 0.024766717639565245,
+              "spreadPositiveShare": 0.5966029723991507,
+              "spreadPropMean": 0.024766717639565245,
+              "spreadPropNwT": 1.7494930001788234,
+              "meanCutoff": 18.479830148619957
+            }
+          ],
+          "firstEvaluableSession": "2022-09-20",
+          "declaredMinWarmupBars": 252
+        },
+        {
+          "id": "qlib158_beta10",
+          "universe": "U1",
+          "days": 983,
+          "meanIc": -0.0022512832315403257,
+          "icir": -0.013905754024605428,
+          "nwT": -0.17656165166170332,
+          "nwSe": 0.012750691955769888,
+          "sd": 0.1618958042517371,
+          "lag": 20,
+          "meanBreadth": 547.5788402848423,
+          "ciLo": -0.027885909027578825,
+          "ciHi": 0.023383342564498175,
+          "df": 48.15,
+          "quantile": 2.010449776761992,
+          "p": 0.8598527183030581,
+          "fdrAdjusted": 0.8598527183030581,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.047959721677289395,
+              "days": 73
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.0007078105178701294,
+              "days": 250
+            },
+            {
+              "year": "2024",
+              "meanIc": -0.002360255317453757,
+              "days": 252
+            },
+            {
+              "year": "2025",
+              "meanIc": 0.0006878214454899414,
+              "days": 250
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.009708383639217152,
+              "days": 158
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": -0.015381344238860268,
+              "nwT": -1.6362858896439814,
+              "days": 998,
+              "spreadMean": 0.000494412798276555,
+              "spreadPositiveShare": 0.5120240480961924,
+              "spreadPropMean": 0.000494412798276555,
+              "spreadPropNwT": 0.514752696689738,
+              "meanCutoff": 55.33466933867736
+            },
+            {
+              "horizon": 20,
+              "meanIc": -0.0022512832315403257,
+              "nwT": -0.17656165166170332,
+              "days": 983,
+              "spreadMean": 0.005232848702347978,
+              "spreadPositiveShare": 0.5422177009155646,
+              "spreadPropMean": 0.005232848702347978,
+              "spreadPropNwT": 1.3996704825476451,
+              "meanCutoff": 55.324516785350966
+            },
+            {
+              "horizon": 60,
+              "meanIc": -0.014312263612904354,
+              "nwT": -1.0480821148147939,
+              "days": 943,
+              "spreadMean": 0.012376706419296897,
+              "spreadPositiveShare": 0.574761399787911,
+              "spreadPropMean": 0.012376706419296897,
+              "spreadPropNwT": 1.7318194434946477,
+              "meanCutoff": 55.295864262990456
+            }
+          ],
+          "firstEvaluableSession": "2021-10-04",
+          "declaredMinWarmupBars": 10
+        },
+        {
+          "id": "qlib158_beta10",
+          "universe": "U2",
+          "days": 983,
+          "meanIc": 0.0025687590464684444,
+          "icir": 0.014167313939531799,
+          "nwT": 0.1863379865845456,
+          "nwSe": 0.013785482464161662,
+          "sd": 0.1813158836906057,
+          "lag": 20,
+          "meanBreadth": 180.79552390640896,
+          "ciLo": -0.025146261096161724,
+          "ciHi": 0.030283779189098612,
+          "df": 48.15,
+          "quantile": 2.010449776761992,
+          "p": 0.8521797200982975,
+          "fdrAdjusted": 0.8521797200982975,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.024313156813491478,
+              "days": 73
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.02656400500048232,
+              "days": 250
+            },
+            {
+              "year": "2024",
+              "meanIc": -0.008992375287011823,
+              "days": 252
+            },
+            {
+              "year": "2025",
+              "meanIc": 0.0022823419869231875,
+              "days": 250
+            },
+            {
+              "year": "2026",
+              "meanIc": -0.004085807496588893,
+              "days": 158
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": -0.00795760933981416,
+              "nwT": -0.7236849432281985,
+              "days": 998,
+              "spreadMean": 0.001186731998311381,
+              "spreadPositiveShare": 0.5110220440881763,
+              "spreadPropMean": 0.001186731998311381,
+              "spreadPropNwT": 1.1926982616811272,
+              "meanCutoff": 18.53206412825651
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.0025687590464684444,
+              "nwT": 0.1863379865845456,
+              "days": 983,
+              "spreadMean": 0.004698907157479845,
+              "spreadPositiveShare": 0.5412004069175992,
+              "spreadPropMean": 0.004698907157479845,
+              "spreadPropNwT": 1.6118513821518183,
+              "meanCutoff": 18.55849440488301
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.00746545694299131,
+              "nwT": 0.7542584599510069,
+              "days": 943,
+              "spreadMean": 0.012240982972180316,
+              "spreadPositiveShare": 0.5705196182396607,
+              "spreadPropMean": 0.012240982972180316,
+              "spreadPropNwT": 1.9314570379310128,
+              "meanCutoff": 18.468716861081653
+            }
+          ],
+          "firstEvaluableSession": "2021-10-04",
+          "declaredMinWarmupBars": 10
+        }
+      ],
+      "skipped": [],
+      "promotion": [],
+      "provenance": {
+        "bridgeVersion": "6a-a3.1",
+        "zoo": {
+          "root": "/Users/yongouyang/vendor/Vibe-Trading/agent/src/factors/zoo",
+          "digest": "94a1a6a0ae42bcd43d644a1b9f8fa5c994f3fef4b8e87b3ee852af76f38baa94",
+          "pyFiles": 468,
+          "pyBytes": 814294,
+          "gitRevision": "899d3c7536a817ff418aefef934e81dfe60d179b",
+          "loaded": 462,
+          "failed": 0
+        },
+        "runtime": {
+          "python": "3.13.5",
+          "pandas": "3.0.6",
+          "numpy": "2.5.3",
+          "bottleneck": false
+        },
+        "adjustment": {
+          "method": "deriveAdjustedBars",
+          "anchor": "latest_bar_of_series",
+          "pointInTime": false,
+          "futureDividendFactor": {
+            "symbols": 547,
+            "median": 0.9367036593245913,
+            "p10": 0.8484058711832214,
+            "p90": 1,
+            "max": 1
+          },
+          "volume": "as_stored (provider split-consistent; never locally adjusted)"
+        },
+        "universalities": [
+          "U1",
+          "U2"
+        ]
+      }
+    },
+    {
+      "market": "HK",
+      "panelDir": "/Users/yongouyang/projects/agentic-trading/apps/api/reports/factor-panels/hk-2021-09-13_2026-09-18-1232s-145n-166277b-6ff8cbd8477e",
+      "panelFingerprint": "2021-09-13_2026-09-18-1232s-145n-166277b-6ff8cbd8477e",
+      "panelRange": {
+        "start": "2021-09-13",
+        "end": "2026-09-18",
+        "sessions": 1232
+      },
+      "replayWindow": {
+        "start": "2022-09-22",
+        "end": "2026-09-18",
+        "sessions": 980
+      },
+      "window": {
+        "start": "2022-09-22",
+        "end": "2026-09-18",
+        "sessions": 980
+      },
+      "universe": "U1",
+      "breadth": {
+        "meanU1": 100.13775510204081,
+        "meanU2": 25.787755102040816
+      },
+      "powerFloor": 0.0493,
+      "laneNwSe": 0.02465,
+      "luckBenchmarkAtLaneSe": 0.046662905355132435,
+      "luckBenchmarkAtSweepSe": 0.05810744011390745,
+      "luckBenchmarkSe": 0.030695654029829395,
+      "k": 6,
+      "fdrQ": 0.05,
+      "fdrDiscoveries": 0,
+      "labels": {
+        "alive": 0,
+        "reversed": 0,
+        "dead": 6
+      },
+      "rows": [
+        {
+          "id": "academic_bab",
+          "universe": "U1",
+          "days": 864,
+          "meanIc": 0.08813738774856417,
+          "icir": 0.256959914427906,
+          "nwT": 2.0501040304748104,
+          "nwSe": 0.04299166600250587,
+          "sd": 0.343000533545447,
+          "lag": 20,
+          "meanBreadth": 99.90277777777777,
+          "ciLo": 0.0013903567456824834,
+          "ciHi": 0.17488441875144584,
+          "df": 42.2,
+          "quantile": 2.0177638846986166,
+          "p": 0.04035428018012041,
+          "fdrAdjusted": 0.12106284054036123,
+          "fdrReject": false,
+          "clearedFloor": true,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2023",
+              "meanIc": 0.15683183426468117,
+              "days": 216
+            },
+            {
+              "year": "2024",
+              "meanIc": 0.04782104470591507,
+              "days": 246
+            },
+            {
+              "year": "2025",
+              "meanIc": -0.002716349945796356,
+              "days": 246
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.1998671275807634,
+              "days": 156
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": 0.06341455317990002,
+              "nwT": 2.8466834426041197,
+              "days": 879,
+              "spreadMean": 0.0008563977421889024,
+              "spreadPositiveShare": 0.5221843003412969,
+              "spreadPropMean": 0.0008563977421889024,
+              "spreadPropNwT": 0.350884092305632,
+              "meanCutoff": 10.474402730375427
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.08813738774856417,
+              "nwT": 2.0501040304748104,
+              "days": 864,
+              "spreadMean": 0.0006871383270049036,
+              "spreadPositiveShare": 0.5428240740740741,
+              "spreadPropMean": 0.0006871383270049036,
+              "spreadPropNwT": 0.07661568387133229,
+              "meanCutoff": 10.465277777777779
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.131130386895955,
+              "nwT": 1.9075856404137532,
+              "days": 824,
+              "spreadMean": 0.0004923000414629839,
+              "spreadPositiveShare": 0.6225728155339806,
+              "spreadPropMean": 0.0004923000414629839,
+              "spreadPropNwT": 0.020976231777590504,
+              "meanCutoff": 10.41504854368932
+            }
+          ],
+          "firstEvaluableSession": "2023-01-09",
+          "declaredMinWarmupBars": 253
+        },
+        {
+          "id": "academic_bab",
+          "universe": "U2",
+          "days": 855,
+          "meanIc": 0.0805749835025584,
+          "icir": 0.20591748002746862,
+          "nwT": 1.7355554868175742,
+          "nwSe": 0.04642604867119855,
+          "sd": 0.39129744347983475,
+          "lag": 20,
+          "meanBreadth": 27.762573099415203,
+          "ciLo": -0.013131545553973431,
+          "ciHi": 0.17428151255909025,
+          "df": 41.75,
+          "quantile": 2.018404144625489,
+          "p": 0.08264246243058418,
+          "fdrAdjusted": 0.24792738729175254,
+          "fdrReject": false,
+          "clearedFloor": true,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2023",
+              "meanIc": 0.21317018770480478,
+              "days": 210
+            },
+            {
+              "year": "2024",
+              "meanIc": 0.03507751154895517,
+              "days": 243
+            },
+            {
+              "year": "2025",
+              "meanIc": -0.05718340277602018,
+              "days": 246
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.19018687982809787,
+              "days": 156
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": 0.0528574520512165,
+              "nwT": 2.3004212028099325,
+              "days": 870,
+              "spreadMean": 0.0014821846000430616,
+              "spreadPositiveShare": 0.5324074074074074,
+              "spreadPropMean": 0.0014821846000430616,
+              "spreadPropNwT": 0.8164901459188548,
+              "meanCutoff": 5.200231481481482
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.0805749835025584,
+              "nwT": 1.7355554868175742,
+              "days": 855,
+              "spreadMean": 0.003438870911851273,
+              "spreadPositiveShare": 0.5347467608951708,
+              "spreadPropMean": 0.003438870911851273,
+              "spreadPropNwT": 0.5220454601397095,
+              "meanCutoff": 5.2037691401648996
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.16754874926924113,
+              "nwT": 2.749884712200526,
+              "days": 815,
+              "spreadMean": 0.014669324688410765,
+              "spreadPositiveShare": 0.5735475896168108,
+              "spreadPropMean": 0.014669324688410765,
+              "spreadPropNwT": 0.9697951826218993,
+              "meanCutoff": 5.213844252163164
+            }
+          ],
+          "firstEvaluableSession": "2023-01-09",
+          "declaredMinWarmupBars": 253
+        },
+        {
+          "id": "academic_carhart_mom",
+          "universe": "U1",
+          "days": 954,
+          "meanIc": -0.00400898932093002,
+          "icir": -0.017273434391128002,
+          "nwT": -0.15412080478619386,
+          "nwSe": 0.026011993166604234,
+          "sd": 0.23208988034186884,
+          "lag": 20,
+          "meanBreadth": 100.31132075471699,
+          "ciLo": -0.05634658394327424,
+          "ciHi": 0.04832860530141421,
+          "df": 46.7,
+          "quantile": 2.012056295998816,
+          "p": 0.8775144844197348,
+          "fdrAdjusted": 0.8775144844197348,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.31957912341488043,
+              "days": 64
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.08447028552517678,
+              "days": 242
+            },
+            {
+              "year": "2024",
+              "meanIc": -0.0029939400526964436,
+              "days": 246
+            },
+            {
+              "year": "2025",
+              "meanIc": -0.007187411298590848,
+              "days": 246
+            },
+            {
+              "year": "2026",
+              "meanIc": -0.008389157553147574,
+              "days": 156
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": 0.02420698495734244,
+              "nwT": 1.5913203717670543,
+              "days": 969,
+              "spreadMean": -0.0016196015132274575,
+              "spreadPositiveShare": 0.5077399380804953,
+              "spreadPropMean": -0.0016196015132274575,
+              "spreadPropNwT": -0.7714752188720663,
+              "meanCutoff": 10.524251805985552
+            },
+            {
+              "horizon": 20,
+              "meanIc": -0.00400898932093002,
+              "nwT": -0.15412080478619386,
+              "days": 954,
+              "spreadMean": -0.0057969292058387975,
+              "spreadPositiveShare": 0.4937106918238994,
+              "spreadPropMean": -0.0057969292058387975,
+              "spreadPropNwT": -0.778683958775296,
+              "meanCutoff": 10.49685534591195
+            },
+            {
+              "horizon": 60,
+              "meanIc": -0.008126417931260708,
+              "nwT": -0.2079847393718215,
+              "days": 914,
+              "spreadMean": -0.009628280301011649,
+              "spreadPositiveShare": 0.5054704595185996,
+              "spreadPropMean": -0.009628280301011649,
+              "spreadPropNwT": -0.709037914469687,
+              "meanCutoff": 10.435448577680525
+            }
+          ],
+          "firstEvaluableSession": "2022-09-22",
+          "declaredMinWarmupBars": 252
+        },
+        {
+          "id": "academic_carhart_mom",
+          "universe": "U2",
+          "days": 903,
+          "meanIc": 0.026797833383292762,
+          "icir": 0.08668848737079761,
+          "nwT": 0.8400288168368278,
+          "nwSe": 0.03190108820814195,
+          "sd": 0.30912793839242875,
+          "lag": 20,
+          "meanBreadth": 27.24031007751938,
+          "ciLo": -0.037487456027776395,
+          "ciHi": 0.09108312279436193,
+          "df": 44.15,
+          "quantile": 2.015144091374976,
+          "p": 0.4008922294727473,
+          "fdrAdjusted": 0.4008922294727473,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": 0.269952774498229,
+              "days": 22
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.047853440254860526,
+              "days": 236
+            },
+            {
+              "year": "2024",
+              "meanIc": -0.014950426480004478,
+              "days": 243
+            },
+            {
+              "year": "2025",
+              "meanIc": 0.0388116853742635,
+              "days": 246
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.0067394207601121844,
+              "days": 156
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": 0.026164539962839364,
+              "nwT": 1.5567828689995606,
+              "days": 918,
+              "spreadMean": 0.002534673348061077,
+              "spreadPositiveShare": 0.538546255506608,
+              "spreadPropMean": 0.002534673348061077,
+              "spreadPropNwT": 1.3437336862835811,
+              "meanCutoff": 5.200440528634362
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.026797833383292762,
+              "nwT": 0.8400288168368278,
+              "days": 903,
+              "spreadMean": 0.012808860589664777,
+              "spreadPositiveShare": 0.5789473684210527,
+              "spreadPropMean": 0.012808860589664777,
+              "spreadPropNwT": 2.21492716342027,
+              "meanCutoff": 5.203807390817469
+            },
+            {
+              "horizon": 60,
+              "meanIc": -0.0012827914254752945,
+              "nwT": -0.029636760761196403,
+              "days": 863,
+              "spreadMean": 0.03391046382999425,
+              "spreadPositiveShare": 0.6072684642438453,
+              "spreadPropMean": 0.03391046382999425,
+              "spreadPropNwT": 1.7969289961050936,
+              "meanCutoff": 5.213364595545134
+            }
+          ],
+          "firstEvaluableSession": "2022-09-22",
+          "declaredMinWarmupBars": 252
+        },
+        {
+          "id": "qlib158_beta10",
+          "universe": "U1",
+          "days": 955,
+          "meanIc": 0.008992292764792438,
+          "icir": 0.043221915501426095,
+          "nwT": 0.5515091693175225,
+          "nwSe": 0.01630488351792982,
+          "sd": 0.20804938097886339,
+          "lag": 20,
+          "meanBreadth": 100.3109947643979,
+          "ciLo": -0.023813119823293878,
+          "ciHi": 0.04179770535287875,
+          "df": 46.75,
+          "quantile": 2.0119991996270032,
+          "p": 0.5812846827606909,
+          "fdrAdjusted": 0.8719270241410364,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.0706771431197819,
+              "days": 64
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.018307726530890415,
+              "days": 243
+            },
+            {
+              "year": "2024",
+              "meanIc": 0.0039721332866559595,
+              "days": 246
+            },
+            {
+              "year": "2025",
+              "meanIc": 0.016212145892078186,
+              "days": 246
+            },
+            {
+              "year": "2026",
+              "meanIc": 0.02369786234017848,
+              "days": 156
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": -0.0038406037153944036,
+              "nwT": -0.31666722547138354,
+              "days": 970,
+              "spreadMean": 0.00008009861026768982,
+              "spreadPositiveShare": 0.5020618556701031,
+              "spreadPropMean": 0.00008009861026768982,
+              "spreadPropNwT": 0.0471695961221976,
+              "meanCutoff": 10.524742268041237
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.008992292764792438,
+              "nwT": 0.5515091693175225,
+              "days": 955,
+              "spreadMean": 0.003280708709647704,
+              "spreadPositiveShare": 0.5235602094240838,
+              "spreadPropMean": 0.003280708709647704,
+              "spreadPropNwT": 0.7459305824690662,
+              "meanCutoff": 10.497382198952879
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.001887824267596462,
+              "nwT": 0.10970028966540057,
+              "days": 915,
+              "spreadMean": -0.00710043343132523,
+              "spreadPositiveShare": 0.46229508196721314,
+              "spreadPropMean": -0.00710043343132523,
+              "spreadPropNwT": -0.7342403285739882,
+              "meanCutoff": 10.436065573770492
+            }
+          ],
+          "firstEvaluableSession": "2021-09-28",
+          "declaredMinWarmupBars": 10
+        },
+        {
+          "id": "qlib158_beta10",
+          "universe": "U2",
+          "days": 904,
+          "meanIc": 0.024123471412029456,
+          "icir": 0.08155084379288823,
+          "nwT": 1.1745634481943354,
+          "nwSe": 0.02053824461259597,
+          "sd": 0.2958089737648206,
+          "lag": 20,
+          "meanBreadth": 27.238938053097346,
+          "ciLo": -0.017262735246111435,
+          "ciHi": 0.06550967807017034,
+          "df": 44.2,
+          "quantile": 2.0150800342868154,
+          "p": 0.2401694139525142,
+          "fdrAdjusted": 0.3602541209287713,
+          "fdrReject": false,
+          "clearedFloor": false,
+          "label": "dead",
+          "byYear": [
+            {
+              "year": "2022",
+              "meanIc": -0.11976584022038567,
+              "days": 22
+            },
+            {
+              "year": "2023",
+              "meanIc": 0.01834724590899669,
+              "days": 237
+            },
+            {
+              "year": "2024",
+              "meanIc": 0.07520612290186635,
+              "days": 243
+            },
+            {
+              "year": "2025",
+              "meanIc": 0.029059229567021713,
+              "days": 246
+            },
+            {
+              "year": "2026",
+              "meanIc": -0.03416339088301249,
+              "days": 156
+            }
+          ],
+          "horizons": [
+            {
+              "horizon": 5,
+              "meanIc": -0.01994929664303665,
+              "nwT": -1.2340286298487053,
+              "days": 919,
+              "spreadMean": 0.001038076688912112,
+              "spreadPositiveShare": 0.5071507150715071,
+              "spreadPropMean": 0.001038076688912112,
+              "spreadPropNwT": 0.6124262715396196,
+              "meanCutoff": 5.2002200220022
+            },
+            {
+              "horizon": 20,
+              "meanIc": 0.024123471412029456,
+              "nwT": 1.1745634481943354,
+              "days": 904,
+              "spreadMean": 0.006535686692848771,
+              "spreadPositiveShare": 0.5246085011185683,
+              "spreadPropMean": 0.006535686692848771,
+              "spreadPropNwT": 1.4713651007649324,
+              "meanCutoff": 5.203579418344519
+            },
+            {
+              "horizon": 60,
+              "meanIc": 0.014037103540115255,
+              "nwT": 0.7043062446350483,
+              "days": 864,
+              "spreadMean": 0.01581271907398792,
+              "spreadPositiveShare": 0.5362997658079626,
+              "spreadPropMean": 0.01581271907398792,
+              "spreadPropNwT": 1.7815317921299498,
+              "meanCutoff": 5.213114754098361
+            }
+          ],
+          "firstEvaluableSession": "2021-09-28",
+          "declaredMinWarmupBars": 10
+        }
+      ],
+      "skipped": [],
+      "promotion": [],
+      "provenance": {
+        "bridgeVersion": "6a-a3.1",
+        "zoo": {
+          "root": "/Users/yongouyang/vendor/Vibe-Trading/agent/src/factors/zoo",
+          "digest": "94a1a6a0ae42bcd43d644a1b9f8fa5c994f3fef4b8e87b3ee852af76f38baa94",
+          "pyFiles": 468,
+          "pyBytes": 814294,
+          "gitRevision": "899d3c7536a817ff418aefef934e81dfe60d179b",
+          "loaded": 462,
+          "failed": 0
+        },
+        "runtime": {
+          "python": "3.13.5",
+          "pandas": "3.0.6",
+          "numpy": "2.5.3",
+          "bottleneck": false
+        },
+        "adjustment": {
+          "method": "deriveAdjustedBars",
+          "anchor": "latest_bar_of_series",
+          "pointInTime": false,
+          "futureDividendFactor": {
+            "symbols": 130,
+            "median": 0.8824106226595603,
+            "p10": 0.7623587045212847,
+            "p90": 1,
+            "max": 1
+          },
+          "volume": "as_stored (provider split-consistent; never locally adjusted)"
+        },
+        "universalities": [
+          "U1",
+          "U2"
+        ]
+      }
+    }
+  ]
+}
