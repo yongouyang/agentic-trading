@@ -5,7 +5,88 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (Phase-6A A1 EXECUTED — the zoo is materialised and computes on python 3.13 + pandas 3; and the clean alpha set was 4 too high in each lane)
+
+Fast-tier execution of `docs/phase-6a-plan.md` step A1, plus the two corrections its
+own exit check surfaced. No product code touched — the picker, the chain, the
+deep-dive and `SCREEN_PARAMS` are untouched, as the plan requires.
+
+**A1 met, both halves.** `git -C ~/vendor/Vibe-Trading sparse-checkout add
+agent/src/factors agent/src/config` materialised 2.0 MB of factors + 96 KB of config
+(the clone is `blob:none`, so this was the one step needing the network). `Registry.health()`
+now reports **`loaded 462, failed 0, errors []`**. Runtime is a pinned venv at
+`.tools/venv` (gitignored), python 3.13.5, committed as
+`apps/api/scripts/requirements-alpha-bridge.txt` with the recreate command in its
+header. `bottleneck` is **deliberately absent**: the zoo's pure-pandas fallback is
+documented as result-identical and one fewer C extension is one fewer way for A3's
+byte-identical re-run claim to break. Zoo revision `899d3c7`.
+
+**health() proves less than it looks, so it was not the only check.** `health()` is
+AST metadata parsing — 0 load errors says nothing about whether the code *runs*, and
+this runtime is **pandas 3.0.6**, a major version. So a probe computed one real alpha
+per contributing zoo on a synthetic panel: **40/40 sampled clean alphas pass**, float64,
+full shape preserved.
+
+**The first probe was wrong and said so loudly.** Built with `high = low = open = close`
+and constant volume, it failed **8 of 40** with `output >95% NaN (nan_ratio=1.000)` —
+looking exactly like a pandas-3 breakage. On a panel with distinct O/H/L and lognormal
+volume the same 40/40 pass. Range- and volume-normalised alphas divide by a zero
+cross-sectional variance, and a toy panel manufactures one. Recorded as a **panel
+requirement for A2**, not a zoo defect: the bridge's panel must carry real spread and
+varying volume, and a green probe on a degenerate panel means nothing.
+
+**Correction A1-2 — the pre-registered alpha set was 222 US / 170 HK; it is 218 / 166.**
+With the tree materialised, the registry manifest is readable directly and disagrees
+with the 09-17 `git grep` census. `equity_us` is declared by 271 modules, of which 53
+are blocked (`vwap`-only 30 · `sector`-only 6 · `sector+vwap` 13 · **`fund:*` 4**) →
+**218 clean**. `equity_hk` is declared by 170, blocked by the same 4 `fund:*` →
+**166 clean**. The grep pass subtracted the vwap/sector blockers and **never saw the
+`fundamental` zoo**: its 4 alphas declare both universes but require
+`fund:asset_growth`, `fund:net_income`+`fund:shares_diluted`, `fund:gross_profitability`
+and `fund:roe` — columns no OHLCV panel supplies, and consistent with 6B excluding
+fundamentals for the same missing-PIT reason. Two facts fall out: the `amount 40`
+credited in the plan are **all `equity_cn`-only**, so no US/HK alpha is lost to
+`amount`; and **`gtja191` contributes 0 to either lane** (191 modules, `equity_cn`
+only) — the usable set is academic 12 + alpha101 52 + qlib158 154 (US) and
+academic 12 + qlib158 154 (HK). **No decision changes**: forks, bars, statistics and
+the U1/U2 universes are all untouched, and A6 sweeps 218 / 166.
+
+**Correction A1-1 — the path was wrong in every locked document.** Both plans wrote
+`vendor/Vibe-Trading`, which reads as repo-relative; the sparse clone is at
+`~/vendor/Vibe-Trading`, and A1's command as written would have failed from the repo
+root. Corrected in the plan (A1 row and header), with the amendment recording it.
+
+**Recorded, not silently edited.** Both corrections are dated amendment blocks in
+`docs/phase-6a-plan.md` plus the inline marker on the 09-17 entry above, because a
+locked plan's measured facts are part of the pre-registration — the fix for a wrong
+number is a dated note next to it, not a rewrite.
+
+**Also landed:** the phase-6 plans and the 09-17 entry are now committed (they were
+untracked), and `apps/api/reports/backtest/` is under version control — that
+directory holds the frozen reference numbers every locked verdict points at
+(H1's verbatim verdict, the vendor design-half run behind the 0.0486 bar), and a
+rolling store means no re-run can reproduce them. `.gitignore` now globs
+`apps/api/reports/*` with a `!...backtest/` negation; per-night artifacts stay ignored.
+
+**Tests:** not re-run — no product code changed. Last full green (20:06 same day):
+quant-core 191, agents 51, api 627 + 1 skipped, web 107.
+
+**Next (fast tier):** A2 `panel-export.ts` — wide panels + U1/U2 masks from the same
+`runScreen(allFailures)` output, with the A1-2 variance requirement built into the
+fixture rather than discovered in A3.
+
+---
+
 ## 2026-09-17 (Phase-6 plans LOCKED — factor and strategy backtests, six forks decided; the vendored zoo is 222/170 usable alphas behind a signal-only bridge)
+
+> *(Corrected 2026-09-18, phase-6a amendments A1-1/A1-2 — the title's 222/170 and the
+> counts below are each **4 too high**, and the path is `~/vendor/Vibe-Trading`, not
+> `vendor/Vibe-Trading`. The `git grep` pass never saw the `fundamental` zoo: its 4
+> alphas declare both universes while requiring `fund:*` columns no OHLCV panel
+> supplies, so the true clean sets are **218 US / 166 HK**. The `amount 40` credited
+> here are all `equity_cn`-only, so no US/HK alpha is lost to `amount`; and `gtja191`
+> (191 modules) declares `equity_cn` only, contributing 0 to either lane. No decision
+> changes — forks, bars and statistics are untouched.)*
 
 Started as a review question — *"which strategy can we borrow to backtest?"* — and ended as
 two pre-registered plans. No code was written; this session is design only.

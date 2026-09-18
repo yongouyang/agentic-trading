@@ -1,0 +1,30 @@
+# Runtime for apps/api/scripts/alpha-bridge.py — the vendored Vibe-Trading zoo.
+#
+# Dev-only and pinned, because Phase 6A's A3 exit criterion is that a bridge
+# re-run is BYTE-IDENTICAL: a float-format or rolling-window change in a minor
+# pandas bump would silently break that claim, and the failing artifact would
+# look like a finding.
+#
+# Interpreter: /opt/homebrew/bin/python3.13 (3.13.5). The system python3 is
+# 3.14 without pandas. The venv itself is NOT versioned (.tools/venv is
+# gitignored); recreate it with:
+#
+#   /opt/homebrew/bin/python3.13 -m venv .tools/venv
+#   .tools/venv/bin/pip install -r apps/api/scripts/requirements-alpha-bridge.txt
+#
+# Deliberately ABSENT: bottleneck. The zoo's _backend falls back to a pure-pandas
+# path whose results are documented as identical, and one fewer C extension is one
+# fewer way for a re-run to differ. The fallback is the path we have measured.
+#
+# Captured 2026-09-18 by `pip freeze` after A1. pandas 3.x is a major version —
+# see the phase-6a A1-2 amendment: the zoo computes correctly on it, but only on a
+# panel with real O/H/L spread and non-constant volume.
+annotated-types==0.8.0
+numpy==2.5.3
+pandas==3.0.6
+pydantic==2.13.5
+pydantic_core==2.46.5
+python-dateutil==2.9.0.post0
+six==1.17.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0

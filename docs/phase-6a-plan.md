@@ -2,7 +2,7 @@
 
 Plan written 2026-09-17. Follows the executed Phase 4/4b/4c (`docs/phase-4-plan.md`,
 `phase-4b-plan.md`, `phase-4c-plan.md`) and the vendor review of
-`vendor/Vibe-Trading` in the same session.
+`~/vendor/Vibe-Trading` in the same session.
 
 **Status: LOCKED** — all six forks decided by the user on 2026-09-17.
 
@@ -47,14 +47,16 @@ The picker window's Phase-4 firewall is unchanged: outcome statistics may inform
 
 ## Measured facts (established before any run)
 
-**Zoo inventory** (`vendor/Vibe-Trading`, parsed from `__alpha_meta__` via `git grep`):
+**Zoo inventory** (`~/vendor/Vibe-Trading`, parsed from `__alpha_meta__` via `git grep`):
 
 | fact | value |
 |---|---|
 | zoo modules carrying metadata | **462** (`alpha101` 101 · `gtja191` 191 · `qlib158` 154 · `academic` 12 · `fundamental` 4) |
-| clean OHLCV-only **and** declaring `equity_us` | **222** |
-| clean OHLCV-only **and** declaring `equity_hk` | **170** |
-| blocked | `columns_required` needs `amount` 40 · needs `vwap` 30 · `requires_sector: True` 19 (6 sector-only, 13 sector+vwap) |
+| clean OHLCV-only **and** declaring `equity_us` | **218** (was 222 — see amendment A1-2) |
+| clean OHLCV-only **and** declaring `equity_hk` | **166** (was 170 — see amendment A1-2) |
+| blocked, US-declaring | **53** — `vwap`-only 30 · `sector`-only 6 · `sector+vwap` 13 · `fund:*` 4 |
+| blocked, HK-declaring | **4** — all `fund:*` |
+| blocked, `amount`, US/HK-declaring | **0** — all 40 are `equity_cn`-only |
 
 `amount` / `vwap` / `sector` alphas are **out of round 1**. Supplying an
 `amount = close × volume` or `vwap = (h+l+c)/3` proxy is a separate, disclosed
@@ -64,6 +66,46 @@ decision — never a silent substitution.
 (`_backend` reaches `src.config.accessor` lazily, which itself needs pydantic only).
 `/opt/homebrew/bin/python3.13` exists; the system `python3` is 3.14 **without pandas**.
 Hence a pinned venv, dev-only.
+
+### Amendment A1-1 (2026-09-18) — the vendor tree is at `~`, not in this repo
+
+Every path in this plan was written `vendor/Vibe-Trading`, which reads as
+repo-relative and is not: the sparse clone lives at `~/vendor/Vibe-Trading`
+(`agent/src/skills` only, cone mode; `PROGRESS.md` already used the `~/` form).
+A1's command as written would fail from the repo root. Corrected here and in the
+A1 row. The clone is a `blob:none` partial clone, so `sparse-checkout add` fetches
+on demand and needs the network — the one reachable-network step in the build.
+
+### Amendment A1-2 (2026-09-18) — the clean-set size was 4 too high in each lane
+
+Found by A1's own exit check. `Registry.health()` returning `loaded=462, failed=0`
+let the manifest be read directly, and the source-of-truth census differs from the
+`git grep` one quoted above:
+
+| lane | declares | clean OHLCV-only | blocked |
+|---|---|---|---|
+| `equity_us` | 271 | **218** | 53 (30 vwap · 6 sector · 13 sector+vwap · **4 fund** ) |
+| `equity_hk` | 170 | **166** | 4 (all **`fund:*`**) |
+
+The grep pass subtracted the `amount`/`vwap`/`sector` blockers from the
+universe-declaring counts (271 − 49 = 222) and **never saw the `fundamental` zoo**,
+whose 4 alphas declare both universes while requiring `fund:asset_growth`,
+`fund:net_income` + `fund:shares_diluted`, `fund:gross_profitability` and
+`fund:roe` — columns no OHLCV panel supplies. The blockers line above had the same
+omission, and its `amount 40` counted alphas that declare neither lane. Net effect:
+**A6 sweeps 218 US / 166 HK, not 222 / 170.** Two further facts worth carrying:
+
+- **`gtja191` contributes 0 to both lanes** — all 191 modules declare `equity_cn`
+only. The lane-usable set is `academic` 12 + `alpha101` 52 + `qlib158` 154 (US),
+and `academic` 12 + `qlib158` 154 (HK). No decision changes: the forks, the bars,
+the statistics and the U1/U2 universes are all untouched.
+- **The bridge's panel must carry real variance.** Probing 40 sampled clean alphas on
+a *degenerate* synthetic panel (high = low = open = close, constant volume) failed 8
+of them with `output >95% NaN (nan_ratio=1.000)`; the same 40 pass on a panel with
+distinct O/H/L and lognormal volume. Range- and volume-normalised alphas divide by
+a zero cross-sectional or rolling variance. Read that as a panel-construction
+requirement for A2, not a zoo defect — and as the reason a probe must not be run on
+a toy panel and believed.
 
 **Power floors on the picker window** (from `reports/backtest/2026-09-13.txt`, the
 lanes' own realized NW SE, t = 2):
@@ -135,12 +177,12 @@ never exceed `insufficient_evidence` in this phase, whatever the sweep prints.
 
 | # | Step | Deliverable | Exit criterion |
 |---|---|---|---|
-| **A1** | Vendor zoo + runtime (ops) | `git -C vendor/Vibe-Trading sparse-checkout add agent/src/factors agent/src/config`; venv on python3.13 with `pandas numpy pydantic` (+ optional `bottleneck`, disabled is a pure-pandas no-op path) | `Registry.health()` lists the zoo with 0 load errors |
+| **A1** | ✅ **DONE 2026-09-18** — Vendor zoo + runtime (ops) | `git -C ~/vendor/Vibe-Trading sparse-checkout add agent/src/factors agent/src/config`; venv on python3.13 at `.tools/venv` (gitignored), pinned in `apps/api/scripts/requirements-alpha-bridge.txt`; `bottleneck` absent, so the pure-pandas fallback is the path that runs | met: `Registry.health()` = `loaded 462, failed 0, errors []`; 40/40 sampled clean alphas compute on a realistic panel (one real `compute()` per contributing zoo); zoo revision `899d3c7` |
 | **A2** | Panel export — `apps/api/src/backtest/panel-export.ts` | `apps/api/reports/factor-panels/<lane>-<fingerprint>/{close,open,high,low,volume,eligible,manifest}.{csv,json}`; fingerprint = lane + window + symbol/bar counts | re-export is a no-op; U1/U2 masks reconcile with a stored `ScreenRun` day |
 | **A3** | Bridge — `apps/api/scripts/alpha-bridge.py` | one `date × symbol` CSV per alpha (float32, NaN preserved) + `bridge-manifest.json` (alpha id, zoo id, zoo revision, warmup, `columns_required`, skipped + `SkipAlpha`/`RegistryError` reason) | no network; re-run is byte-identical; a deliberately broken alpha is skipped with a reason, not a crash |
 | **A4** | Consumer — `quant-core/src/replayFromPanel.ts` + `multipleTesting.ts` | panel + mask + dates → `ReplayDay[]`; BH FDR + `E[\|IC\|]` by luck | unit tests: FDR monotonicity/known small case; **look-ahead invariant** — recomputing alpha `f` on a panel truncated at T equals the prefix of the full run to 1e-9, and a hand-written look-ahead alpha fails the test |
 | **A5** | CLI — `pnpm -C apps/api backtest:factor` | `--market us\|hk\|all --zoo … --alpha <ids> --from/--to --json` → `reports/backtest/factor-<date>.{json,txt}` with per-alpha rows (IC, ICIR, NW t, spread, by-year, breadth/day, warmup, label, p, FDR) | artifact renders; a `--alpha` list of 3 runs end-to-end on both lanes |
-| **A6** | The sweep | full US + HK sweep over the 222 / 170 clean alphas | every alpha has a label; the luck benchmark and both power floors are printed; artifacts for record |
+| **A6** | The sweep | full US + HK sweep over the 218 / 166 clean alphas | every alpha has a label; the luck benchmark and both power floors are printed; artifacts for record |
 | **A7** | Confirmation + PROGRESS | promoted-subset run on the vendor test half (US), bar per alpha, capped, guarded | verdict per promoted alpha; `PROGRESS.md` records window, universe, alpha set, zoo revision, labels, verdicts, limitations |
 
 **Cost of a false start, deliberately bounded:** A6 produces labels whatever the
