@@ -5,6 +5,71 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-17 (Phase-6 plans LOCKED — factor and strategy backtests, six forks decided; the vendored zoo is 222/170 usable alphas behind a signal-only bridge)
+
+Started as a review question — *"which strategy can we borrow to backtest?"* — and ended as
+two pre-registered plans. No code was written; this session is design only.
+
+**The discovery that reframed the question.** `vendor/Vibe-Trading` is a **sparse
+checkout of `agent/src/skills` only** (`git sparse-checkout list`): the runnable engine
+(`agent/backtest/`), the **Alpha Zoo** (`agent/src/factors/zoo/`) and `agent/src/quantlib/`
+are all in the clone's git objects, unextracted. One `sparse-checkout add` materialises
+them, so "borrow" is far cheaper than it looked. Parsed the zoo's own `__alpha_meta__`
+via `git grep` (the tree is not checked out): **462 modules** — alpha101 101 · gtja191 191 ·
+qlib158 154 · academic 12 · fundamental 4 — of which **222 are clean OHLCV-only and declare
+`equity_us`, 170 declare `equity_hk`**. Blocked outright: 40 need `amount`, 30 need `vwap`,
+19 need `requires_sector`. Runtime check: `Registry` needs **numpy, pandas, pydantic only**
+(`_backend` reaches `src.config.accessor` lazily, which itself needs pydantic only);
+`/opt/homebrew/bin/python3.13` exists while the system `python3` is 3.14 **without pandas** —
+hence a pinned dev venv, not an ad-hoc install.
+
+**The architectural rule both plans are built on.** Their code produces *signals*; ours
+produces *returns, statistics and verdicts*. The Python bridge may compute a factor panel
+or a position panel and **nothing else** — never a return, an IC, a Sharpe or a t-stat.
+That keeps the deciding number single-source in `quant-core/src/ic.ts`, which is the same
+discipline that makes `replayScreen` call production `runScreen`.
+
+**Six forks, all decided by the user (2026-09-17).** (1) **Liquidity universe U1 primary**
+(PIT ≥ 252 bars + `adv20 ≥ advFloor`, no trend/vol/MDD gates), screen-eligible U2 reported —
+and U1 is *derived from the same `runScreen(allFailures)` output*, so no second indicator
+implementation exists to drift. (2) **Exploratory sweep on the picker window; confirmation
+on the unspent vendor test half**, US-only, with its measured floor 0.0486 stated in every
+artifact. (3) **BH FDR q = 0.05** on the NW t-stats plus the luck benchmark
+`E[max|IC|] ≈ SE·√(2 ln K)`, ported into quant-core (~40 lines + tests) rather than
+called from their `quantlib`. (4) **Python bridge, formulas verbatim** — no 448-alpha
+TypeScript port. (5) **All statistics TypeScript.** (6) **Mean 20d rank IC with NW t
+(lag = horizon) decides, unchanged from Phase 4.**
+
+**Why the sweep is a shortlist, not a verdict — pre-registered from measured numbers.**
+The picker lanes' own realized NW SEs put their t = 2 floors at **0.0297 (US)** and
+**0.0493 (HK)**, so on this window a sweep can only separate IC ≈ 0 from |IC| ≳ 0.03/0.05;
+below that the honest label is `insufficient_evidence`, exactly as Phase 4b concluded for
+H1. Screening labels (`alive`/`reversed`/`dead`) are therefore *labels*, the promotion rule
+is fixed (top **K = 20** US alphas by mean IC among FDR survivors), the confirmation bar
+reuses the 4c arithmetic (2.4865 × design-half SE, cap 0.03, 1.5× SE-stability guard), and
+**HK can never exceed `insufficient_evidence`** because the vendor archive is US-only.
+
+**Phase 6B keeps its own honest ceiling.** The differential cannot confirm on ~4 years
+(measured US IR 0.49 against the ~0.985 a t = 2 needs), so portfolio results are
+**falsification-only** and the IC path carries any `supported` claim. Round 1 is five pure-pandas
+trailing engines (ichimoku, technical-basic, candlestick, volatility, seasonal) admitted only
+after passing a **causality gate** — `generate(series[:T]) == generate(series)[:T]` for sampled
+T — which is what separates a strategy backtest from a repainting one. Harmonic, elliott-wave,
+smc and chanlun are round 2 at the earliest and only in walk-forward mode; pair-trading waits
+for a pair-*selection* pre-registration; fundamental-filter and event-driven are excluded for
+lack of a PIT store, which is a data-honesty exclusion, not a preference.
+
+**Deliverables.** `docs/phase-6a-plan.md` and `docs/phase-6b-plan.md`, both **LOCKED**, each
+carrying its forks table, measured facts, build order with exit criteria, verdict vocabulary,
+pre-registered limitations and explicit non-goals.
+
+**Next (fast tier, execution):** 6A A1→A5 — materialise the zoo paths + venv, `panel-export`,
+`alpha-bridge.py`, `replayFromPanel` + `multipleTesting` with the look-ahead invariant test,
+then `backtest:factor`. A6/A7 are the sweep and the single confirmation run; a negative sweep
+costs one session, not a rework.
+
+---
+
 ## 2026-09-16 (cost tracking phase 3) — `report:cost`: the breadth price tag exists, and the per-run rows reconcile
 
 **Prices, from the provider rather than from memory.** Read
