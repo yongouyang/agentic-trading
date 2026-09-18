@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Bar, CorporateAction } from "../src/types.js";
-import { deriveAdjustedCloses, deriveAdjustedBars } from "../src/adjustment.js";
+import { deriveAdjustedCloses, deriveAdjustedBars, deriveAdjustedBarsForward } from "../src/adjustment.js";
 
 const bar = (date: string, close: number, ohlc?: Partial<Bar>): Bar => ({
   date,
@@ -136,5 +136,81 @@ describe("deriveAdjustedBars", () => {
       { date: "2025-01-03", open: null, high: null, low: null, close: null, volume: null },
     ];
     expect(deriveAdjustedBars(bars, [])).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6A: the two anchor conventions (amendment A2-1 / the A6 decision)
+// ---------------------------------------------------------------------------
+
+describe("dividend anchor — back vs forward", () => {
+  /** A price series that falls by exactly the dividend on each ex-date, so the
+   *  total return across an ex-date is 0 and any convention error cannot hide. */
+  const ds = ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05", "2024-01-08", "2024-01-09"];
+  const closes = [100, 100, 99, 98, 98, 98];
+  const bars: Bar[] = ds.map((d, i) => ({ date: d, open: closes[i]!, high: closes[i]!, low: closes[i]!, close: closes[i]!, volume: 1000 }));
+  const divs: CorporateAction[] = [
+    { date: "2024-01-04", type: "DIVIDEND", amount: 1, currency: "USD" },
+    { date: "2024-01-08", type: "DIVIDEND", amount: 1, currency: "USD" },
+  ];
+
+  const closesOf = (anchor: "back" | "forward") =>
+    deriveAdjustedBars(bars, divs, anchor).map((b) => b.close);
+
+  it("agrees on EVERY return and differs only in level", () => {
+    const back = closesOf("back");
+    const forward = closesOf("forward");
+    expect(back).not.toEqual(forward); // the levels really do differ
+    for (let i = 1; i < back.length; i++) {
+      const rb = back[i]! / back[i - 1]!;
+      const rf = forward[i]! / forward[i - 1]!;
+      expect(rf).toBeCloseTo(rb, 12);
+    }
+  });
+
+  it("gives the correct total return across an ex-date — 0 here, not −1%", () => {
+    // 2024-01-03 → 2024-01-04: the price fell by exactly the 1.0 dividend, so the
+    // investor's total return is 0. Both conventions must say so; a convention
+    // that anchors on the wrong side would say −1 %.
+    for (const anchor of ["back", "forward"] as const) {
+      const c = closesOf(anchor);
+      expect(c[2]! / c[1]! - 1).toBeCloseTo(0, 12);
+    }
+  });
+
+  it("is PIT-clean only forward-anchored: a FUTURE dividend moves back-adjustment's past value and must not move the forward one", () => {
+    const future: CorporateAction[] = [...divs, { date: "2024-01-09", type: "DIVIDEND", amount: 2, currency: "USD" }];
+    const at = (anchor: "back" | "forward", d: string, list: CorporateAction[] = divs) =>
+      deriveAdjustedBars(bars, list, anchor).find((b) => b.date === d)!.close;
+
+    // The property the panel convention exists for.
+    expect(at("forward", "2024-01-02", future)).toBeCloseTo(at("forward", "2024-01-02"), 12);
+    // …and the reason the shipped screen convention is NOT usable for a panel:
+    expect(at("back", "2024-01-02", future)).not.toBeCloseTo(at("back", "2024-01-02"), 12);
+  });
+
+  it("makes truncation a no-op on the data, which is what the look-ahead check needs", () => {
+    // Slice the input at T and recompute: forward-anchored values must be
+    // unchanged, because every factor a value at t uses has ex-date <= t.
+    const T = "2024-01-05";
+    const cut = ds.indexOf(T) + 1;
+    const full = deriveAdjustedBarsForward(bars, divs).slice(0, cut);
+    const truncated = deriveAdjustedBarsForward(bars.slice(0, cut), divs.filter((d) => d.date <= T));
+    expect(truncated.map((b) => b.close)).toEqual(full.map((b) => b.close));
+    // Back-anchored does NOT survive the same truncation — the anchor moves.
+    const bFull = deriveAdjustedBars(bars, divs).slice(0, cut).map((b) => b.close);
+    const bTrunc = deriveAdjustedBars(bars.slice(0, cut), divs.filter((d) => d.date <= T)).map((b) => b.close);
+    expect(bTrunc).not.toEqual(bFull);
+  });
+
+  it("defaults to the shipped back-adjustment so no existing caller can change", () => {
+    expect(deriveAdjustedBars(bars, divs).map((b) => b.close)).toEqual(closesOf("back"));
+    expect(deriveAdjustedCloses(bars, divs).get("2024-01-02")).toBe(closesOf("back")[0]);
+  });
+
+  it("skips a distribution of 100 % or more rather than dividing by zero", () => {
+    const wipeout: CorporateAction[] = [{ date: "2024-01-04", type: "DIVIDEND", amount: 100, currency: "USD" }];
+    const out = deriveAdjustedBarsForward(bars, wipeout);
+    expect(out.every((b) => Number.isFinite(b.close))).toBe(true);
   });
 });

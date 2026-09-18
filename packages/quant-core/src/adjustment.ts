@@ -16,10 +16,44 @@
  */
 import { Bar, CorporateAction } from "./types.js";
 
+/**
+ * Which end of the sample the cumulative dividend factor is anchored at.
+ *
+ * **`back`** (the shipped default, and Yahoo's `adjclose` convention):
+ *
+ *     adj_back(t) = raw(t) × Π{d > t} (1 − D/P_prev)
+ *
+ * The value at t therefore depends on dividends that go ex AFTER t. Harmless
+ * wherever it is used for a RATIO — every such factor appears in both the
+ * numerator and the denominator of a return, so it cancels (`replay.ts` header
+ * note 3) — but not for a cross-sectional LEVEL comparison, which is what a
+ * factor panel feeds. See `docs/phase-6a-plan.md` amendment A2-1.
+ *
+ * **`forward`** (Phase 6A's panel convention, decided 2026-09-18):
+ *
+ *     adj_forward(t) = raw(t) / Π{d ≤ t} (1 − D/P_prev)
+ *
+ * Historically anchored, so the value at t uses only ex-dates at or before t.
+ * Both conventions satisfy the same ratio identity,
+ * `adj(t₂)/adj(t₁) = raw(t₂)/raw(t₁) × Π{t₁ < d ≤ t₂} f`, which is why they agree
+ * on EVERY return and differ only in level — and it is the level identity for
+ * which the panel needed the historical one. Truncating a forward-anchored series
+ * is also a clean no-op on the data, which is what makes the look-ahead invariant
+ * checkable by ordinary truncation. Its residual, stated because it is real: a
+ * level is inflated by the symbol's own PAST dividend history, so a
+ * level-sensitive alpha reads that history — past information, so not look-ahead,
+ * but named in the manifest rather than left implicit.
+ */
+export type DividendAnchor = "back" | "forward";
+
 /** Derive the locally-adjusted close series from raw bars + dividend events.
  *  Returns a map date → adjusted close. Bars with null close are skipped. */
-export function deriveAdjustedCloses(bars: Bar[], dividends: CorporateAction[]): Map<string, number> {
-  const factors = factorSeries(bars, dividends);
+export function deriveAdjustedCloses(
+  bars: Bar[],
+  dividends: CorporateAction[],
+  anchor: DividendAnchor = "back",
+): Map<string, number> {
+  const factors = factorSeries(bars, dividends, anchor);
   const out = new Map<string, number>();
   for (const b of bars) if (b.close != null) out.set(b.date, b.close * (factors.get(b.date) ?? 1));
   return out;
@@ -30,8 +64,9 @@ export function deriveAdjustedCloses(bars: Bar[], dividends: CorporateAction[]):
 export function deriveAdjustedBars(
   bars: Bar[],
   dividends: CorporateAction[],
+  anchor: DividendAnchor = "back",
 ): (Bar & { adjustedClose: number })[] {
-  const factors = factorSeries(bars, dividends);
+  const factors = factorSeries(bars, dividends, anchor);
   return bars
     .filter((b) => b.close != null)
     .map((b) => {
@@ -47,7 +82,17 @@ export function deriveAdjustedBars(
     });
 }
 
-function factorSeries(bars: Bar[], dividends: CorporateAction[]): Map<string, number> {
+/**
+ * The forward-anchored (historically anchored, PIT-clean) bars — Phase 6A's panel
+ * convention. A named alias rather than a bare `"forward"` argument at each call
+ * site, because the two conventions are one keyword apart and a silent swap would
+ * be invisible in every downstream number.
+ */
+export function deriveAdjustedBarsForward(bars: Bar[], dividends: CorporateAction[]): (Bar & { adjustedClose: number })[] {
+  return deriveAdjustedBars(bars, dividends, "forward");
+}
+
+function factorSeries(bars: Bar[], dividends: CorporateAction[], anchor: DividendAnchor): Map<string, number> {
   const ordered = bars.filter((b) => b.close != null);
   const prevClose = new Map<string, number>();
   ordered.forEach((b, i) => {
@@ -58,10 +103,17 @@ function factorSeries(bars: Bar[], dividends: CorporateAction[]): Map<string, nu
   for (const b of ordered) {
     let f = 1;
     for (const d of divs) {
-      if (d.date > b.date) {
-        const p = prevClose.get(d.date);
-        if (p) f *= 1 - d.amount / p;
-      }
+      // The ex-date bar already reflects the drop, so `back` scales the bars
+      // strictly before it and `forward` scales the bars at or after it. The
+      // two are reciprocals of each other's cumulative product, which is what
+      // makes their returns identical.
+      const applies = anchor === "back" ? d.date > b.date : d.date <= b.date;
+      if (!applies) continue;
+      const p = prevClose.get(d.date);
+      if (!p) continue;
+      const step = 1 - d.amount / p;
+      if (step <= 0) continue; // a 100 %-or-more distribution has no usable factor
+      f *= anchor === "back" ? step : 1 / step;
     }
     out.set(b.date, f);
   }

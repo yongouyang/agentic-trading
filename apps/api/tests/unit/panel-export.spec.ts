@@ -15,7 +15,7 @@ import type { ReplayDay, ScreenPick, SymbolSeries } from "@agentic-trading/quant
 import {
   cellNum,
   fingerprintOf,
-  futureDividendFactors,
+  pastDividendFactors,
   maskForDay,
   reconcileMask,
   wideCsv,
@@ -94,11 +94,16 @@ describe("panel export — CSV and fingerprint determinism", () => {
     expect(fingerprintOf(r, ["AAA", "CCC"], 2000)).not.toBe(a);
     // Different window ⇒ different panel.
     expect(fingerprintOf({ ...r, end: "2026-09-18" }, ["AAA", "BBB"], 2000)).not.toBe(a);
-    expect(a).toContain("2022-09-08_2026-09-17-1003s-2n-2000b-");
+    expect(a).toContain("2022-09-08_2026-09-17-1003s-2n-2000b-fwd-");
+    // The ADJUSTMENT CONVENTION is part of the identity: it changes every price
+    // while leaving range, symbols and bar count identical, so a fingerprint
+    // without it would let a stale signals/ set be reused against data it was
+    // never computed from.
+    expect(fingerprintOf(r, ["AAA", "BBB"], 2000, "back")).not.toBe(a);
   });
 });
 
-describe("panel export — the dividend anchor is measured, not asserted", () => {
+describe("panel export — the forward anchor's residual is measured, not asserted", () => {
   const series = (symbol: string, dividends: SymbolSeries["dividends"]): SymbolSeries => ({
     symbol,
     market: "US",
@@ -111,19 +116,22 @@ describe("panel export — the dividend anchor is measured, not asserted", () =>
     dividends,
   });
 
-  it("is 1 for a name with no future dividend and below 1 when one exists", () => {
-    const none = futureDividendFactors([series("AAA", [])], "2024-01-02");
-    expect(none).toEqual([1]);
-    // Ex-date after the panel start: anchored at the last bar, the value at
-    // 2024-01-02 is scaled by (1 - D/P_prev) = 1 - 1/100.
-    const some = futureDividendFactors([series("BBB", [{ date: "2024-01-04", type: "DIVIDEND", amount: 1, currency: "USD" }])], "2024-01-02");
-    expect(some[0]).toBeCloseTo(0.99, 10);
+  it("is 1 for a name with no PAST dividend and above 1 when one exists", () => {
+    expect(pastDividendFactors([series("AAA", [])], "2024-01-04")).toEqual([1]);
+    // Forward-anchored, so a dividend with ex-date AT OR BEFORE the query date
+    // inflates the level by 1/(1 − D/P_prev) = 1/0.99 …
+    const before = pastDividendFactors([series("BBB", [{ date: "2024-01-03", type: "DIVIDEND", amount: 1, currency: "USD" }])], "2024-01-04");
+    expect(before[0]).toBeCloseTo(1 / 0.99, 10);
+    // …and one with an ex-date AFTER it must not move the level at all. That
+    // asymmetry is the entire difference between the two conventions.
+    const after = pastDividendFactors([series("CCC", [{ date: "2024-01-04", type: "DIVIDEND", amount: 1, currency: "USD" }])], "2024-01-03");
+    expect(after[0]).toBe(1);
   });
 
   it("skips names with no bar on the panel's first session", () => {
     const s = series("CCC", []);
     s.bars = s.bars.slice(1);
-    expect(futureDividendFactors([s], "2024-01-02")).toEqual([]);
+    expect(pastDividendFactors([s], "2024-01-02")).toEqual([]);
   });
 });
 

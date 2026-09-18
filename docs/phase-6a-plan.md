@@ -133,7 +133,9 @@ hypothesis family**, from a preserved half, which is exactly why it was never sp
   carrying each excluded name's full failure set (`excludedReasons`), default off
   and asserted byte-identical, mirroring the existing `allFailures` opt-in. U1 and
   U2 both read from that single output.
-- **Panel:** dividend-adjusted OHLC (`deriveAdjustedBars`), volume as stored
+- **Panel:** dividend-adjusted OHLC, **FORWARD-anchored** (`deriveAdjustedBarsForward` —
+  see amendment A2-3; the screen's own back-anchored `deriveAdjustedBars` is unchanged
+  and remains correct where it is used, for ratios), volume as stored
   (provider series are split-consistent per R1; no local split adjustment anywhere).
 - **Warmup / truncation:** `REPLAY_TRUNCATION_BARS` (252) unchanged. An alpha's own
   `min_warmup_bars` is honoured on top, and the *first* session an alpha can be
@@ -292,6 +294,53 @@ and it makes the anchor a decision rather than a disclosure: a sweep that shippe
 the labels of `alpha101_015` under this panel would be reporting a number about
 dividends as if it were about momentum.
 
+### Amendment A2-3 (2026-09-18) — the anchor is FIXED, not disclosed
+
+**User decision, 2026-09-18:** the panel switches to a forward (historically
+anchored) dividend adjustment. Amendment A2-1 framed this as a fork with an
+"accept and disclose" default; the decision went the other way, and this records
+what changed and how it was verified.
+
+**The change is one word wide and lives in one place.**
+`packages/quant-core/src/adjustment.ts` gains a `DividendAnchor` parameter and
+`deriveAdjustedBarsForward`:
+
+```
+back     adj(t) = raw(t) × Π{d > t} (1 − D/P_prev)      ← Yahoo adjclose; the screen's convention
+forward  adj(t) = raw(t) / Π{d ≤ t} (1 − D/P_prev)      ← the panel's convention
+```
+
+Both satisfy the same ratio identity,
+`adj(t₂)/adj(t₁) = raw(t₂)/raw(t₁) × Π{t₁ < d ≤ t₂} f`, so **they agree on every
+return and differ only in level** — which is why the screen, the forward-return
+builder and Phase 4 are all unaffected, and why a unit test asserts the identity
+rather than trusting the algebra. `deriveAdjustedBars` still defaults to `back`, so
+no existing caller can change by accident.
+
+**Verified three ways, not asserted.**
+
+| check | result |
+|---|---|
+| returns agree across the two conventions | asserted to 1e-12 on a fixture whose price falls by exactly the dividend, so the total return across the ex-date is 0 and an error cannot hide |
+| **the panel is window-independent** | an export ending at 2025-06-30 reproduces the full export's rows ≤ that date **byte for byte on all six CSVs** (`close/open/high/low/volume/eligible`), where under the back anchor it cannot by construction |
+| the look-ahead invariant on live output | 0 of 5 alphas peek, max relative difference `0.000e+00` over 2.36 M cells — including `alpha101_015`, `alpha101_045` and `alpha101_092`, the three the back anchor moved catastrophically |
+
+The `eligible` mask matching is part of that: the replay's PIT slicing was already
+day-local, so unifying the price convention makes the whole artifact
+window-independent rather than only its price columns.
+
+**The fingerprint now carries the convention** (`…-fwd-<digest>`). Without that, a
+panel whose every price changed would keep its directory name — same range, same
+symbols, same bar count — and a stale `signals/` set would be silently reused
+against data it was never computed from. The old back-anchored panel directories
+were deleted, not left beside the new ones.
+
+**What it buys beyond correctness:** limitation 10 collapses from "look-ahead of
+measured-but-unknown effect" to "past dividends inflate a level, measured"; the
+look-ahead invariant is checkable by ordinary truncation instead of only on sliced
+text; and `--from/--to` on `panel:export` becomes a real test rather than a
+convenience. Cost, for the record: one function, six tests, and a re-export.
+
 ## Build order (fast tier once locked)
 
 | # | Step | Deliverable | Exit criterion |
@@ -340,12 +389,16 @@ consumer's read path, so neither is taken speculatively here.
    per-zoo provenance line travels in every artifact.
 9. **No production impact** — nothing in this phase changes `SCREEN_PARAMS`, the
    chain, the dashboard, or the deep-dive.
-10. **The panel's dividend anchor is not point-in-time** (added 2026-09-18, A2) —
-   `deriveAdjustedBars` back-adjusts from the latest bar, so a factor value at T
-   carries the symbol's dividends that ex-date after T. Ratios *within* a symbol
-   are exactly PIT-safe; cross-sectional level comparisons are not. Measured size
-   and the reasoning are in **amendment A2-1** — this is the one limitation in the
-   list that could be removed by a fork change rather than only disclosed.
+10. **The panel's dividend anchor is now point-in-time, with a measured residual**
+   (rewritten 2026-09-18 by amendment A2-3; the pre-fix version of this item and
+   the measurement that forced the change are in amendment A2-1). The panel is
+   forward-anchored, so a value at t uses only ex-dates at or before t — nothing
+   about the future enters X. What remains is that a level is inflated by the
+   symbol's own **PAST** dividend history (`adjustment.pastDividendFactor`: US
+   median 1.0157, p90 1.0367; HK median 1.0177, p90 1.0831 at the window start), so
+   a level-sensitive alpha reads that history. Past information, so not look-ahead;
+   measured rather than asserted, because the anchor it replaced was also "just a
+   convention" until it was measured.
 11. **U1 spans the store, production spans the index list** (added 2026-09-18,
    A2-2) — U1 is defined by history + liquidity alone, so HK's mask carries 4 names
    the shipped screen no longer ranks. HK artifacts must say their book is wider

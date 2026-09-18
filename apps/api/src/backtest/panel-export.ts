@@ -17,43 +17,60 @@
  * `U2 ⊆ U1` holds by construction (a name that passed every gate failed
  * neither), which is why one three-valued mask can carry both.
  *
- * ## What this file does NOT guarantee — the dividend anchor
+ * ## The dividend anchor: the panel is FORWARD-anchored, and why
  *
- * The panel is dividend-adjusted by `deriveAdjustedBars`, which is a
- * MULTIPLICATIVE BACK-adjustment anchored at the latest bar of the series it is
- * given (R1). Handing it the full history therefore makes the value at date T
- * depend on dividends that ex-date AFTER T — in the project's own vocabulary,
- * look-ahead in the X variable.
+ * `deriveAdjustedBars` — the shipped screen's convention, and Yahoo's `adjclose`
+ * one — is a MULTIPLICATIVE BACK-adjustment anchored at the latest bar:
  *
- * The project already relies on this convention elsewhere and it is safe there
- * for a stated reason: a forward RETURN is a ratio of two adjusted values, so
- * every factor outside the interval cancels (`replay.ts` header note 3). A
- * factor VALUE has no such cancellation. What survives is worth stating exactly,
- * because it bounds the damage:
+ *     adj_back(t) = raw(t) × Π{d > t} (1 − D/P_prev)
  *
- *   adj(T) = raw(T) × Π{div ex-date > T} (1 − D/P_prev)
+ * so a value at T carries dividends that go ex AFTER T. That is safe wherever it
+ * is used for a RATIO, which is why the screen and the forward-return builder use
+ * it: every such factor cancels between the two endpoints (`replay.ts` header
+ * note 3). A factor VALUE has no such cancellation, and a factor panel is read
+ * cross-sectionally at a fixed T.
  *
- * so for a FIXED T the distortion is a per-symbol CONSTANT, and every
- * date-to-date ratio within one symbol is unaffected (any alpha built from
- * `ts_mean`, `ts_std`, `ts_corr`, `ts_rank` or a difference of log prices is
- * therefore exactly PIT-safe). What is not safe is a CROSS-SECTIONAL comparison
- * at fixed T across symbols whose future dividend streams differ — which
- * includes every `rank`/`zscore` alpha. The size of that distortion is measured
- * per lane and written into the manifest (`futureDividendFactor`), so it is a
- * number on the record rather than a defence in prose.
+ * **The panel therefore uses the forward anchor** (`deriveAdjustedBarsForward`),
+ * decided 2026-09-18 after the alternative was measured:
  *
- * The alternative — raw, unadjusted prices — removes the leakage by removing the
- * dividend return too, which is the larger error. A PIT-correct adjusted panel
- * is not expressible as a single matrix. The phase plan locked
- * `deriveAdjustedBars`, so this follows it and discloses; re-opening the fork is
- * the user's call, and the manifest carries what that decision would need.
+ *     adj_forward(t) = raw(t) / Π{d ≤ t} (1 − D/P_prev)
+ *
+ * Both conventions satisfy the same ratio identity
+ * `adj(t₂)/adj(t₁) = raw(t₂)/raw(t₁) × Π{t₁ < d ≤ t₂} f`, so they agree on EVERY
+ * return and differ only in level — and it is the level that the panel needs to be
+ * historical.
+ *
+ * **How big the difference was, because it is the whole reason for the change.**
+ * The distortion at T is a per-symbol constant rescaling of the price columns, so
+ * the affected alphas are decidable: rescale each symbol's OHLC by a factor drawn
+ * from the measured spread and re-run the bridge. On 31 alphas spanning all three
+ * contributing zoos, **9 moved and 3 catastrophically** — `alpha101_015` at rank
+ * ρ 0.4412 on 1250/1250 dates, `alpha101_092` 0.6701, `alpha101_045` 0.8507. For
+ * those the cross-section was dominated by the per-symbol dividend factor rather
+ * than by the signal, so an IC computed from it would have been measuring a
+ * per-symbol fixed effect assembled from post-T data. (A first 11-alpha sample
+ * said 10 of 11 were untouched and the effect was negligible; it was too small and
+ * its stride selected scale-invariant alphas. See amendment A2-1.)
+ *
+ * **Two consequences are now properties rather than caveats.** Truncating a
+ * forward-anchored panel is a clean no-op on the data, so the look-ahead invariant
+ * is checkable by ordinary truncation (`alpha-bridge.prefix-check.py`) rather than
+ * only on sliced text; and the panel is window-independent, so an export ending at
+ * T equals the full export's rows ≤ T.
+ *
+ * **The residual, named because it is real and PIT-legal:** a forward-anchored
+ * level is inflated by the symbol's own PAST dividend history, so a
+ * level-sensitive alpha reads that history. It is past information, so it is not
+ * look-ahead — but its size is measured into the manifest
+ * (`pastDividendFactor`) rather than left implicit, exactly as the anchor it
+ * replaced was.
  */
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   REPLAY_TRUNCATION_BARS,
-  deriveAdjustedBars,
+  deriveAdjustedBarsForward,
   replayScreen,
   type Bar,
   type Market,
@@ -95,15 +112,15 @@ export interface PanelManifest {
   symbols: number;
   bars: number;
   adjustment: {
-    method: "deriveAdjustedBars";
-    anchor: "latest_bar_of_series";
-    /** False, and this is the honest value: see the module header. */
-    pointInTime: false;
-    /** |Π{div ex-date > replayWindow.start}(1 − D/P_prev)| across the names
-     *  priced on the window's first session. The LEVEL mostly reflects each
-     *  name's dividend yield; the P10–P90 SPREAD is the part that survives into
-     *  a cross-sectional rank, which is why both are reported. */
-    futureDividendFactor: { symbols: number; median: number; p10: number; p90: number; max: number };
+    method: "deriveAdjustedBarsForward";
+    anchor: "first_bar_of_series";
+    /** True: a value at t uses only ex-dates at or before t. */
+    pointInTime: true;
+    /** The residual cost of a total-return series, measured at the replay
+     *  window's start across the names priced that day: the level is inflated by
+     *  the symbol's own PAST dividends. Past information, so not look-ahead; the
+     *  P10–P90 SPREAD is the part that survives into a cross-sectional rank. */
+    pastDividendFactor: { symbols: number; median: number; p10: number; p90: number; max: number };
     volume: "as_stored (provider split-consistent; never locally adjusted)";
   };
   warmup: { replayTruncationBars: number };
@@ -186,11 +203,17 @@ export function wideCsv(symbols: string[], dates: string[], value: (date: string
   return `${out.join("\n")}\n`;
 }
 
-/** Deterministic directory key: lane + window + symbol/bar counts (+ a digest of
- *  the symbol LIST, so swapping one name for another is a different panel). */
-export function fingerprintOf(panel: PanelRange, symbols: string[], bars: number): string {
+/** The adjustment convention is part of the identity of a panel: it changes every
+ *  price while leaving the range, the symbol list and the bar count identical, so
+ *  a fingerprint without it would let a stale `signals/` set be silently reused
+ *  against data it was not computed from. */
+export const ADJUSTMENT_TOKEN = "fwd";
+
+/** Deterministic directory key: window + symbol/bar counts + a digest of the
+ *  symbol LIST + the adjustment convention. */
+export function fingerprintOf(panel: PanelRange, symbols: string[], bars: number, adjustment: string = ADJUSTMENT_TOKEN): string {
   const digest = createHash("sha256").update(symbols.join("\n")).digest("hex").slice(0, 12);
-  return `${panel.start}_${panel.end}-${panel.sessions}s-${symbols.length}n-${bars}b-${digest}`;
+  return `${panel.start}_${panel.end}-${panel.sessions}s-${symbols.length}n-${bars}b-${adjustment}-${digest}`;
 }
 
 /** Session dates present in a lane's series, ascending. Unlike `loadLane().dates`
@@ -219,14 +242,22 @@ function quantile(sorted: number[], q: number): number {
   return sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))))]!;
 }
 
-/** `adj(first) / raw(first)` = Π{div ex-date > first}(1 − D/P_prev): how far the
- *  full-history anchor moves a value at the panel's first session. */
-export function futureDividendFactors(series: SymbolSeries[], firstDate: string): number[] {
+/**
+ * `adj_forward(date) / raw(date)` = `1 / Π{ex-date ≤ date}(1 − D/P_prev)`: the
+ * FACTOR by which a forward-anchored level is inflated by the symbol's own PAST
+ * dividends at that session.
+ *
+ * Measured rather than asserted, in the same spirit as the back-anchor's
+ * future-dividend factor was: it is the residual cost of the convention, and a
+ * level-sensitive alpha reads this history. It is past information, so it is not
+ * look-ahead — but the number belongs on the record, not in a footnote.
+ */
+export function pastDividendFactors(series: SymbolSeries[], date: string): number[] {
   const out: number[] = [];
   for (const s of series) {
-    const raw = s.bars.find((b) => b.date === firstDate);
+    const raw = s.bars.find((b) => b.date === date);
     if (!raw || raw.close == null || raw.close === 0) continue;
-    const adj = deriveAdjustedBars(s.bars, s.dividends).find((b) => b.date === firstDate);
+    const adj = deriveAdjustedBarsForward(s.bars, s.dividends).find((b) => b.date === date);
     if (!adj) continue;
     out.push(adj.adjustedClose / raw.close);
   }
@@ -251,8 +282,13 @@ export interface LanePanel {
   barCount: number;
 }
 
+export interface PanelRangeFilter {
+  from?: string;
+  to?: string;
+}
+
 /** Pure given a loaded lane: adjust once, replay once, derive both universes. */
-export function buildLanePanel(lane: LoadedLane): LanePanel {
+export function buildLanePanel(lane: LoadedLane, range: PanelRangeFilter = {}): LanePanel {
   const symbols = lane.series.map((s) => s.symbol);
   const bars = new Map<string, Map<string, Bar>>();
   const volume = new Map<string, Map<string, number | null>>();
@@ -260,7 +296,7 @@ export function buildLanePanel(lane: LoadedLane): LanePanel {
   for (const s of lane.series) {
     barCount += s.bars.length;
     const byDate = new Map<string, Bar>();
-    for (const b of deriveAdjustedBars(s.bars, s.dividends)) byDate.set(b.date, b);
+    for (const b of deriveAdjustedBarsForward(s.bars, s.dividends)) byDate.set(b.date, b);
     bars.set(s.symbol, byDate);
     const vol = new Map<string, number | null>();
     for (const b of s.bars) vol.set(b.date, b.volume);
@@ -273,7 +309,8 @@ export function buildLanePanel(lane: LoadedLane): LanePanel {
   const mask = new Map<string, Map<string, 0 | 1 | 2>>();
   for (const day of replayDays) mask.set(day.date, maskForDay(day));
 
-  return { market: lane.market, symbols, dates: panelDates(lane.series), bars, volume, mask, replayDays, barCount };
+  const inRange = (d: string) => (!range.from || d >= range.from) && (!range.to || d <= range.to);
+  return { market: lane.market, symbols, dates: panelDates(lane.series).filter(inRange), bars, volume, mask, replayDays, barCount };
 }
 
 function writeIfChanged(file: string, content: string, written: string[]): void {
@@ -343,12 +380,21 @@ async function storedRunFor(prisma: PrismaService, market: Market) {
 export async function exportPanel(
   prisma: PrismaService,
   market: Market,
-  opts: { root: string; log?: (m: string) => void },
+  opts: { root: string; log?: (m: string) => void; from?: string; to?: string },
 ): Promise<PanelExportResult> {
   const log = opts.log ?? (() => {});
   const lane = await loadLane(prisma, market, log);
+  // A windowed export is not a convenience: it is the check that the panel is
+  // window-INDEPENDENT. With a forward anchor a value at t uses only ex-dates at
+  // or before t, so an export ending at T must reproduce the full export's rows
+  // <= T exactly. Under the back anchor it cannot, which is how the convention
+  // was caught.
+  if (opts.from || opts.to) {
+    lane.dates = lane.dates.filter((d) => (!opts.from || d >= opts.from) && (!opts.to || d <= opts.to));
+    if (lane.windowStart && opts.from && opts.from > lane.windowStart) lane.windowStart = opts.from;
+  }
   if (lane.dates.length < 2) throw new Error(`${market}: too few replay sessions (${lane.dates.length})`);
-  const panel = buildLanePanel(lane);
+  const panel = buildLanePanel(lane, { from: opts.from, to: opts.to });
 
   const replayWindow: PanelRange = {
     start: lane.dates[0]!,
@@ -376,7 +422,7 @@ export async function exportPanel(
   // panel's first session is usually priced by a handful of names, which would
   // measure nothing. This is the cross-sectional spread of the anchor drift on
   // the session a sweep's first factor value is computed at.
-  const dilutions = futureDividendFactors(lane.series, replayWindow.start).sort((a, b) => a - b);
+  const dilutions = pastDividendFactors(lane.series, replayWindow.start).sort((a, b) => a - b);
   const stored = await storedRunFor(prisma, market);
   let reconciliation: MaskReconciliation | null = null;
   if (stored) {
@@ -403,10 +449,10 @@ export async function exportPanel(
     symbols: panel.symbols.length,
     bars: panel.barCount,
     adjustment: {
-      method: "deriveAdjustedBars",
-      anchor: "latest_bar_of_series",
-      pointInTime: false,
-      futureDividendFactor: {
+      method: "deriveAdjustedBarsForward",
+      anchor: "first_bar_of_series",
+      pointInTime: true,
+      pastDividendFactor: {
         symbols: dilutions.length,
         median: quantile(dilutions, 0.5),
         p10: quantile(dilutions, 0.1),
@@ -422,8 +468,9 @@ export async function exportPanel(
     columns: { date: "YYYY-MM-DD, the lane's own session calendar", fields: [...PANEL_FIELDS], eligible: "0 | 1 | 2 | (blank outside the replay window)" },
     limits: [
       "Survivorship: the store holds today's universe, so every claim is relative and an upper bound.",
-      "adjustment.pointInTime=false — the anchor is the last bar, so cross-sectional (rank/zscore) alphas see a per-symbol constant from future dividends. Bound in futureDividendFactor; see the module header for why within-symbol ratios are unaffected.",
+      "The panel is forward-anchored (adjustment.pointInTime=true): a value at t uses only ex-dates at or before t. The residual is that a level carries the symbol's PAST dividends, measured in adjustment.pastDividendFactor.",
       "The mask is defined only inside replayWindow; blank means 'not evaluated', which is not the same as 0.",
+      "Truncating this panel is a no-op on the data, so the look-ahead invariant is checkable by ordinary truncation.",
       "Volume is as stored (split-consistent per R1) and never dividend-adjusted.",
     ],
   };
@@ -464,8 +511,8 @@ export function renderPanelSummary(r: PanelExportResult): string {
   out.push(`panel      ${m.panelRange.start} … ${m.panelRange.end} (${m.panelRange.sessions} sessions) · ${m.symbols} symbols · ${m.bars} bars`);
   out.push(`replay     ${m.replayWindow.start} … ${m.replayWindow.end} (${m.replayWindow.sessions} sessions) · ${m.warmupSessions} warmup sessions before it`);
   out.push(`universes  U1 ${m.counts.u1Observations} name-observations (${m.counts.u1PerSession.toFixed(1)}/session) · U2 ${m.counts.u2Observations} (${m.counts.u2PerSession.toFixed(1)}/session)`);
-  const f = m.adjustment.futureDividendFactor;
-  out.push(`anchor     dividend-adjusted, anchor = last bar (NOT point-in-time) · Π(1−D/P) after panel start: median ${f.median.toFixed(4)} · p10 ${f.p10.toFixed(4)} · p90 ${f.p90.toFixed(4)} over ${f.symbols} names`);
+  const f = m.adjustment.pastDividendFactor;
+  out.push(`anchor     forward-anchored (point-in-time) · level vs raw from PAST dividends: median ${f.median.toFixed(4)} · p10 ${f.p10.toFixed(4)} · p90 ${f.p90.toFixed(4)} over ${f.symbols} names`);
   const c = m.reconciliation;
   if (!c) out.push(`reconcile  no stored ScreenRun to compare against`);
   else {

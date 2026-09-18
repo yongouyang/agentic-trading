@@ -12,7 +12,7 @@
  * proves the inputs did not move.
  *
  * Usage:
- *   pnpm -C apps/api panel:export [--market us|hk|all] [--json] [--quiet]
+ *   pnpm -C apps/api panel:export [--market us|hk|all] [--from <date>] [--to <date>] [--quiet]
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -27,11 +27,15 @@ export const PANEL_ROOT = path.join(PKG_ROOT, "reports", "factor-panels");
 export interface PanelArgs {
   markets: Market[];
   quiet: boolean;
+  from: string | null;
+  to: string | null;
 }
 
 export function parsePanelArgs(argv: string[]): PanelArgs {
   let markets: Market[] = ["US", "HK"];
   let quiet = false;
+  let from: string | null = null;
+  let to: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--") continue; // pnpm passes a bare --
@@ -40,6 +44,13 @@ export function parsePanelArgs(argv: string[]): PanelArgs {
       continue;
     }
     if (arg === "--json") continue; // the manifest IS the json artifact
+    if (arg === "--from" || arg === "--to") {
+      const v = argv[++i];
+      if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`${arg} needs YYYY-MM-DD, got "${v ?? ""}"`);
+      if (arg === "--from") from = v;
+      else to = v;
+      continue;
+    }
     if (arg === "--market") {
       const v = argv[++i];
       if (v === "all") markets = ["US", "HK"];
@@ -48,9 +59,9 @@ export function parsePanelArgs(argv: string[]): PanelArgs {
       else throw new Error(`--market must be us|hk|all, got "${v ?? ""}"`);
       continue;
     }
-    throw new Error(`unknown argument "${arg}" (expected --market us|hk|all, --quiet)`);
+    throw new Error(`unknown argument "${arg}" (expected --market us|hk|all, --from/--to, --quiet)`);
   }
-  return { markets, quiet };
+  return { markets, quiet, from, to };
 }
 
 export async function runPanelExportCli(
@@ -61,7 +72,7 @@ export async function runPanelExportCli(
   const out: PanelExportResult[] = [];
   for (const market of args.markets) {
     log(`  ${market}: loading store (read-only)…`);
-    out.push(await exportPanel(prisma, market, { root: PANEL_ROOT, log }));
+    out.push(await exportPanel(prisma, market, { root: PANEL_ROOT, log, from: args.from ?? undefined, to: args.to ?? undefined }));
   }
   return out;
 }
