@@ -7,6 +7,8 @@ export * from "./correlation.js";
 export * from "./screening.js";
 export * from "./replay.js";
 export * from "./ic.js";
+export * from "./multipleTesting.js";
+export * from "./replayFromPanel.js";
 export * from "./verdict-ic.js";
 export * from "./portfolio.js";
 export * from "./backtest.js";

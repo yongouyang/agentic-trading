@@ -95,6 +95,24 @@ export interface ReplayOptions {
   excludedReasons?: boolean;
 }
 
+/** The three fields the ranking-power readers need from a day's ranked set.
+ *
+ *  Deliberately NOT `ScreenPick`: the factor path (Phase 6A) has a score and a
+ *  rank and nothing else, and fabricating sma50/vol60/adv20 to satisfy a type
+ *  would encode a lie. `ReplayDay` is structurally assignable to `ScoredDay`, so
+ *  the screen path and the factor path feed the SAME IC engine — which is the
+ *  point, because the deciding statistic must stay single-source. */
+export interface ScoredSymbol {
+  symbol: string;
+  score: number;
+  rank: number;
+}
+
+export interface ScoredDay {
+  date: string;
+  ranked: ScoredSymbol[];
+}
+
 /**
  * Aggregate per-day exclusions for one lane into a census (Phase 4b D3). Pure.
  * Descriptive only: it describes the screen's *inputs*, not returns, and may not

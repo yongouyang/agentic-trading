@@ -256,6 +256,19 @@ moves with T. The phase plan locked `deriveAdjustedBars`, so A2 follows it. This
 recorded as limitation 10 and flagged to the user, because it is the one item in
 this phase that a fork change could remove rather than merely price.
 
+**A second consequence, found at A4 — the anchor also makes the look-ahead
+invariant unrunnable by the obvious method.** The natural way to check that an
+alpha only reads the past is to export a shorter panel and compare prefixes. With
+the anchor at the last bar that export is *not* a no-op on the data: cutting at T
+rescales every surviving row of each symbol by that symbol's future-dividend
+factor, so a perfectly trailing alpha would disagree with itself for a reason that
+has nothing to do with the alpha. The invariant can still be run against live
+output, but only by **slicing the panel's own CSV text** rather than re-exporting a
+window — which is what `alpha-bridge.prefix-check.py` does, and which is why it
+reported an exact `0.000e+00` rather than a residue near the tolerance. Both
+consequences point the same way: the anchor is not only a bias of unknown size in
+the X variable, it also degrades the sharpest correctness test this phase has.
+
 ## Build order (fast tier once locked)
 
 | # | Step | Deliverable | Exit criterion |
@@ -263,7 +276,7 @@ this phase that a fork change could remove rather than merely price.
 | **A1** | ✅ **DONE 2026-09-18** — Vendor zoo + runtime (ops) | `git -C ~/vendor/Vibe-Trading sparse-checkout add agent/src/factors agent/src/config`; venv on python3.13 at `.tools/venv` (gitignored), pinned in `apps/api/scripts/requirements-alpha-bridge.txt`; `bottleneck` absent, so the pure-pandas fallback is the path that runs | met: `Registry.health()` = `loaded 462, failed 0, errors []`; 40/40 sampled clean alphas compute on a realistic panel (one real `compute()` per contributing zoo); zoo revision `899d3c7` |
 | **A2** | ✅ **DONE 2026-09-18** — Panel export | `apps/api/src/backtest/panel-export.ts` + `pnpm -C apps/api panel:export`; `apps/api/reports/factor-panels/<lane>-<fingerprint>/{close,open,high,low,volume,eligible}.csv + manifest.json`; fingerprint = panel range + symbol/bar counts + a digest of the symbol list | met: re-export is a no-op (second run writes nothing); **U2 reconciles exactly on both lanes** — US stored-eligible 111 = mask 111, HK 23 = 23, with all 40/23 stored ranked names marked U2; U1 reconciles for US (552 = 552) and is reported-not-asserted for HK (116 vs 113, cause named — amendment A2-2) |
 | **A3** | ✅ **DONE 2026-09-18** — Bridge | `apps/api/scripts/alpha-bridge.py` → `<panel dir>/signals/<alpha_id>.csv` + `bridge-manifest.json`; outputs land INSIDE the panel directory so a signals set can never be paired with the wrong panel, and the manifest records the panel fingerprint anyway | met: all three clauses verified by `alpha-bridge.selftest.py` — (1) **no network**, proven by running under a poisoned `socket.socket`; (2) **skip, not crash**, with a purpose-built fixture zoo: a raising alpha lands in `skipped` as `RegistryError` *with its message* and a missing-column alpha as `SkipAlpha`, while the working alpha still produces its panel; (3) **byte-identical re-run**, a second identical run writes nothing. Live check on the real US panel: 3 alphas computed, zoo digest `94a1a6a0ae42`, rev `899d3c7` |
-| **A4** | Consumer — `quant-core/src/replayFromPanel.ts` + `multipleTesting.ts` | panel + mask + dates → `ReplayDay[]`; BH FDR + `E[\|IC\|]` by luck | unit tests: FDR monotonicity/known small case; **look-ahead invariant** — recomputing alpha `f` on a panel truncated at T equals the prefix of the full run to 1e-9, and a hand-written look-ahead alpha fails the test |
+| **A4** | ✅ **DONE 2026-09-18** — Consumer | `packages/quant-core/src/replayFromPanel.ts` (panel + mask + signals → ranked days; the look-ahead invariant) + `multipleTesting.ts` (BH FDR, `E[max\|IC\|]` luck benchmark, normal p). Ranked days are `ScoredDay` (symbol/score/rank), NOT `ReplayDay`: the factor path has no sma50/vol60/adv20 to put in a `ScreenPick`, and fabricating eight screen metrics to satisfy a type would be a lie encoded in the type system. `ReplayDay` is structurally assignable to `ScoredDay`, so both paths feed one IC engine | met: BH reproduces the 1995 paper's worked example (4 discoveries at q = 0.05, 3 at q = 0.01, monotone in q, non-finite p excluded from K); the invariant harness passes two trailing-only signals and **rejects** a centred window and a one-row peek, locating the violation; and the REAL zoo checked clean — **0 of 10 alphas peeking, max relative difference 0.000e+00 over 4,746,606 cells** (`alpha-bridge.prefix-check.py`; A6 should widen it to all 218) |
 | **A5** | CLI — `pnpm -C apps/api backtest:factor` | `--market us\|hk\|all --zoo … --alpha <ids> --from/--to --json` → `reports/backtest/factor-<date>.{json,txt}` with per-alpha rows (IC, ICIR, NW t, spread, by-year, breadth/day, warmup, label, p, FDR) | artifact renders; a `--alpha` list of 3 runs end-to-end on both lanes |
 | **A6** | The sweep | full US + HK sweep over the 218 / 166 clean alphas | every alpha has a label; the luck benchmark and both power floors are printed; artifacts for record |
 | **A7** | Confirmation + PROGRESS | promoted-subset run on the vendor test half (US), bar per alpha, capped, guarded | verdict per promoted alpha; `PROGRESS.md` records window, universe, alpha set, zoo revision, labels, verdicts, limitations |

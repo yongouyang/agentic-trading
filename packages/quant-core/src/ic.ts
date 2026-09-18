@@ -12,7 +12,7 @@
  * closer to 1011/20 ≈ 50, and overstates significance by roughly √20 ≈ 4.5×.
  * `neweyWestT` is the only t-statistic the gate may use.
  */
-import { ReplayDay, ForwardSeries, forwardReturn } from "./replay.js";
+import { ForwardSeries, ReplayDay, ScoredDay, forwardReturn } from "./replay.js";
 
 export interface IcPoint {
   date: string;
@@ -89,7 +89,7 @@ export function spearmanRank(xs: number[], ys: number[]): number | null {
 export const MIN_IC_BREADTH = 5;
 
 /** Daily Spearman IC of score vs forward return over the eligible set. */
-export function icSeries(days: ReplayDay[], forward: Map<string, ForwardSeries>, horizon: number): IcPoint[] {
+export function icSeries(days: ScoredDay[], forward: Map<string, ForwardSeries>, horizon: number): IcPoint[] {
   const out: IcPoint[] = [];
   for (const day of days) {
     const scores: number[] = [];
@@ -112,7 +112,7 @@ export function icSeries(days: ReplayDay[], forward: Map<string, ForwardSeries>,
 
 /** Mean forward return of the top-N ranked names minus the mean of the rest. */
 export function spreadSeries(
-  days: ReplayDay[],
+  days: ScoredDay[],
   forward: Map<string, ForwardSeries>,
   horizon: number,
   topN: number,
@@ -219,7 +219,7 @@ export function proportionalCutoff(breadth: number, share = PROP_SPREAD_SHARE, f
  * floor (not the share) is what binds and the report has to say which.
  */
 export function spreadSeriesProportional(
-  days: ReplayDay[],
+  days: ScoredDay[],
   forward: Map<string, ForwardSeries>,
   horizon: number,
   cutoffs?: number[],

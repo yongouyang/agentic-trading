@@ -5,6 +5,73 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (Phase-6A A4 EXECUTED — the IC engine is fed from panels, BH FDR and the luck benchmark are in-repo, and the look-ahead harness is proven able to fail; the real zoo comes back clean)
+
+Fast-tier execution of `docs/phase-6a-plan.md` step A4. Pure quant-core: no product
+code, no chain, no `SCREEN_PARAMS`.
+
+**The adapter, and one deliberate deviation from the plan's wording.** The A4 row
+says "panel + mask + dates → `ReplayDay[]`". It does not, and the reason matters:
+`ScreenPick` carries sma50, sma200, mom20, mom60, vol60, sharpe252, adv20, mdd252
+and `caDegraded`, none of which exist on the factor path — populating them from
+nothing would be a lie encoded in the type system. `ScoredDay` names the three
+fields the ranking-power readers actually touch (symbol, score, rank), and
+`ReplayDay` is structurally assignable to it, so the screen path and the factor
+path feed **one** IC engine. That is the condition for the deciding number staying
+single-source, and it is worth more than a literal type match. `icSeries`,
+`spreadSeries` and `spreadSeriesProportional` were widened to `ScoredDay[]`; nothing
+else changed and `sweepWeightCombos` still reads `ReplayDay`.
+
+**Both exit criteria met.** `benjaminiHochberg` reproduces the 1995 paper's own
+worked example — 4 discoveries at q = 0.05 (the fifth p-value fails the step-up),
+3 at q = 0.01, monotone in q, adjusted p-values monotonised and ≥ p — and excludes
+non-finite p from K rather than calling them p = 1, because an alpha whose statistic
+could not be computed is not evidence in either direction. `luckBenchmark` is
+`SE·√(2 ln K)`, with the two caveats that travel with it stated in code: it is an
+asymptotic order-statistic approximation, and using K (rather than the smaller
+effective trial count of a correlated sweep) makes it *conservative* — harder to
+pass, which is the direction this phase's pre-registration prefers.
+
+**The look-ahead invariant, and the harness's ability to fail.** This was the step
+where a mistake stays invisible in every downstream number, so it is tested by
+attempting to break it: the checker passes two trailing-only signals and
+**rejects** a centred window and a one-row peek, reporting the exact date, symbol
+and both values. `ReplayDay`-style shape aside, the interesting test proved the
+*third* case: a signal whose value depends on how many rows it was handed passes at
+a truncation at the very end of the window (both inputs then have the same length)
+and fails at every interior truncation — which is precisely why the default
+sampling is a spread through the window rather than a single point.
+
+**The real zoo checked clean, and the method mattered.** `alpha-bridge.prefix-check.py`
+runs the bridge over the live US panel and over the same panel truncated at
+`2025-06-30`, then compares every prefix cell: **0 of 10 alphas peeking, maximum
+relative difference exactly `0.000e+00` over 4,746,606 cells** — not "within
+tolerance", identical. The truncation is done by slicing the panel's CSV **text**,
+not by re-exporting a shorter window from the store, and that distinction is the
+whole test: slicing leaves every surviving row byte-identical, so any disagreement
+would be the alpha's doing. Re-exporting would re-anchor the dividend adjustment at
+T (amendment A2-1) and rescale each symbol's rows by its own future-dividend
+factor — a perfectly trailing alpha would "fail" for a reason unrelated to the
+alpha.
+
+**Which is the second consequence of A2-1, and it is the stronger one.** The anchor
+is not only a bias of unknown size in the X variable; it also breaks the sharpest
+correctness test this phase has, unless that test is run on sliced text. Recorded
+in amendment A2-1 and in the plan's A4 row. The fork is still the user's call, and
+this is now two measured reasons rather than one argument.
+
+**Tests:** quant-core 194 → **227** (+33) — 16 on the normal approximation and BH
+(known Φ values, the textbook example, monotonicity in q, K-exclusion, degenerate
+inputs, the luck benchmark's guards), 17 on the adapter and the invariant. api 639,
+agents 51, web 107 unchanged; tsc clean on both packages.
+
+**Next (fast tier):** A5 — `pnpm -C apps/api backtest:factor`: read the panel +
+mask + signals CSVs, run three alphas end-to-end on both lanes, and emit
+`reports/backtest/factor-<date>.{json,txt}` with per-alpha IC, ICIR, NW t, spread,
+by-year, breadth/day, the screening label, p and the FDR decision.
+
+---
+
 ## 2026-09-18 (Phase-6A A3 EXECUTED — the bridge computes zoo alphas verbatim, stays offline, and skips a broken alpha instead of dying; A6's disk bill is now a measured number)
 
 Fast-tier execution of `docs/phase-6a-plan.md` step A3. Python only — no product
