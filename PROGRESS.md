@@ -5,6 +5,96 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (Phase-6A A6 EXECUTED — 384 alphas swept and the US shortlist comes back EMPTY; the sweep produced less than its own noise ceiling, so A7 has nothing to promote and the vendor test half stays unspent)
+
+Fast-tier execution of `docs/phase-6a-plan.md` step A6, the sweep itself. No product
+code touched.
+
+**What ran.** The bridge over every clean alpha on both lanes — **218/218 US and
+166/166 HK evaluated, 0 skipped**, 1.9 GB of signal panels in four minutes — then
+`backtest:factor --market all` over all 768 lane×universe×alpha rows. Provenance:
+zoo digest `94a1a6a0ae42`, rev `899d3c7`, panel fingerprints `…-fwd-…` with
+`pointInTime: true`, US window 2022-09-19…2026-09-17 (1003 sessions), HK
+2022-09-22…2026-09-18 (980). One numpy `RuntimeWarning` surfaced from an alpha's
+intermediate arithmetic; the zoo's own `>95 % NaN` / no-`inf` gate is what vets the
+output, and it passed every alpha.
+
+**The US result: all 436 rows `dead`, and it is not a marginal miss.** Best |t| is
+**2.49** (U1, `qlib158_wvma5`) and **2.56** (U2, `academic_cma`); 13 rows clear the
+pre-registered 0.0297 floor; exactly **four** rows are both floor-clearing and
+significant uncorrected (p < 0.05) — and they are **three** hypotheses, because
+`qlib158_sumd60` ≡ `sump60` (identical) and `sumn60` is the exact negation. FDR
+removes all of them (adjusted p 0.78–0.98), leaving **0 discoveries**.
+
+**The one number that carries the interpretation is the luck ratio**, per alpha and
+against its OWN NW SE rather than a lane average — because SE varies three-fold
+across the zoo, so a lane-mean benchmark would be the wrong denominator:
+
+| lane / universe | K | max \|IC\| / (ownSE·√(2 ln K)) | reading |
+|---|---|---|---|
+| US U1 | 218 | **0.76** | within noise |
+| US U2 | 218 | **0.78** | within noise |
+| HK U1 | 166 | **1.04** | clears it |
+| HK U2 | 166 | **1.57** | clears it |
+
+So **no US alpha's |IC| reaches what a pure-null sweep of that size would be
+expected to produce at that alpha's own standard error** — and the identical
+machinery on HK does clear it (up to 1.57). That contrast is the control: the US
+null is a statement about the data, not a dead pipeline. It also shows on HK, which
+is where the machinery had to work at all.
+
+**Multiplicity is priced, and the US null does not depend on it.** The BH threshold
+at K = 218 is p ≤ 2.29e-4, i.e. |t| ≥ 3.68, i.e. **|IC| ≈ 0.055 at the lane SE —
+nearly twice the pre-registered 0.0297 power floor.** That is the cost of a 218-fold
+search, and it is roughly what the luck benchmark predicted (0.0518 at the lane SE,
+0.0358 at the sweep's own mean SE). Checked against the effective-K caveat, since the
+correction assumes independence: even at K = 10 the threshold is |t| ≥ 2.81 against the
+observed best of 2.56, and only K ≈ 5 would make the reading marginal. The null
+survives every plausible deflation of K.
+
+**HK: 30 survivors, and none of them is evidence.** 34 discoveries (20 `alive`, 10
+`reversed`) — **every one on U2, the 27-name cross-section, and none on U1.**
+Standouts: `qlib158_cntn20` −0.1022 (t −5.01), `academic_high52w` +0.1051 (t 3.55),
+`qlib158_imax60` +0.0777 (t 4.20). Recorded rather than claimed, for four
+pre-registered reasons: the vendor archive is US-only so HK can never exceed
+`insufficient_evidence`; the breadth is 27 names; the HK venue distortion is
+inherited; and **the zoo contains exact duplicates**, so 166 is not 166 distinct
+hypotheses — `qlib158_vsumd20` ≡ `vsump20` and `vsumn20` is the negation, `sumd60`
+≡ −`sumn60`, and the `cntd`/`cntn` family is paired the same way. The effective
+hypothesis count is materially below 166, which makes the correction
+*over*-conservative there — the direction that cannot manufacture the US null.
+
+**A6's FDR scope is auditable rather than implicit.** Corrections are applied within
+(lane, universe); pooling is the stricter direction, so the report prints what
+pooling would leave: **15 discoveries, all HK, US still 0.** The lenient reading was
+not allowed to be invisible.
+
+**Consequence: A7 cannot run.** The promotion rule is pre-registered as "the
+FDR-surviving, power-floor-clearing US alphas, ranked by mean 20d IC, capped at
+K = 20 by mean IC" — that set is **empty**, so there is no promoted subset and the
+vendor test half cannot be spent. **The test half has now survived unspent twice**
+(Phase 4c declared the lane underpowered by design; Phase 6A produced no shortlist).
+The temptation now is to widen the rule — pool HK, lower the floor, use |IC| instead
+of IC, take the top 20 regardless of FDR — and every one of those is a re-bar after
+seeing outcomes. Not done.
+
+**What the US result does and does not say.** `dead` is defined as uninformative,
+not as "no edge" — but this null is better characterised than Phase 4's was, because
+the sweep *could* have detected |IC| ≈ 0.03 and none survived the search. So the
+supportable statement is: **on this window, at this breadth, no formulaic alpha's
+|IC| exceeds what a 218-fold search produces from noise.** One caveat worth naming:
+the A6 sensitivity probe found 9 of 31 alphas read the panel's price LEVEL, and a
+forward-anchored level carries a PIT-legal past-dividend component (US p90 1.0367),
+so those alphas' cross-sections carry a dividend-driven component that can dilute a
+real signal. That is a statement about this panel's X, not about the formulas.
+
+**Tests:** api 662 → **663** (+1 for the pooled-FDR line), quant-core 233, agents 51,
+web 107; tsc clean.
+
+**Next: a decision, not a step.**
+
+---
+
 ## 2026-09-18 (Phase-6A A5 EXECUTED — `backtest:factor` runs end-to-end on both lanes, and the first real run's own output caught three defects in its reporting)
 
 Fast-tier execution of `docs/phase-6a-plan.md` step A5. New

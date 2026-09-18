@@ -209,6 +209,7 @@ describe("rendering", () => {
     fdrQ: FDR_Q,
     promotionK: PROMOTION_K,
     lanes: [lane("US"), lane("HK")],
+    pooledFdrSensitivity: { universes: ["U1", "U2"], k: 768, discoveries: 0, byLane: {} },
   };
 
   it("states the statistic, both luck benchmarks, and the pre-registered limitations", () => {
@@ -218,6 +219,17 @@ describe("rendering", () => {
     expect(text).toContain("E[max|IC|]");
     expect(text).toContain("CONSERVATIVE");
     expect(text).toContain("`dead` means UNINFORMATIVE");
+  });
+
+  it("shows the pooled-across-lanes FDR reading, so the lenient direction is visible", () => {
+    // The decision is per (lane, universe); pooling is stricter, so the page has
+    // to carry what the stricter reading would have left standing.
+    const text = renderFactor(report);
+    expect(text).toContain("FDR sensitivity: pooling every lane's U1/U2 rows into ONE correction");
+    expect(text).toContain("K=768");
+    expect(text).toContain("The per-lane numbers above are the decision");
+    // Absent when only one lane ran — there is nothing to pool.
+    expect(renderFactor({ ...report, pooledFdrSensitivity: null })).not.toContain("FDR sensitivity");
   });
 
   it("is explicit that only the US lane promotes, and that a label is not a verdict", () => {

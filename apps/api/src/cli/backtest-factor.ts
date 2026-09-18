@@ -163,6 +163,21 @@ export interface FactorReport {
   fdrQ: number;
   promotionK: number;
   lanes: LaneReport[];
+  /**
+   * The FDR is applied WITHIN each (lane, universe) — the US/U1 family is the one
+   * that decides, HK cannot exceed `insufficient_evidence` whatever it prints, and
+   * pooling a 25-name cross-section into a 550-name one would import HK's noise
+   * into the US threshold. But pooling is the STRICTER direction, so choosing the
+   * narrower family is choosing the more lenient correction; that is only
+   * acceptable if it is visible. This re-runs BH over every lane's U1 rows at once
+   * and reports what the stricter reading would have left standing.
+   */
+  pooledFdrSensitivity: {
+    universes: Universe[];
+    k: number;
+    discoveries: number;
+    byLane: Record<string, number>;
+  } | null;
 }
 
 export interface FactorArgs {
@@ -537,6 +552,14 @@ export function renderFactor(report: FactorReport, log?: string[]): string {
     out.push(...renderLane(l));
     out.push("");
   }
+  if (report.pooledFdrSensitivity) {
+    const p = report.pooledFdrSensitivity;
+    out.push(
+      `FDR sensitivity: pooling every lane's ${p.universes.join("/")} rows into ONE correction (K=${p.k}, the stricter reading) leaves ${p.discoveries} discoveries` +
+        ` (${Object.entries(p.byLane).map(([m, n]) => `${m} ${n}`).join(", ") || "none"}). The per-lane numbers above are the decision; this line exists so the lenient direction is visible.`,
+    );
+    out.push("");
+  }
   out.push("Pre-registered limitations:");
   out.push("  · The picker window can only separate IC ≈ 0 from |IC| ≳ 0.03 (US) / 0.05 (HK), so `dead` means UNINFORMATIVE, not 'no edge'.");
   out.push("  · HK has no confirmation stage: the vendor archive is US-only, so HK cannot exceed insufficient_evidence here.");
@@ -559,6 +582,20 @@ async function main(): Promise<void> {
   const lanes: LaneReport[] = [];
   for (const market of args.markets) lanes.push(await runLane(market, args.panel ?? "", args, log));
 
+  // Pooled-across-lanes sensitivity: identical rows, one correction over all of
+  // them. Reported, never used to decide.
+  let pooled: FactorReport["pooledFdrSensitivity"] = null;
+  if (lanes.length > 1) {
+    const rows: { row: AlphaRow; market: Market }[] = [];
+    for (const l of lanes) for (const r of l.rows) if (args.universes.includes(r.universe)) rows.push({ row: r, market: l.market });
+    const bh = benjaminiHochberg(rows.map((x) => x.row.p), FDR_Q);
+    const byLane: Record<string, number> = {};
+    rows.forEach((x, i) => {
+      if (bh.rejected[i]) byLane[x.market] = (byLane[x.market] ?? 0) + 1;
+    });
+    pooled = { universes: args.universes, k: bh.k, discoveries: bh.discoveries, byLane };
+  }
+
   const report: FactorReport = {
     generatedAt: new Date().toISOString(),
     primaryHorizon: PRIMARY_HORIZON,
@@ -566,6 +603,7 @@ async function main(): Promise<void> {
     fdrQ: FDR_Q,
     promotionK: PROMOTION_K,
     lanes,
+    pooledFdrSensitivity: pooled,
   };
   const text = renderFactor(report);
   console.log(text);
