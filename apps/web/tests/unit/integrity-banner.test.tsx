@@ -65,10 +65,13 @@ describe("IntegrityBanner", () => {
   });
 
   // Phase 4b item 6: the header vouches for the DATA; this line is the only place
-  // that says the RULES behind the ranking are unvalidated. Without it the list
-  // reads as more authoritative than the evidence supports.
+  // that says what the RULES behind the ranking are worth. Without it the list
+  // reads as more authoritative than the evidence supports. The 2026-09-18
+  // rewording (K1 locked and fired — docs/kill-criteria-lock.md, D1b) tightened it
+  // from "unvalidated" to "retired, no alpha claim"; the fixture tracks the live
+  // string so it cannot teach a reader the old stance.
   it("renders the rule-provenance caveat when the api supplies one", () => {
-    const caveat = "ranking rules are an unvalidated hypothesis — see docs/phase-4b-plan.md";
+    const caveat = "this list is a candidate funnel, not an alpha claim — the ranking rules are RETIRED as an alpha claim (K1, 2026-09-18)";
     render(<IntegrityBanner integrity={{ ...okIntegrity, caveat }} />);
     const el = screen.getByTestId("integrity-caveat");
     expect(el).toHaveTextContent(caveat);
