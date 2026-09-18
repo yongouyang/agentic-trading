@@ -262,7 +262,7 @@ this phase that a fork change could remove rather than merely price.
 |---|---|---|---|
 | **A1** | ✅ **DONE 2026-09-18** — Vendor zoo + runtime (ops) | `git -C ~/vendor/Vibe-Trading sparse-checkout add agent/src/factors agent/src/config`; venv on python3.13 at `.tools/venv` (gitignored), pinned in `apps/api/scripts/requirements-alpha-bridge.txt`; `bottleneck` absent, so the pure-pandas fallback is the path that runs | met: `Registry.health()` = `loaded 462, failed 0, errors []`; 40/40 sampled clean alphas compute on a realistic panel (one real `compute()` per contributing zoo); zoo revision `899d3c7` |
 | **A2** | ✅ **DONE 2026-09-18** — Panel export | `apps/api/src/backtest/panel-export.ts` + `pnpm -C apps/api panel:export`; `apps/api/reports/factor-panels/<lane>-<fingerprint>/{close,open,high,low,volume,eligible}.csv + manifest.json`; fingerprint = panel range + symbol/bar counts + a digest of the symbol list | met: re-export is a no-op (second run writes nothing); **U2 reconciles exactly on both lanes** — US stored-eligible 111 = mask 111, HK 23 = 23, with all 40/23 stored ranked names marked U2; U1 reconciles for US (552 = 552) and is reported-not-asserted for HK (116 vs 113, cause named — amendment A2-2) |
-| **A3** | Bridge — `apps/api/scripts/alpha-bridge.py` | one `date × symbol` CSV per alpha (float32, NaN preserved) + `bridge-manifest.json` (alpha id, zoo id, zoo revision, warmup, `columns_required`, skipped + `SkipAlpha`/`RegistryError` reason) | no network; re-run is byte-identical; a deliberately broken alpha is skipped with a reason, not a crash |
+| **A3** | ✅ **DONE 2026-09-18** — Bridge | `apps/api/scripts/alpha-bridge.py` → `<panel dir>/signals/<alpha_id>.csv` + `bridge-manifest.json`; outputs land INSIDE the panel directory so a signals set can never be paired with the wrong panel, and the manifest records the panel fingerprint anyway | met: all three clauses verified by `alpha-bridge.selftest.py` — (1) **no network**, proven by running under a poisoned `socket.socket`; (2) **skip, not crash**, with a purpose-built fixture zoo: a raising alpha lands in `skipped` as `RegistryError` *with its message* and a missing-column alpha as `SkipAlpha`, while the working alpha still produces its panel; (3) **byte-identical re-run**, a second identical run writes nothing. Live check on the real US panel: 3 alphas computed, zoo digest `94a1a6a0ae42`, rev `899d3c7` |
 | **A4** | Consumer — `quant-core/src/replayFromPanel.ts` + `multipleTesting.ts` | panel + mask + dates → `ReplayDay[]`; BH FDR + `E[\|IC\|]` by luck | unit tests: FDR monotonicity/known small case; **look-ahead invariant** — recomputing alpha `f` on a panel truncated at T equals the prefix of the full run to 1e-9, and a hand-written look-ahead alpha fails the test |
 | **A5** | CLI — `pnpm -C apps/api backtest:factor` | `--market us\|hk\|all --zoo … --alpha <ids> --from/--to --json` → `reports/backtest/factor-<date>.{json,txt}` with per-alpha rows (IC, ICIR, NW t, spread, by-year, breadth/day, warmup, label, p, FDR) | artifact renders; a `--alpha` list of 3 runs end-to-end on both lanes |
 | **A6** | The sweep | full US + HK sweep over the 218 / 166 clean alphas | every alpha has a label; the luck benchmark and both power floors are printed; artifacts for record |
@@ -271,6 +271,17 @@ this phase that a fork change could remove rather than merely price.
 **Cost of a false start, deliberately bounded:** A6 produces labels whatever the
 outcome, and A7 is a single run over ≤ 20 alphas — a negative sweep costs one
 session, not a rework.
+
+**A6's price tag, measured at A3** (US panel, 1254 × 555, three real alphas):
+median **8.52 MB per alpha** and **0.53 s** of compute. Projected over the
+pre-registered sets — 218 US + 166 HK — that is **≈ 2.2 GB of CSVs** (US ≈ 1.86 GB
+on the larger panel, HK ≈ 0.37 GB) and **≈ 3 minutes** of compute. The size is the
+only cost in this phase that is not free, and it is *regenerable*: deleting
+`signals/` and re-running rebuilds it in minutes, which is why A2/A3 write to
+`apps/api/reports/` (gitignored) rather than to anything versioned. If 2.2 GB is
+unwelcome at A6, the levers are per-alpha warmup trimming (≈ 20 % of the cells are
+leading warmup NaNs whose text is one byte each) or compression; both change the
+consumer's read path, so neither is taken speculatively here.
 
 ## Pre-registered limitations
 

@@ -5,6 +5,67 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (Phase-6A A3 EXECUTED — the bridge computes zoo alphas verbatim, stays offline, and skips a broken alpha instead of dying; A6's disk bill is now a measured number)
+
+Fast-tier execution of `docs/phase-6a-plan.md` step A3. Python only — no product
+code, no TypeScript touched.
+
+**All three exit clauses verified by a check that lives next to the bridge.**
+`apps/api/scripts/alpha-bridge.py` reads an A2 panel and writes
+`<panel dir>/signals/<alpha_id>.csv` plus `bridge-manifest.json`. Because the bridge
+is Python and Python is deliberately **not** a test-suite dependency (`.tools/venv` is
+dev-only and gitignored), the check is `alpha-bridge.selftest.py` — committed beside
+it, run explicitly, exit code 0 on success:
+
+| clause | evidence |
+|---|---|
+| **no network** | runs under a poisoned `socket.socket`; any connection would raise instead of silently working |
+| **skip, not crash** | a purpose-built fixture zoo: the raising alpha lands in `skipped` as `RegistryError` carrying `"boom: deliberate fixture failure"`, the missing-column alpha as `SkipAlpha` on `['vwap']`, and the working alpha still produces its panel |
+| **byte-identical re-run** | a second identical run writes **nothing** (`written: []`, `unchanged: 1`) and `generatedAt` is preserved |
+
+`signals/` sits **inside** the panel directory rather than in a sibling keyed by two
+fingerprints: pairing a signals set with the wrong panel then becomes impossible, and
+the manifest records the panel fingerprint, market and range anyway.
+
+**The architectural rule is enforced by construction, not by discipline.** Every
+output is a `date × symbol` matrix whose shape is asserted equal to the panel's, and
+the bridge calls `Registry.compute` and nothing else — there is no channel through
+which a return, an IC, a Sharpe or a t-stat could travel, which is what keeps the
+deciding number single-source in `quant-core/src/ic.ts`. Formulas stay verbatim:
+nothing in this repo reimplements an alpha.
+
+**Two silent-corruption guards worth naming.** `Registry._validate_output` checks
+shape but *not* labels, so a zoo module returning a `reset_index()` frame would have
+been written with the wrong date/symbol axis — a plausible, invisible wrongness of
+exactly the kind this project treats as worse than a crash. The bridge reattaches the
+panel's index and columns whenever the shape matches but the labels differ. And
+`float32` output uses `%.9g`, the round-trip width of binary32, so the text *is* the
+float the alpha produced and a re-run cannot drift in the eighth digit.
+
+**A6's price tag, measured rather than guessed.** Three real alphas on the US panel
+(1254 × 555): median **8.52 MB per alpha**, median **0.53 s** of compute. Projected
+over the pre-registered 218 US + 166 HK: **≈ 2.2 GB of CSVs** and **≈ 3 minutes** of
+compute. Recorded in the plan at the build order, with the levers (warmup trimming
+saves the ~20 % of cells that are leading NaNs; compression changes the consumer's
+read path) left untaken because they would be speculative until A6 decides the disk
+bill is unwelcome. Both are cheap to add later and the directory is regenerable.
+
+**Also measured, free:** zoo digest `94a1a6a0ae42` (a content digest over every zoo
+`.py`, chosen as the primary provenance because it names the exact formula bytes and
+works for a non-git fixture zoo — the git revision `899d3c7` rides along as
+best-effort), and `cleanEligible = 218` for `equity_us`, matching A1-2's corrected
+census from a completely different code path.
+
+**Tests:** no TS test ran differently — nothing testable changed. Last full green
+(21:20 same day): quant-core 194, agents 51, api 639 + 1 skipped, web 107.
+
+**Next (fast tier):** A4 — `quant-core/src/replayFromPanel.ts` + `multipleTesting.ts`:
+panel + mask + dates → `ReplayDay[]`, BH FDR and the `E[max|IC|]` luck benchmark, with
+the **look-ahead invariant** test (recomputing alpha `f` on a panel truncated at T
+equals the prefix of the full run to 1e-9, and a hand-written look-ahead alpha fails).
+
+---
+
 ## 2026-09-18 (Phase-6A A2 EXECUTED — the panels exist and the masks agree with production exactly; plus a look-ahead channel the locked plan had not named)
 
 Fast-tier execution of `docs/phase-6a-plan.md` step A2, plus two disclosures its
