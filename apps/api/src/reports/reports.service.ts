@@ -46,9 +46,27 @@ export function visibleRows<T>(results: T[], market: string): T[] {
   return typeof limit === "number" ? results.slice(0, limit) : results;
 }
 
+/**
+ * The rule-provenance line on the dashboard's daily list.
+ *
+ * Phase 4b item 6 added it so that a user acting on the list learns, without
+ * reading a research document, that the ranking rules have not been validated.
+ * **2026-09-18: the charter's K1 was locked and has FIRED**
+ * (`docs/kill-criteria-lock.md`, D1b). That retires the screen as an alpha claim
+ * permanently rather than merely marking it unvalidated, so the wording moves from
+ * "an unvalidated hypothesis" — which implies it might yet be validated — to a
+ * statement that no alpha claim exists and the list is a funnel. The old text also
+ * rested on the Phase-4b power-bar problem alone; the retirement now rests on two
+ * independent nulls, which is why the second clause names the sweep.
+ *
+ * One exported constant on purpose: this string is the product's single honest
+ * sentence about its own ranked list, and a second copy of it would drift.
+ */
 export const SCREEN_RULES_CAVEAT =
-  "ranking rules are an unvalidated hypothesis — the pre-registered power bar was out of reach at this lane's " +
-  "breadth, and the modelled book trailed buy-and-hold (docs/phase-4b-plan.md)";
+  "this list is a candidate funnel, not an alpha claim — the ranking rules are RETIRED as an alpha claim " +
+  "(K1, 2026-09-18): the pre-registered power bar was out of reach at this lane's breadth, and a 218-alpha " +
+  "factor sweep over the same window produced no US name that beat its own noise ceiling " +
+  "(docs/kill-criteria-lock.md, docs/phase-6a-plan.md)";
 
 export interface IntegrityHeader {
   universeSize: number;

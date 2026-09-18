@@ -1,7 +1,8 @@
 # Kill criteria lock — K1–K5
 
-**Status: DRAFT — requires an explicit user lock.** Nothing here takes effect until
-each decision below is accepted or amended. Written 2026-09-18.
+**Status: LOCKED 2026-09-18.** All five decisions taken; the lock record is §6.
+Every recommendation below was accepted as written. `docs/project-direction.html`
+§7 has been amended to match, including its status line, which now reads `LOCKED`.
 
 Source: `docs/project-direction.html` §7 ("Decision gates & kill criteria", currently
 `Status: PROPOSED`) and §8 ("Working rules"). This document exists because the
@@ -24,12 +25,16 @@ Three of the five criteria have something to bite on today:
 Two of the three tracks have emitted; H2's clock is the only one still moving, and its
 soonest *measurement* is ~2 months out while its verdict is ~9 months out.
 
-Five decisions are needed. Four are accept/amend/reject; **D3 needs a number from you
-that the charter never states.**
+Five decisions were needed. Four were accept/amend/reject; **D3 needed a number the
+charter never states.** All five are now taken — see §6.
 
 ---
 
 ## 2. The decisions
+
+*(Written as proposals; each is now ACCEPTED. The reasoning is kept because it is
+what the lock rests on, and a lock without its reasons is a rule nobody can revise
+later.)*
 
 ### D1 — Does K1 fire on a *design-half* `underpowered` declaration?
 
@@ -248,14 +253,22 @@ which makes it a two-week observation rather than whatever the reader prefers.
 
 ## 6. Lock record
 
-| item | decision | date | by |
-|---|---|---|---|
-| D1 — K1 fires on a design-half `underpowered` | | | |
-| D2 — 6A's null scope | | | |
-| D3 — K4 horizon | | | |
-| D4 — K5 evaluation | | | |
-| D5 — G2 clock + "inconclusive twice" | | | |
+| item | decision | date |
+|---|---|---|
+| **D1** — K1 fires on the design-half `underpowered` | **ACCEPTED as recommended.** K1 has **FIRED**. G1's exit wording amended (D1a); the vendor test half stays unspent and that is recorded as *not* an extension. D1b's product meaning is now implemented: `SCREEN_RULES_CAVEAT` says the list is a candidate funnel with no validated alpha claim. | 2026-09-18 |
+| **D2** — what 6A's null does | **ACCEPTED as recommended.** K1's scope extended to the **price/volume cross-sectional selection class** (screen + formulaic alphas on price history), retired on the windows already examined; only a pre-registered test on data those windows do not contain may revisit. Recorded as an *input* to K4, not an automatic K4 trigger — taken automatically it would pre-empt H2, the only live clock. | 2026-09-18 |
+| **D3** — K4 horizon | **ACCEPTED: fires if H2 has not reached readiness by 2027-06-30.** 2026-11-15 is a measurement checkpoint, not a kill point. One amendment permitted, only while the sample is unlabelled. Track B recorded as not-a-clock (4.7 y US / 18.1 y HK). | 2026-09-18 |
+| **D4** — K5 evaluation (due because G1 exited) | **ACCEPTED: CONTINUE**, on an evidence standard fixed before the comparison was read. Re-read at an H2 verdict, not on a timer. | 2026-09-18 |
+| **D5** — two definitions | **ACCEPTED.** (a) G2's post-re-baseline clock recorded: restarted 2026-09-16, k3 verdicts an excluded sub-sample, 157-day figure stands, only a measured SE authorises. (b) "Inconclusive twice" = **two consecutive weekly validation digests** in which the 1.5× guard trips. | 2026-09-18 |
 
-On completion, `docs/project-direction.html` §7's status line changes from
-`PROPOSED` to `LOCKED — see docs/kill-criteria-lock.md`, and the decisions are
-recorded as an amendment in `PROGRESS.md`.
+**Landed with the lock:** `docs/project-direction.html` §7 (status line, G1's exit,
+K1's action with scope and the meaning of "filter", G2's verified state, K2's
+"twice", K4's horizon, K5's evaluation, the locked-items table and the footer), and
+`SCREEN_RULES_CAVEAT` in `apps/api/src/reports/reports.service.ts` — the dashboard's
+one honest sentence about its own list, which D1b makes a requirement rather than a
+nicety.
+
+**Still open, and not implied by this lock:** the Stage-2 decision table, the North
+Star metric ("time-to-verdict at pre-registered power — days / daysNeeded"), and the
+§5.3 self-audit's residual MEDIUM items. K4 and K5 both *read* the North Star metric,
+so locking that is the natural next item.

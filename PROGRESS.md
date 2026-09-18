@@ -5,6 +5,112 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (the K1–K5 kill criteria are LOCKED — K1 has fired, its scope now covers the whole price-selection class, and K4 finally has a horizon)
+
+Governance, not code, except for one consequence that had to land with it. The
+charter's §7 said to lock the criteria "before Stage 1's verdicts arrive, not after"
+and they had arrived, so this is late; `docs/kill-criteria-lock.md` records that
+rather than glossing it.
+
+**Two opposite defects, one rule.** Reading §7 against reality turned up a pair of
+faults that look unconnected and are not:
+
+- **K1 could not fire.** Its trigger class (`underpowered`) was emitted on
+  2026-09-13, but G1's *exit condition* requires that class to come from the **test
+  half** — and a lane declared underpowered by design never spends its test half,
+  because spending it cannot add information the design already lacks. The criterion
+  was unreachable on the only instance it was built for.
+- **G2 would fire on day 0.** The harness prints `insufficient_evidence` at *every*
+  run, including today's (0/157 days), so a literal reading of G2's exit condition
+  has already been satisfied — for months, on no evidence.
+
+The fix is one rule, applied symmetrically: **a class only counts once its gate's
+precondition is satisfied.** G1's precondition is the design-half power
+determination and it *was* met (the bar was locked at 0.0486 before any outcome), so
+its class is authoritative. G2's is the readiness rule (only a measured SE may
+authorise) and it is not met, so today's printed class is not a verdict. That is
+also what the charter's Stage-2 table already implied by conditioning its entry on
+"insufficient_evidence *after readiness was met*" — it just had never been stated as
+a rule.
+
+**The five decisions, all accepted as recommended.**
+
+- **D1 — K1 has FIRED.** Design-half bar 0.0486 > the 0.03 cap, declared before any
+test-half number existed; the test half stays **unspent** and that is recorded as
+*not* an extension. Independently reinforced by Phase 6A (0 of 436 US rows survive
+FDR; no US alpha reaches its own noise ceiling, max luck ratio 0.78). G1's exit
+wording amended, and D1b's product meaning implemented — see below.
+- **D2 — K1's scope extended to the price/volume cross-sectional selection class**:
+the screen *and* formulaic alphas on price history are retired as alpha claims on the
+**windows already examined**. The retirement is of examined windows, not of the class
+in principle: one pre-registered test on data those windows do not contain may
+revisit them, and nothing else may. Recorded as an *input* to K4 rather than an
+automatic K4 trigger, because taking it automatically would pre-empt H2 — the only
+live clock — and §8 says the decision rule cannot be written by disappointment.
+- **D3 — K4 has a horizon for the first time: it fires if H2 has not reached
+readiness by 2027-06-30**, derived from measured supply (~157 pooled labelled
+lane-days at ~21/month) rather than picked for legibility. **2026-11-15 is a
+measurement checkpoint, not a kill point** — the projection watch prints the
+observed/assumed per-day sd ratio at 20 labelled days, and the pre-agreed response at
+≥1.5× is to change breadth or target *then*, while the sample is still unlabelled.
+One amendment of the date is permitted and only while unlabelled; after that it
+stands. **Track B is recorded as not-a-clock** (4.7 y US / 18.1 y HK, differential
+~7 y): it may keep accruing but cannot gate anything, because a criterion whose
+soonest trigger is 4.7 years out is not a criterion.
+- **D4 — K5 was due because G1 exited, and it is evaluated now: CONTINUE**, on an
+evidence standard fixed *before* the comparison was read. The evidence: three
+measured nulls (4c `underpowered`; 6A US 0/436 at max luck ratio 0.78; Phase 4
+`insufficient_evidence` on both lanes); realised cost **$1.81 of a $10 cap**,
+computed rather than modelled; and the alternative's own return over the tested
+window — **SPY +101.82 %** against the screen portfolio's **+88.95 %**, i.e. the
+screen beat its like-for-like benchmark and lost to the index. Re-read at an H2
+verdict, not on a timer.
+- **D5 — two definitions nothing else could settle.** (a) G2's clock after the
+re-baseline: restarted 2026-09-16, the k3 verdicts an excluded sub-sample never
+pooled, the 157-day figure stands, only a measured SE authorises a decision.
+(b) "`inconclusive` twice under the 1.5× guard" = **two consecutive weekly validation
+digests** in which the guard trips — the only path to K2 short of an outright
+falsification, so leaving it open left K2 half-defined.
+
+**The one code consequence, landed with the lock.** D1b makes it a requirement that
+the dashboard say the list carries no alpha claim, so `SCREEN_RULES_CAVEAT`
+(`apps/api/src/reports/reports.service.ts`) moved from "ranking rules are an
+unvalidated hypothesis" — which implies they might yet be validated — to "this list
+is a candidate funnel, not an alpha claim — the ranking rules are RETIRED as an
+alpha claim (K1, 2026-09-18)", naming both nulls. Its test was rewritten to assert
+the **claim** (funnel; no alpha claim; cites K1) rather than the old phrase, so a
+future rewording that keeps the meaning still passes. The old text also rested on the
+Phase-4b power-bar problem alone; the retirement now rests on two independent nulls.
+
+**Landed with the lock:** `docs/project-direction.html` §7 — status line `PROPOSED`
+→ `LOCKED`, G1's exit wording, K1's action with its scope and the concrete meaning of
+"survives only as a filter", G2's live-verified state, K2's "twice", K4's horizon,
+K5's evaluation — plus the locked-items table and the footer, which now distinguish
+what is locked from what is still proposed.
+
+**What the lock did NOT do.** No bar, cap, floor, window or statistic changed; §8's
+firewall stands, so nothing here may be used to re-bar Phase 4, 4b, 4c, 5 or 6A. It
+neither spent nor unspent anything. And it deliberately did not take the Stage-2
+objective decision, which stays deferred until H2 emits a class at readiness.
+
+**Facts verified live for the lock rather than quoted from a stale digest:**
+`verdict:validate` on 2026-09-18 → 0 labelled verdicts over 0 days, 125 awaiting a
+20d label, readiness 0/157 raw and 0/159 (|rank) pooled, 151 verdicts excluded for a
+different model stack and 87 as legacy-unverifiable (the charter's G2 figures needed
+no correction); `phase4c:accrual` → 4/4 and 5/5 lane-days, 4.7 y / 18.1 y; `report:cost`
+→ $1.81 of $10 for 2026-09.
+
+**Tests:** api 663 + 1 skipped (the rewritten caveat assertion), quant-core 233, web
+107, agents 51; tsc clean.
+
+**Next:** the **North Star metric** is the natural next lock — K4 and K5 both *read*
+it ("time-to-verdict at pre-registered power — days / daysNeeded"), so leaving it
+proposed leaves two locked criteria pointing at an unlocked measure. After that, the
+choice this session deferred: scope Phase 6B to its durable half (the causality gate
+and `simulatePositions`) or hold for H2.
+
+---
+
 ## 2026-09-18 (Phase-6A A6 EXECUTED — 384 alphas swept and the US shortlist comes back EMPTY; the sweep produced less than its own noise ceiling, so A7 has nothing to promote and the vendor test half stays unspent)
 
 Fast-tier execution of `docs/phase-6a-plan.md` step A6, the sweep itself. No product

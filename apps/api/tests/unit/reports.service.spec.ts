@@ -182,7 +182,17 @@ describe("ReportsService", () => {
       });
       // The caveat must not quantify the floors: they are window-specific and
       // would silently rot here after the next backtest.
-      expect(out.integrity.caveat).toMatch(/unvalidated hypothesis/);
+      //
+      // 2026-09-18: the wording changed because the charter's K1 was locked and
+      // FIRED (docs/kill-criteria-lock.md, D1b). It used to call the ranking "an
+      // unvalidated hypothesis", which implies it might yet be validated; the
+      // claim is now RETIRED, so what the product must say is that the list
+      // carries no alpha claim at all. Asserted on the claim, not the phrase, so
+      // a future rewording that keeps the meaning still passes.
+      expect(out.integrity.caveat).toMatch(/candidate funnel/);
+      expect(out.integrity.caveat).toMatch(/no alpha claim|RETIRED as an alpha claim/i);
+      expect(out.integrity.caveat).toMatch(/K1/);
+      expect(out.integrity.caveat).not.toMatch(/unvalidated hypothesis/);
       expect(out.integrity.caveat).not.toMatch(/0\.0\d\d/);
       expect(out.rows.map((r) => [r.rank, r.symbol])).toEqual([
         [1, "AAPL"],

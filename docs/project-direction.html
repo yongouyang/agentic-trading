@@ -724,7 +724,8 @@
   <p class="subtitle">The part most personal projects never write down — and therefore never act on</p>
 
   <div class="warn">
-    <b>Status: PROPOSED.</b> Unlike the phase plans, these kill criteria are not yet user-locked. They are drafted here so that "the project stops" becomes a decision with a trigger, rather than a mood that arrives gradually. Lock them or amend them — but before Stage 1's verdicts arrive, not after.
+    <b>Status: LOCKED 2026-09-18</b> — <code>docs/kill-criteria-lock.md</code> holds the five decisions, the evidence each was taken on, and the two definitions (D5) that settle G2's post-re-baseline clock and what "inconclusive twice" means. The draft this replaces said to lock <i>before</i> Stage 1's verdicts arrived; it was locked after, and the lock document records why that was accepted rather than glossed over.<br><br>
+    <b>One rule governs every gate below: a class only counts once its gate's precondition is satisfied.</b> G2 would otherwise print <code>insufficient_evidence</code> from day 0 — it does today, at 0/157 days — and G1's <code>underpowered</code> would otherwise be unreachable, because a lane declared underpowered by design never spends the test half its exit condition requires. Applied symmetrically: G1's precondition (the design-half power determination) <b>was</b> met, so its class is authoritative and <b>K1 has fired</b>; G2's (a measured SE) is not, so today's printed class is not a verdict.
   </div>
 
   <table>
@@ -732,14 +733,14 @@
     <tr>
       <td><b>G1 — Vendor generality</b></td>
       <td>Loader exists; design-half bar locked numerically and appended to the pre-registration</td>
-      <td>A verdict class is emitted from the test half, spent once</td>
-      <td><b>K1:</b> <code>falsified</code> or <code>underpowered</code> → the screen is retired as an alpha claim <b>permanently</b>, and no further tuning of it is permitted. It may survive only as a filter.</td>
+      <td>A verdict class is emitted — <b>from the test half when it is spent, otherwise from the design-half power determination</b>, which is final for that lane and that window <i>(amended 2026-09-18, D1a; the vendor test half remains <b>unspent</b>)</i></td>
+      <td><b>K1:</b> <code>falsified</code> or <code>underpowered</code> → the screen is retired as an alpha claim <b>permanently</b>, and no further tuning of it is permitted. It may survive only as a filter.<br><br><b>FIRED 2026-09-18.</b> Design-half bar 0.0486 &gt; the 0.03 cap, declared before any test-half number existed; the test half stays unspent and that is not an extension, because spending it cannot add information the design already lacks. Independently reinforced by Phase 6A (0 of 436 US rows survive FDR; no US alpha reaches its own noise ceiling, max luck ratio 0.78).<br><br><b>Scope extended 2026-09-18 (D2) to the price/volume cross-sectional selection class</b> — the screen <i>and</i> formulaic alphas on price history are retired as alpha claims on the windows already examined. The retirement is of <i>examined windows</i>, not of the class in principle: a pre-registered test on data those windows do not contain may revisit them, and nothing else may.<br><br><b>"Survives as a filter", concretely</b> (D1b): the dashboard list (<code>displayTopN</code> 10 US / 5 HK) is a <b>candidate funnel</b>; its rule-provenance line must state that the ranking carries <b>no validated alpha claim</b>; and no future change to <code>SCREEN_PARAMS</code> may be justified by any statistic on a spent window.</td>
     </tr>
     <tr>
       <td><b>G2 — Deep-dive layer</b></td>
-      <td>Readiness met — only a <b>measured</b> SE may authorise a decision (<code>SE(mean IC) ≤ 0.10 / 2.487</code>); currently <b>0 / 157 days</b> (controlled 0 / 159) at breadth 40/lane</td>
+      <td>Readiness met — only a <b>measured</b> SE may authorise a decision (<code>SE(mean IC) ≤ 0.10 / 2.487</code>); currently <b>0 / 157 days</b> (controlled 0 / 159) at breadth 40/lane<br><br><i>Verified live 2026-09-18 (<code>verdict:validate</code>): 0 labelled verdicts over 0 days · 125 verdicts awaiting a 20d label · readiness 0/157 raw and 0/159 (|rank) pooled · 151 verdicts excluded for a different model stack and 87 as legacy-unverifiable. Re-baselined 2026-09-16 to <code>deepseek-flash</code> ×3 (Phase-5 A7), which restarted the clock: the accrued k3 verdicts are an <b>excluded sub-sample</b>, never pooled, at a recorded cost of ~8–10 lane-days of the 157-day pooled horizon. D5(a).</i></td>
       <td><code>h2_holds</code> · <code>h2_falsified</code> · <code>insufficient_evidence</code> · SE guard trips</td>
-      <td><b>K2:</b> <code>h2_falsified</code>, or <code>inconclusive</code> twice under the 1.5× guard → the agent layer stops being a signal and becomes a research assistant. If <i>both</i> G1 and G2 fail, invoke <b>K5</b>.</td>
+      <td><b>K2:</b> <code>h2_falsified</code>, or <code>inconclusive</code> twice under the 1.5× guard → the agent layer stops being a signal and becomes a research assistant. If <i>both</i> G1 and G2 fail, invoke <b>K5</b>.<br><br><i>"Twice" defined 2026-09-18 (D5b): <b>two consecutive weekly validation digests</b> in which the guard trips — a two-week observation, not whatever the reader prefers. It is the only path to K2 short of an outright falsification, so leaving it open left K2 half-defined.</i></td>
     </tr>
     <tr>
       <td><b>G3 — Cost realism</b></td>
@@ -768,14 +769,14 @@
     <tr>
       <td><b>K4 — Time</b></td>
       <td>Continuous</td>
-      <td>If neither layer has produced a verdict at target power within the pre-agreed horizon, the project is restructured rather than extended</td>
+      <td>If neither layer has produced a verdict at target power within the pre-agreed horizon, the project is restructured rather than extended<br><br><b>Horizon defined 2026-09-18 (D3): K4 fires if H2 has not reached readiness by <span class="num">2027-06-30</span></b>, derived from measured supply (~157 pooled labelled lane-days at ~21/month) rather than chosen for legibility. <b>2026-11-15 is a measurement checkpoint, not a kill point:</b> the projection watch prints the observed/assumed per-day sd ratio at 20 labelled days, and the pre-agreed response at ≥1.5× is to change breadth or target <i>then</i>, while the sample is still unlabelled. One amendment of the date is permitted, and only while the sample is unlabelled; after that it stands.<br><br><b>Track B is recorded as not-a-clock</b> (its rank-IC path needs 4.7 y US / 18.1 y HK, the differential ~7 y): it may keep accruing, but it cannot gate anything — a criterion whose soonest trigger is 4.7 years out is not a criterion.</td>
       <td><b>Restructure the question, not the clock.</b> Default restructuring: reduce the objective to one layer, or switch to the index-core option. Rolling extensions are how a six-month project becomes a permanent hobby with no verdict.</td>
     </tr>
     <tr>
       <td><b>K5 — Opportunity cost</b></td>
       <td>Evaluated at every G1/G2 exit</td>
       <td class="num">Is this platform's expected value greater than (a dull index portfolio) + (a written monthly watchlist)?</td>
-      <td>If not, <b>stop building and keep using it as a monitor.</b> This is a legitimate, successful end state — the system's value is that it can tell you this, which an unmeasured backtest never can.</td>
+      <td>If not, <b>stop building and keep using it as a monitor.</b> This is a legitimate, successful end state — the system's value is that it can tell you this, which an unmeasured backtest never can.<br><br><b>Evaluated 2026-09-18 (G1 having exited) → <span class="num">CONTINUE</span></b>, on an evidence standard fixed <i>before</i> the comparison was read (D4): three measured nulls (4c <code>underpowered</code>; Phase 6A US 0/436 with max luck ratio 0.78; Phase 4 <code>insufficient_evidence</code> on both lanes); realised cost <b>$1.81 of a $10 cap</b>, computed rather than modelled; and the alternative's own return over the tested window — <b>SPY +101.82 %</b> against the screen portfolio's +88.95 %, i.e. the screen beat its like-for-like benchmark and lost to the index. Re-read at an <b>H2 verdict</b>, not on a timer.</td>
     </tr>
   </table>
 
@@ -850,13 +851,14 @@
     <tr><td>Model tiering policy</td><td><code>AGENTS.md</code></td></tr>
     <tr><td>Slot supply 56 %, accrual re-pricing (8.4 y / 13.3 mo), the 15,602-tokens-per-name measurement, the 0.174 rank↔conviction figure</td><td><code>PROGRESS.md</code> 2026-09-11/12</td></tr>
     <tr><td>§5.3 self-audit findings and the §5.1 open-defect row, including the missing <code>source</code> filter on the deciding sample</td><td><code>apps/api/src/cli/verdict-validate.ts</code>, <code>apps/api/src/ops/health.ts</code>, <code>packages/quant-core/src/screening.ts</code>, <code>journal.ts</code>, and a three-pass review of the log and plans run 2026-09-12</td></tr>
-    <tr><td>Kill criteria K1–K5, the Stage-2 decision table, the North Star metric, and the §5.3 self-audit</td><td><b>Proposed by this document</b> — not yet user-locked</td></tr>
+    <tr><td>Kill criteria K1–K5</td><td><b>LOCKED 2026-09-18</b> — five decisions taken, with the K4 horizon and two definitions (D5) that were previously missing; see <code>docs/kill-criteria-lock.md</code></td></tr>
+    <tr><td>The Stage-2 decision table, the North Star metric, and the §5.3 self-audit's residual MEDIUM items</td><td><b>Proposed by this document</b> — not yet user-locked. The self-audit's two HIGH findings were closed (provenance gate) and ratified (<code>IC_target</code> provenance) on 2026-09-12</td></tr>
   </table>
 </section>
 
 <footer>
   <b>agentic-trading · Objective &amp; Direction</b> · drafted 2026-09-12 · revised 2026-09-12 after a self-audit against the log, the phase plans and the code · status: <b>draft for user lock</b>.
-  Section 7's kill criteria are proposed and require an explicit decision; §5.3's two HIGH findings require one as well. Sections 1–6 describe the project as built and measured; if this document and a locked pre-registration disagree, the pre-registration wins until this document is revised.
+  Section 7's kill criteria were <b>locked 2026-09-18</b> (<code>docs/kill-criteria-lock.md</code>); still proposed and awaiting an explicit decision are the Stage-2 decision table, the North Star metric, and the §5.3 self-audit's residual MEDIUM items — its two HIGH findings were closed and ratified on 2026-09-12. Sections 1–6 describe the project as built and measured; if this document and a locked pre-registration disagree, the pre-registration wins until this document is revised.
 </footer>
 
 </div>
