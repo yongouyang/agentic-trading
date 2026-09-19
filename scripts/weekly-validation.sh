@@ -6,9 +6,15 @@
 #                       per-day IC sd vs the assumed one; >= 1.5x is Phase-5
 #                       A3's pre-agreed "re-price the clock" signal)
 #   phase4c:accrual     Track-B prospective accrual
+#   north-star          the hypothesis register + the North Star metric
+#                       (docs/north-star-metric-lock.md). Run LAST, because
+#                       unlike the other two it exits NON-ZERO when the
+#                       register fails to reconcile — and a broken register
+#                       must fail loudly rather than silently report that no
+#                       hypothesis is live, which is L2's completion condition.
 #
-# Both CLIs exit 0 by design (they are status readouts, not gates), so this
-# job exists to make their output a weekly artifact: full output is appended
+# The two validation CLIs exit 0 by design (they are status readouts, not gates), so
+# this job exists to make their output a weekly artifact: full output is appended
 # to logs/weekly-validation.log and a machine-readable digest goes to
 # logs/validation-digest-<YYYY-MM-DD>.json, which ops:health reads — a digest
 # whose sd ratio has crossed 1.5x surfaces as a WARN there, and a missing
@@ -46,9 +52,16 @@ ARC=$?
 cat "$TMP/accrual.out" >>"$LOG"
 echo "phase4c:accrual exit=$ARC" | tee -a "$LOG"
 
+# Run last and tolerate a non-zero exit here so the projection watch above still
+# lands in the digest; the failure is recorded and propagated at the end.
+pnpm -C apps/api north-star >"$TMP/northstar.out" 2>&1
+NRC=$?
+cat "$TMP/northstar.out" >>"$LOG"
+echo "north-star exit=$NRC" | tee -a "$LOG"
+
 # The digest ops:health reads. If a CLI failed, its output may not be JSON —
 # the exit codes are recorded regardless and the sd fields stay null.
-VFILE="$TMP/verdict.out" VRC="$VRC" ARC="$ARC" OUT="$ROOT/logs/validation-digest-$DATE.json" node <<'EOF'
+VFILE="$TMP/verdict.out" VRC="$VRC" ARC="$ARC" NRC="$NRC" NDIR="$ROOT/apps/api/reports" YDATE="$DATE" OUT="$ROOT/logs/validation-digest-$DATE.json" node <<'EOF'
 const { readFileSync, writeFileSync } = require("node:fs");
 const pick = (l) =>
   l && typeof l === "object"
@@ -68,6 +81,12 @@ try {
 } catch {
   // a failed verdict:validate leaves non-JSON output; exits below say so
 }
+let ns = null;
+try {
+  ns = JSON.parse(readFileSync(`${process.env.NDIR}/north-star-${process.env.YDATE}.json`, "utf8"));
+} catch {
+  // a broken register exits non-zero and NRC says so; the digest still lands
+}
 const lanes = {};
 for (const l of report?.lanes ?? []) lanes[l.market] = pick(l);
 const digest = {
@@ -76,12 +95,26 @@ const digest = {
   phase4cAccrualExit: Number(process.env.ARC),
   pooled: pick(report?.pooled),
   lanes,
+  // The register summary (additive: ops:health picks named keys). `projects` is the
+  // North Star metric's project-level reading — the last GATING hypothesis's
+  // projected date — and `liveGating` is what L2's completion condition counts.
+  northStar: ns
+    ? {
+        verdict: ns.verdict,
+        liveGating: ns.project?.liveGating ?? null,
+        projectDate: ns.project?.date ?? null,
+        projectWithheld: ns.project?.withheld ?? [],
+        complete: ns.project?.complete ?? null,
+        classes: ns.classes ?? {},
+        broken: (ns.artifacts ?? []).filter((a) => a.state === "BROKEN").map((a) => a.id),
+      }
+    : null,
 };
 writeFileSync(process.env.OUT, JSON.stringify(digest, null, 2));
 EOF
 
-if [ "$VRC" -ne 0 ] || [ "$ARC" -ne 0 ]; then
-  echo "weekly-validation FAILED (verdict:validate=$VRC phase4c:accrual=$ARC)" | tee -a "$LOG"
+if [ "$VRC" -ne 0 ] || [ "$ARC" -ne 0 ] || [ "$NRC" -ne 0 ]; then
+  echo "weekly-validation FAILED (verdict:validate=$VRC phase4c:accrual=$ARC north-star=$NRC)" | tee -a "$LOG"
   exit 1
 fi
 echo "weekly-validation ok — logs/validation-digest-$DATE.json" | tee -a "$LOG"

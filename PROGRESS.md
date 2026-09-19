@@ -5,6 +5,89 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-19 (the register readout is BUILT — and its own integrity checks failed on the first run, against my register)
+
+`pnpm -C apps/api north-star` + `docs/hypothesis-register.json` + a `northStar` block in the
+weekly digest. The first substantial code since A6.
+
+**Declared, not derived — and the review found why.** All five hypotheses are readable
+from *something*, but which artifact is **authoritative** for a retired class is
+governance, not inference: H1's class lives in three backtest artifacts that disagree
+(`2026-09-10.json` says `h1_revised` — the pre-registered verdict — while 09-11/13 say
+`insufficient_evidence`, the Phase-4b re-label recorded in `2026-09-10.ANNOTATION.md`),
+so newest-wins agrees only by accident and would move the register if the backtest were
+ever re-run on a longer window. The register declares its pointers; the readout derives
+only the *live* readings and reuses `runValidation`/`runAccrual` rather than
+reimplementing either clock.
+
+**A live error the checks caught, in my own register.** The first run printed
+`BROKEN H2-deepdive · artifact missing: apps/api/reports/verdict-2026-09-12.json` —
+`verdict:validate` writes to `reports/verdict/verdict-<date>.json`, a subdirectory, so
+the pointer I had written was fabricated. Fixed by **dropping** it rather than
+repointing: a live row's numbers are recomputed from the store on every run, so a
+dated artifact pointer is provenance theatre that goes stale. That is the whole
+argument for a declared register in one incident — a derived one could not have
+contained the error, and a summary line could not have shown it.
+
+**A real divergence kept visible rather than smoothed.** `vendor-2026-09-13.json` says
+`lane.verdict = insufficient_evidence`, while the record says the lane closed
+**`underpowered`**. Its own note explains it: the artifact's field is computed against
+Phase 4's 0.02 magnitude bar ("can only detect IC ≥ 0.0391 at t = 2"), whereas 4c's
+decision came from the design-half power arithmetic — **2.4865 × 0.019558 = 0.0486**,
+above the 0.03 cap. The register declares both and renders `DIVERGENT` with the reason,
+so the disagreement is a reviewed fact instead of a silent override.
+
+**6A's class is declared, not derived.** The artifact carries per-alpha *labels*
+(`alive`/`reversed`/`dead`), not a five-class verdict, so the register is `MAPPED` with
+a reason naming the evidence: every US row is `dead`, and `dead` is defined as
+*uninformative* — which is what `insufficient_evidence` means. Recorded the way the §5.3
+audit mapped H2's outputs onto the five classes.
+
+**A trap the lock predicted, hit immediately.** Track B's first reading printed
+**45.3 % progress** — because `requiredDays` is a *total-sample* requirement (2,174
+IC-days derived from the observed window's SE) while the accrual is *prospective
+lane-days* (4/5). Different quantities, so the ratio read as nearly half-done when
+nothing prospective had happened at all. The row now carries **no progress fraction**
+and says why, which is the lock's D1 ("units always stated, never conflated") doing
+real work rather than decorating a table.
+
+**Integrity checks that fail loudly.** Per row: the declared artifact must exist and be
+readable; where a locator is given (`lanes[].verdict`) **every** located value must equal
+the declared `artifactClass` — multi-value on purpose, since a two-lane artifact checked
+against only its first lane would pass while the second disagreed; a governing class
+differing from `artifactClass` requires a `divergenceReason` and renders `DIVERGENT`;
+and a retired row with nothing machine-checkable behind it must say how the class was
+established. Schema checks require the bar *and its lock date and doc* on every row — a
+bar with no lock date is not pre-registered. **The CLI exits non-zero on a broken check**,
+unlike the two status clocks, because L2's completion condition reads this file: a
+register that cannot reconcile must not be able to report "nothing is live".
+
+**Staleness, and the honest reading of it.** With one digest on disk, `supply` was
+unmeasurable and Reading B was withheld with that reason. After running the digest job
+(now two digests), supply is *still* unmeasurable — because the gain in pooled
+observation-days is **zero**, nothing has accrued a label yet. The message distinguishes
+the two situations rather than telling a reader to fix a clock that is already running.
+
+**First live reading:** 5 hypotheses, 3 retired (`insufficient_evidence` ×2,
+`underpowered` ×1), 2 live. **L2 NOT MET** — one gating hypothesis (H2) is live; its
+progress is `0/159` on the governing `IC | rank` arm (raw 0/157, 125 verdicts pending a
+label), basis `theoretical`, projected date **withheld**. Track B is excluded from both
+L2 and the project-level date as accruing-only (K-lock D3), and the register says so.
+
+**Tests:** api 663 → **681** (+18): the locator's multi-value behaviour, the schema's
+bar/class/clock requirements, all four artifact states including `DIVERGENT` and the
+three `BROKEN` shapes, supply from fewer than two digests, the staleness boundary, the
+project-level rule (accruing-only cannot extend it), and — the block that keeps this
+honest — the **checked-in register is schema-valid and every pointer in it resolves**,
+so a future edit that breaks it fails the suite rather than silently changing what L2
+reads. quant-core 233, web 107, agents 51; tsc clean.
+
+**Next:** the choices this sequence deferred — scope Phase 6B to its durable half (B1
+causality gate + B3 `simulatePositions`) or hold for H2 — and the last two unlocked
+governance items (the Stage-2 decision table, the §5.3 residual MEDIUM items).
+
+---
+
 ## 2026-09-18 (the North Star metric is LOCKED — the one-liner turned out to be two currencies, and L2 now has a falsifiable completion condition instead of a status word)
 
 Governance again, no code. This is the last item K4 depends on: its 2027-06-30
