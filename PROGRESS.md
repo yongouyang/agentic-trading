@@ -5,6 +5,98 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-18 (the North Star metric is LOCKED — the one-liner turned out to be two currencies, and L2 now has a falsifiable completion condition instead of a status word)
+
+Governance again, no code. This is the last item K4 depends on: its 2027-06-30
+horizon was *derived* from this metric's denominator, so K4 was unreadable without it.
+
+**The finding.** The charter's metric — "time-to-verdict at pre-registered power —
+`days / daysNeeded`" — reads as one ratio and is not one. The repo computes two
+different quantities under that phrase, in different units, in different code paths:
+
+| where | computes | units | prints |
+|---|---|---|---|
+| `verdictReadiness` (quant-core) | `days / daysNeeded` | observation-days ÷ observation-days | `0 / 157 days` — a **progress fraction** |
+| `phase4c:accrual` | `requiredDays − observedDays` ÷ supply | observation-days, then months | `~1,191 more sessions ≈ 4.7 years` — a **projected duration** |
+
+Calendar-days ÷ observation-days is not a fraction of anything, so no single number can
+be both. Both readings are now locked, named, and may never be reported as one another
+— they fail differently (progress is robust to supply and silent about the calendar;
+the date is what a human plans around and the first thing to rot).
+
+**`daysNeeded` is locked by reference, not by restatement.** `POWER_Z`
+(= 1.6449 + 0.8416), `theoreticalSdDay`, and accrual's `GATE1_BAR` / `GATE1_T` /
+`SESSIONS_PER_MONTH` are exported constants at single sources, so the formula cannot
+drift out from under the lock by prose. Verified against the live tooling: `seMax` =
+0.0402 for `IC_target` 0.10 (the validator prints exactly that), and the theoretical sd
+is 1/√39 = 0.1601 per lane and 1/√79 = 0.1125 pooled, matching the digest. The **basis**
+of every projection must be declared, because the two live hypotheses already differ:
+H2 projects from the theoretical sd until 20 labelled days exist, Track B from the
+observed NW SE from the start.
+
+**L2 is the level this measures.** §2.4: L1 MET, L2 IN PROGRESS ("no verdict on the
+differentiator yet"), L3 NOT PROVEN — so the metric must never be read as progress
+toward money.
+
+**The register as of the lock.** Three hypotheses retired with trusted classes — the
+picker window (`insufficient_evidence`), the vendor lane (`underpowered`), the
+formulaic-alpha class (no US shortlist) — and **two still live**: H2 at 0/157, and
+Track B accruing but not a clock.
+
+**The three decisions, all accepted as recommended.**
+
+- **D1 — both readings, units always stated.** Neither may be quoted without its unit
+and its basis.
+- **D2 — the project-level reading is the last live hypothesis's projected date, and
+L2 completes when the register has no live entries.** This cannot be improved by
+*adding* hypotheses, since each addition can only push the maximum later — the
+anti-Goodhart property the metric needs.
+- **D3 — any class emitted at pre-registered power counts as success**, with the class
+distribution published beside the number. So Phase 4c (2026-09-13) and 6A (2026-09-18)
+count as this metric **working** — two families moved open→decided in five days — which
+is the opposite verdict from the one a return metric gives the same five days. This is
+the charter's own wording, and §8's: `insufficient_evidence` is a legitimate resting
+state and `underpowered` is an answer.
+
+**Recorded with the lock:** the **anti-Goodhart clause** (the metric may be improved
+only by supplying observation-days or by a design change made *before* outcomes —
+never by moving `targetIc`, `Z`, the horizon, the breadth in `daysNeeded`, the
+definition of an observation-day, or the declared sd basis; and a clock stops only on a
+class emitted at pre-registered power, which is the K-lock's "a class only counts once
+its gate's precondition is satisfied" applied to the metric) and a **staleness rule**
+(Reading B is withheld unless the supply was measured within 4 weeks and the artifact is
+at most 7 days old).
+
+**Two corrections to my own earlier claims, recorded because this document is a
+record.** (1) I told the user "K4 and K5 both read it". K4 genuinely *is* built on this
+metric's denominator; K5's charter text never names the metric, so the accurate and
+weaker statement — now in §1 — is that K5 is the should-this-continue gate and this is
+the project's declared measure of success, so K5 must publish it as one input among the
+measured nulls, the realised cost and the alternative's return. (2) §2.3's own metric
+arithmetic is stale: it quotes a 56 % slot supply and ~8.4 y for Phase 4c's US lane,
+while the live `phase4c:accrual` run today measures **4.7 y (US) and 18.1 y (HK)** on
+the same rule. That is not a defect in the charter so much as an argument for Reading B
+being *recomputed* rather than quoted — which is what the reporting half of this lock
+is for.
+
+**Landed with the lock:** `docs/project-direction.html` §2.3 (LOCKED marker, both
+readings with units, the project-level reading, "any class counts", the anti-Goodhart
+clause) and §2.4, where **the L2 row's status word became a condition** — "the
+hypothesis register has no live entries" — plus the locked-items table and the footer.
+Three of the four items §7 once listed as unlocked are now locked; the Stage-2 decision
+table and the §5.3 self-audit's residual MEDIUM items remain.
+
+**Next, and the reason this lock came first:** a single **register readout** — per
+hypothesis `{progress, projected date, basis, class-or-live}` plus the project-level
+reading, with the staleness rule enforced. Every piece is already computed
+(`verdict:validate`, `phase4c:accrual`, the weekly digest); what does not exist is one
+place showing the register, the basis and the class distribution together. It is a real
+build rather than a formatting job, because it needs a decision about where the register
+**lives** — derived from the DB and the artifacts, or a small checked-in file — and that
+is precisely why the definition was locked first.
+
+---
+
 ## 2026-09-18 (the K1–K5 kill criteria are LOCKED — K1 has fired, its scope now covers the whole price-selection class, and K4 finally has a horizon)
 
 Governance, not code, except for one consequence that had to land with it. The

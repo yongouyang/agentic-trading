@@ -1,6 +1,8 @@
 # North Star metric lock
 
-**Status: DRAFT — requires an explicit user lock.** Written 2026-09-18.
+**Status: LOCKED 2026-09-18.** All three decisions taken; the lock record is §5.
+Every recommendation below was accepted as written, and §4's clauses are recorded
+with the lock. `docs/project-direction.html` §2.3 and §2.4 have been amended to match.
 
 Source: `docs/project-direction.html` §2.3 ("The objective that actually
 distinguishes this project" → **North Star metric: time-to-verdict at pre-registered
@@ -97,7 +99,7 @@ register as of this lock:
 
 ## 3. The decisions
 
-### D1 — Carry both readings, or one?
+### D1 — Carry both readings, or one?  *(ACCEPTED: both)*
 
 - **(a) Both, units always stated (recommended).** Progress answers "how far along is
   this?"; the projected date answers "when will I know?". They fail differently:
@@ -110,7 +112,7 @@ register as of this lock:
 
 **Decision: ☐ (a) ☐ (b) ☐ (c) —**
 
-### D2 — What is the project-level reading?
+### D2 — What is the project-level reading?  *(ACCEPTED: last live hypothesis; L2 completes when none live)*
 
 - **(a) The last live hypothesis's projected date, and L2 completes when no hypothesis
   is live (recommended).** Makes "time-to-verdict" a project-level fact rather than a
@@ -125,7 +127,7 @@ register as of this lock:
 
 **Decision: ☐ (a) ☐ (b) ☐ (c) —**
 
-### D3 — Does a class other than `supported` count as success?
+### D3 — Does a class other than `supported` count as success?  *(ACCEPTED: any class at power, distribution published)*
 
 This is the most consequential item, and the project's recent history scores very
 differently under the two readings.
@@ -189,11 +191,31 @@ measures whether this project can decide — L2, not L3.
 
 | item | decision | date |
 |---|---|---|
-| D1 — both readings, units stated | | |
-| D2 — project-level = last live hypothesis; L2 completes when none live | | |
-| D3 — any class at pre-registered power counts, distribution published | | |
-| §4 — anti-Goodhart clause, staleness rule, reporting home | | |
+| **D1** — both readings, units always stated | **ACCEPTED.** Progress (`observedDays / daysNeeded`, observation-days ÷ observation-days) and the projected date (`today + (daysNeeded − observedDays) / measured supply`) are both carried and may never be reported as one another. Neither may be quoted without its unit and its basis. | 2026-09-18 |
+| **D2** — project-level = last live hypothesis; L2 completes when none live | **ACCEPTED.** Cannot be improved by adding hypotheses, because each addition can only push the maximum later — the anti-Goodhart property the metric needs. | 2026-09-18 |
+| **D3** — any class at pre-registered power counts, distribution published | **ACCEPTED.** `insufficient_evidence` is a legitimate resting state and `underpowered` is an answer, so Phase 4c (2026-09-13) and 6A (2026-09-18) count as the metric *working*. The class distribution is published beside the number so the metric cannot be read as "we are winning". | 2026-09-18 |
+| **§4** — anti-Goodhart clause, staleness rule, reporting home | **RECORDED** (no objection raised). The readout itself is still **not built**: the definition came first, deliberately. | 2026-09-18 |
 
-On completion: `docs/project-direction.html` §2.3's metric line is marked `LOCKED`
-with a pointer here, the §2.4 L2 row gains its falsifiable completion condition, and
-the decisions are recorded as an entry in `PROGRESS.md`.
+**Landed with the lock:** `docs/project-direction.html` — §2.3's metric block (LOCKED
+marker, the two readings with their units, the project-level reading, "any class
+counts", the anti-Goodhart clause), §2.4's L2 row (which now carries a *falsifiable*
+completion condition rather than a status word: three hypotheses retired with trusted
+classes, two still live), the locked-items table, and the footer.
+
+**Two corrections made while writing this, recorded because the document is a
+record.** (1) I had described the relationship to K5 as "K4 and K5 both read it"; K4
+genuinely is built on this metric's denominator, but K5's own text never names it, so
+the weaker and accurate statement is in §1. (2) §2.3's original "days / daysNeeded"
+arithmetic quoted a 56 % slot supply and ~8.4 y for Phase 4c's US lane; the live
+`phase4c:accrual` run on 2026-09-18 measures 4.7 y (US) and 18.1 y (HK) on the same
+rule, so the metric's own numbers have moved since they were written — which is
+itself an argument for Reading B being recomputed rather than quoted.
+
+**Next, and the reason this lock came first:** a single **register readout** — per
+hypothesis `{progress, projected date, basis, class-or-live}` plus the project-level
+reading, with the staleness rule enforced. The pieces exist and are computed
+(`verdict:validate`, `phase4c:accrual`, the weekly digest); what does not exist is the
+one place a reader can see the register, the basis and the class distribution
+together. It is a real build, not a formatting job: it needs a decision about where
+the register *lives* (derived from the DB and the artifacts, or a small checked-in
+file), and that decision is why the definition was locked first.
