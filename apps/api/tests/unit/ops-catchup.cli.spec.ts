@@ -351,6 +351,21 @@ describe("ops:catchup — the verdict leg (provenance)", () => {  /** Stub store
     const r = await runCatchup(stubWithDeepDives([{ screenRunId: 5, status: "complete", source: "chain" }]), ["HK"]);
     expect(r.lanes[0]!.needsRun).toBe(true);
   });
+
+  it("verdict leg RETIRED: a session screened on/after 2026-09-19 owes no deep-dive", async () => {
+    // 2026-09-19 decision (H2 abandoned): without this carve-out the guard would
+    // exit NEEDS_RUN every night forever on a leg that deliberately no longer runs.
+    const prisma = {
+      bar: { findFirst: async () => ({ date: "2026-09-21" }) },
+      screenRun: {
+        findFirst: async () => ({ id: 20, sessionDate: "2026-09-21", runAt: new Date("2026-09-21T12:40:00Z") }),
+      },
+      deepDiveRun: { findFirst: async () => null },
+    } as any;
+    const r = await runCatchup(prisma, ["HK"]);
+    expect(r.lanes[0]!.needsRun).toBe(false);
+    expect(r.lanes[0]!.reason).toMatch(/deep-dive leg retired 2026-09-19/);
+  });
 });
 
 describe("ops:catchup — rescreen rows must not make the lane read as behind", () => {

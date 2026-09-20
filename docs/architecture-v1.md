@@ -31,13 +31,13 @@ deterministic quant core (from the 24-day course) is the trusted layer.
 | Fork | Decision |
 |---|---|
 | Markets | **HK stocks/ETFs + US stocks/ETFs only** (LSE/UCITS lane dropped 2026-09-01). Tax-efficient US exposure via **HK-domiciled US-index trackers** (e.g. 3195.HK Hang Seng S&P 500) — no US estate tax; 30% WHT embedded at fund level (~0.2%/yr extra drag vs Irish UCITS, accepted for simplicity). ⚠️ HK cross-listings of *US-domiciled* funds (3455.HK = QQQ, ISIN `US…`) give **no** tax benefit: still US-situs + 30% WHT |
-| Picker mode | **Screen then deep-dive**: quant filters narrow the universe, LLM pipeline deep-dives survivors |
+| Picker mode | **Screen then deep-dive**: quant filters narrow the universe, LLM pipeline deep-dives survivors (nightly deep-dive retired 2026-09-19 — the screen still runs daily; `screen:deep-dive` remains for ad-hoc use) |
 | Stack | **Pure TypeScript.** Nest.js backend, Next.js frontend. No Python service (no akshare; TradingAgents *pattern* reimplemented, code not reused) |
 | Market data | **One free no-key primary for both lanes: Yahoo v8** (via `yahoo-finance2`). Other sources are repair/rescue only, never a second daily feed. Store **raw OHLCV + corporate-action events**; derive adjusted series locally with the multiplicative convention (see §4.2) |
 | Output | Interactive chat/session in a local web UI, with charts, tables, signals; plus a daily report view |
 | Brokers (later) | Futu/moomoo + IBKR. Not integrated in v1 (manual trading); either covers both markets for the future paper→live path |
 | Screening style | **Technical first** — trend/momentum/volume/volatility, directly from Days 3/12/18 |
-| Cadence | **Daily after close** — one guarded evening pipeline at **20:30 HKT** (+**23:03 HKT** second chance): HK's same-day session, the US lane's previous session (§5.1; since 2026-09-14 this is THE daily run — the 16:50/06:10 jobs were removed, the machine is realistically only on in the evening — and the `ops:catchup` guard probes the provider for completed sessions, so a power-off day can no longer read as "up to date") |
+| Cadence | **Daily after close** — one guarded evening pipeline at **20:30 HKT** (+**23:03 HKT** second chance): HK's same-day session, the US lane's previous session (§5.1; since 2026-09-14 this is THE daily run — the 16:50/06:10 jobs were removed, the machine is realistically only on in the evening — and the `ops:catchup` guard probes the provider for completed sessions, so a power-off day can no longer read as "up to date"). **Since 2026-09-19 the chain is the screen leg only** — the nightly deep-dive was retired by decision (H2 abandoned, `docs/hypothesis-register.json`) |
 | LLM providers | Kimi (Moonshot) as workhorse; budget/open models (DeepSeek/Qwen) optional for cheap summarization. OpenAI-compatible client, swappable via env vars |
 | Universe | **Large/liquid only (~800 tickers)**: S&P 500 + Nasdaq 100 + ~50 major US ETFs; HSI + HS Tech constituents + liquid HK ETFs (HK 141 as of 2026-09-12 — see `universe.hk.json._meta` for the refresh and the HSI-source warning) |
 | Agent depth | **Lean pipeline** (~6–8 LLM calls/stock): News/Sentiment Analyst + Fundamentals Analyst → Bull vs Bear debate → structured verdict |
@@ -464,7 +464,7 @@ enters the store — so the guard screens the previous **completed** US session
 | `weekly-sentinel` | `screen:sentinel --eastmoney` | Sun 20:47 |
 | `weekly-f10` | `ca:f10-refresh` (F10 overlay for CA_DEGRADED / IN_SPECIE) | Sun 21:17 |
 | `weekly-validation` | `scripts/weekly-validation.sh` — the two validation clocks, `verdict:validate` (Phase-5 readiness + projection watch) and `phase4c:accrual`, as a weekly artifact (`logs/validation-digest-<date>.json`) so the Phase-5 A3 re-pricing signal cannot accrue unnoticed | Sun 21:47 |
-| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`, which probes the provider for the newest completed session). **Since 2026-09-14 this is THE daily pipeline** (the 06:10/16:50 `daily-hk`/`daily-us` jobs were removed) | **20:30 + 23:03 daily** |
+| `daily-catchup` | `scripts/daily-catchup.sh` — per lane, runs `daily-chain.sh` **only if** a session is unscreened (`ops:catchup`, which probes the provider for the newest completed session). **Since 2026-09-14 this is THE daily pipeline** (the 06:10/16:50 `daily-hk`/`daily-us` jobs were removed); **since 2026-09-19 the chain is screen-only** (deep-dive leg retired, H2 abandoned) | **20:30 + 23:03 daily** |
 | `ops-health` | `scripts/ops-health.sh` → `ops:health` (health artifact + log; the user-facing signal is the dashboard banner, `GET /ops/health`) | 22:35 daily (since 2026-09-14; was 07:15, 17:30) |
 
 ### 5.2 Failure visibility (R0, 2026-09-10)
@@ -474,9 +474,9 @@ work was silently lost — the 09-10 US deep-dive made 40 live calls, completed 
 of 10 verdicts, was killed, and left no trace at all.
 
 **Exit codes.** `daily-chain.sh` reports the **worst** of its legs:
-`0` clean · `2` screen failed · `3` deep-dive skipped (auth preflight) · `4`
-deep-dive failed or partial · `5` post-condition health failed. Both legs always
-run before the verdict, so a degraded screen never skips the deep-dive. The
+`0` clean · `2` screen failed · `5` post-condition health failed. (`3` deep-dive
+preflight skip and `4` deep-dive failed/partial were retired with the leg on
+2026-09-19 — the chain has been screen-only since.) The
 CLIs back this up: `screen:daily` exits non-zero on a degraded lane, and
 `screen:deep-dive` on **any** name failure (it previously required a 100 % lane
 failure).
@@ -510,8 +510,10 @@ cutoff, missed evening catch-ups, and stale `running` rows. Cadence is
 weekday-arithmetic over the **guarded evening catch-up** (re-declared
 2026-09-13, finalized 2026-09-14 — the 06:10/16:50 jobs were removed that
 day, so the evening run is the ONLY daily run, see §5.1): a lane is missed
-only when still behind (stale screen, or the
-newest screen lacking a complete chain deep-dive) after an evening's
+only when still behind (stale screen; before 2026-09-19 also the
+newest screen lacking a complete chain deep-dive — the verdict leg applies
+only to sessions screened before `DEEP_DIVE_RETIRED_AT`, since the nightly
+deep-dive was retired that day) after an evening's
 20:30/23:03 slots on a day the store held a completed unscreened session — HK
 sessions due the same evening, US the following one — with **no**
 market-holiday calendar. 1 missed evening is **warn** (runs are
@@ -544,20 +546,21 @@ lesson does not depend on the cause: a killed process emits no exit code, so
 detection has to come from the store (W1's post-condition) and the `running` row
 (W2).
 
-Caveat: the deep-dive LLM credential prefers the durable `LLM_API_KEY` from
-`.env` (Moonshot platform key, added 2026-09-09) and falls back to the Kimi CLI's
-**rotating OAuth token**. `daily-chain.sh` runs a cheap auth preflight first; on
-failure it **skips the deep-dive leg loudly and exits 3** — never as success
-(see §5.2). The deploy profile pinned `deepseek-v4-flash` until 2026-09-11, when it was
-corrected to the catalog's current id `deepseek-flash` ("DeepSeek V4.1 Flash")
-— see §7. The id is a deploy-time value, so it is re-checked at deploy rather
-than assumed to hold.
+Caveat: the deep-dive LLM credential is the durable `LLM_API_KEY` from `.env`
+(DeepSeek since 2026-09-16; the Kimi OAuth fallback was removed with the switch).
+The chain's cheap auth preflight was removed along with the deep-dive leg on
+2026-09-19 — ad-hoc `screen:deep-dive` runs fail loudly on their own. The deploy
+profile uses the catalog id `deepseek-flash` ("DeepSeek V4.1 Flash", corrected
+2026-09-11 from the pinned `deepseek-v4-flash`) — a deploy-time value, re-checked
+at deploy rather than assumed to hold.
 
 ## 6. The two market lanes
 
-- **US stocks/ETFs** — full pipeline (screen + deep-dive). Best data/news
+- **US stocks/ETFs** — full pipeline (screen + deep-dive; the nightly deep-dive
+  leg was retired 2026-09-19, ad-hoc dives still available). Best data/news
   coverage; TradingAgents' native vendors all apply.
-- **HK stocks/ETFs** — full pipeline, with thinner news sources in v1 (Yahoo
+- **HK stocks/ETFs** — full pipeline (same 2026-09-19 retirement), with thinner
+  news sources in v1 (Yahoo
   news, Google News RSS, HKEX announcements where feasible). Kimi's Chinese
   strength is an asset here. **HK-domiciled US-index trackers** (3195.HK etc.)
   are just members of this lane — the tax-efficient US-exposure vehicle

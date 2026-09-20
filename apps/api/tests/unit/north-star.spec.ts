@@ -89,6 +89,27 @@ describe("register schema", () => {
     expect(validateRegister(reg([row({ class: "h1_revised" } as never)])).join(" ")).toContain("outside the fixed five-class vocabulary");
   });
 
+  it("an abandoned row carries abandonedAt/abandonedReason and its old clock — and never a class or a locator", () => {
+    const base = {
+      state: "abandoned" as const,
+      clock: "gating" as const,
+      class: undefined,
+      classAt: undefined,
+      classDoc: undefined,
+      artifact: undefined,
+      artifactClassLocator: undefined,
+      artifactClass: undefined,
+      abandonedAt: "2026-09-19",
+      abandonedReason: "clock stopped by decision",
+    };
+    expect(validateRegister(reg([row(base) as never]))).toEqual([]);
+    expect(validateRegister(reg([row({ ...base, abandonedAt: undefined }) as never])).join(" ")).toContain("abandonedAt");
+    expect(validateRegister(reg([row({ ...base, abandonedReason: undefined }) as never])).join(" ")).toContain("abandonedReason");
+    expect(validateRegister(reg([row({ ...base, clock: undefined }) as never])).join(" ")).toContain("clock");
+    expect(validateRegister(reg([row({ ...base, class: "inconclusive" }) as never])).join(" ")).toContain("must not carry a class");
+    expect(validateRegister(reg([row({ ...base, artifactClassLocator: "lane.verdict" }) as never])).join(" ")).toContain("no class to check an artifact against");
+  });
+
   it("demands a reason when the artifact cannot be checked or disagrees", () => {
     // No locator at all: nothing machine-checkable backs the class, so the row must
     // say how it was established.
@@ -203,7 +224,7 @@ describe("rendering, and the checked-in register", () => {
     schemaErrors: [],
     readings: [],
     supply: null,
-    project: { date: null, withheld: [], liveGating: 0, complete: true },
+    project: { date: null, withheld: [], liveGating: 0, complete: true, abandonedGating: [] },
     classes: { underpowered: 1 },
     verdict: "OK",
   };
@@ -215,6 +236,34 @@ describe("rendering, and the checked-in register", () => {
     expect(text).toContain("we are winning");
     expect(text).toContain("anti-Goodhart clause");
     expect(text).toContain("DIVERGENT");
+  });
+
+  it("renders L2 CLOSED — never COMPLETE — while an abandoned gating row exists", () => {
+    // The register's core honesty rule: abandoning the last gating hypothesis by
+    // decision must not render as the verdicts having arrived.
+    const abandonedRow = row({
+      id: "H2-deepdive",
+      state: "abandoned",
+      clock: "gating",
+      class: undefined,
+      classAt: undefined,
+      classDoc: undefined,
+      artifact: undefined,
+      artifactClassLocator: undefined,
+      artifactClass: undefined,
+      abandonedAt: "2026-09-19",
+      abandonedReason: "decision",
+    }) as never;
+    const closed: NorthStarReport = {
+      ...report,
+      rows: [...report.rows, abandonedRow],
+      project: { date: null, withheld: [], liveGating: 0, complete: true, abandonedGating: ["H2-deepdive"] },
+    };
+    const text = renderNorthStar(closed).join("\n");
+    expect(text).toContain("CLOSED — H2-deepdive abandoned by decision, not by a verdict");
+    expect(text).toContain("no date to project");
+    expect(text).not.toContain("COMPLETE");
+    expect(text).toContain("abandoned 1 (no class — ended by decision, not by evidence)");
   });
 
   it("parses its arguments and rejects an unknown one", () => {
@@ -234,5 +283,12 @@ describe("rendering, and the checked-in register", () => {
     // The three retired hypotheses, and the one deliberate divergence.
     expect(loaded.hypotheses.filter((h) => h.state === "retired")).toHaveLength(3);
     expect(checks.filter((c) => c.state === "DIVERGENT").map((c) => c.id)).toEqual(["H1-vendor"]);
+    // H2 is ABANDONED, not retired (2026-09-19, user decision): no class, the old
+    // gating clock kept, and it is the only abandoned row. Track B stays live.
+    const abandoned = loaded.hypotheses.filter((h) => h.state === "abandoned");
+    expect(abandoned.map((h) => h.id)).toEqual(["H2-deepdive"]);
+    expect(abandoned[0]!.class).toBeUndefined();
+    expect(abandoned[0]!.clock).toBe("gating");
+    expect(loaded.hypotheses.filter((h) => h.state === "live").map((h) => h.id)).toEqual(["TrackB-differential"]);
   });
 });

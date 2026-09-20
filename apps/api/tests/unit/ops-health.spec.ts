@@ -271,7 +271,45 @@ describe("computeHealth — lane cadence (guarded evening catch-up)", () => {
     const us = lane(r, "US");
     expect(us.level).toBe("alert");
     expect(us.lastCompleteRunId).toBeNull();
-    expect(us.reasons.join(" ")).toMatch(/no complete deep-dive run/);
+    // Post-retirement (DEEP_DIVE_RETIRED_AT 2026-09-19) a never-run lane has no
+    // screened session either, so the alert names the missing run itself rather
+    // than the retired deep-dive leg specifically.
+    expect(us.reasons.join(" ")).toMatch(/no complete run on record/);
+  });
+
+  it("verdict leg RETIRED: a session screened on/after DEEP_DIVE_RETIRED_AT owes no deep-dive", async () => {
+    // 2026-09-19 decision: the nightly deep-dive leg stopped. A session screened
+    // after that with NO deep-dive at all must not read as behind — the screen
+    // leg alone decides. Monday 2026-09-21 screened that evening, store current.
+    const r = await computeHealth(
+      stubPrisma({
+        screens: [{ id: 40, market: "HK", runAt: hkt("2026-09-21T20:40:00"), sessionDate: "2026-09-21" }],
+        bars: { HK: "2026-09-21" },
+      }),
+      { now: hkt("2026-09-21T21:30:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.expectedRunsMissed).toBe(0);
+    expect(hk.level).toBe("healthy");
+  });
+
+  it("verdict leg boundary: the last pre-retirement session (2026-09-18) still owes its deep-dive", async () => {
+    // Sessions before the retirement keep their historical status — a missing
+    // chain verdict on one is still the lane being behind.
+    const r = await computeHealth(
+      stubPrisma({
+        runs: [{ id: 39, market: "HK", runAt: hkt("2026-09-17T20:50:00"), source: "chain", screenRunId: 38 }],
+        screens: [
+          { id: 38, market: "HK", runAt: hkt("2026-09-17T20:40:00"), sessionDate: "2026-09-17" },
+          { id: 41, market: "HK", runAt: hkt("2026-09-18T20:40:00"), sessionDate: "2026-09-18" },
+        ],
+        bars: { HK: "2026-09-18" },
+      }),
+      { now: hkt("2026-09-19T08:00:00"), reportsDir },
+    );
+    const hk = lane(r, "HK");
+    expect(hk.expectedRunsMissed).toBe(1);
+    expect(hk.level).toBe("warn");
   });
 });
 

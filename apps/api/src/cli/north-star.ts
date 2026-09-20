@@ -8,6 +8,9 @@
  * why the register is DECLARED (`docs/hypothesis-register.json`, reviewed by diff)
  * rather than derived — which artifact is authoritative for a retired class is a
  * governance choice, not an inference — and why the checks below fail loudly.
+ * A third state, `abandoned` (2026-09-19), records a clock stopped by DECISION:
+ * it carries no class (the anti-Goodhart clause forbids one) and L2 renders
+ * CLOSED, never COMPLETE, while an abandoned gating row exists.
  *
  * What it derives (reusing the two existing clocks, so there is no third
  * implementation of the same arithmetic):
@@ -54,12 +57,21 @@ export interface RegisterRow {
   bar: string;
   barLockedAt: string;
   barDoc: string;
-  state: "live" | "retired";
-  /** live rows only: whether the row may gate. An accruing-only row cannot. */
+  /** live: accruing toward a verdict. retired: a class was emitted at
+   *  pre-registered power. abandoned: the clock was stopped by DECISION with no
+   *  class — the anti-Goodhart clause allows a stop only on a class, so an
+   *  abandoned row must never carry one, and L2 must not read it as COMPLETE. */
+  state: "live" | "retired" | "abandoned";
+  /** live rows: whether the row may gate. Abandoned rows keep the clock they
+   *  had when abandoned, so L2 can tell "closed by decision" from "completed
+   *  by verdicts". An accruing-only row cannot gate. */
   clock?: "gating" | "accruing-only";
   class?: VerdictClass;
   classAt?: string;
   classDoc?: string;
+  /** abandoned rows only: when the clock was stopped, and why. */
+  abandonedAt?: string;
+  abandonedReason?: string;
   artifact?: string;
   artifactClassLocator?: string;
   artifactClass?: VerdictClass | null;
@@ -114,9 +126,22 @@ export function validateRegister(reg: HypothesisRegister): string[] {
     for (const field of ["title", "statistic", "universe", "window", "bar", "barLockedAt", "barDoc"] as const) {
       if (!r[field]) errors.push(`${at}: missing ${field}`);
     }
-    if (r.state !== "live" && r.state !== "retired") errors.push(`${at}: state must be live|retired`);
+    if (r.state !== "live" && r.state !== "retired" && r.state !== "abandoned") errors.push(`${at}: state must be live|retired|abandoned`);
     if (r.state === "live" && r.clock !== "gating" && r.clock !== "accruing-only") {
       errors.push(`${at}: a live row needs clock gating|accruing-only`);
+    }
+    if (r.state === "abandoned") {
+      if (!r.abandonedAt) errors.push(`${at}: an abandoned row needs abandonedAt`);
+      if (!r.abandonedReason) errors.push(`${at}: an abandoned row needs abandonedReason`);
+      if (r.clock !== "gating" && r.clock !== "accruing-only") {
+        errors.push(`${at}: an abandoned row keeps the clock it had when abandoned (gating|accruing-only), so L2 can tell CLOSED from COMPLETE`);
+      }
+      if (r.class || r.classAt || r.classDoc) {
+        errors.push(`${at}: an abandoned row must not carry a class — the anti-Goodhart clause allows a clock to stop only on a class at pre-registered power, and none was emitted`);
+      }
+      if (r.artifactClassLocator || r.artifactClass) {
+        errors.push(`${at}: an abandoned row has no class to check an artifact against — drop artifactClassLocator/artifactClass`);
+      }
     }
     if (r.state === "retired") {
       if (!r.class) errors.push(`${at}: a retired row needs a class`);
@@ -155,14 +180,20 @@ export function checkArtifacts(reg: HypothesisRegister, root: string = REPO_ROOT
       out.push({ id: r.id, state: "BROKEN", detail: `artifact missing: ${r.artifact}` });
       continue;
     }
+    // An abandoned row emitted no class, so there is nothing to locate — its
+    // artifact is provenance for the decision, never evidence for a verdict.
+    if (r.state === "abandoned") {
+      out.push({ id: r.id, state: "PROVENANCE", detail: "artifact present, provenance only — an abandoned row emitted no class to map" });
+      continue;
+    }
     if (!r.artifactClassLocator) {
       out.push({
         id: r.id,
         state: r.state === "retired" ? "MAPPED" : "PROVENANCE",
         detail:
-          r.state === "live"
-            ? "artifact present, used as provenance only — a live row has no class to map"
-            : `artifact present; no class in it — ${r.divergenceReason ? "mapping declared" : "mapping NOT declared"}`, 
+          r.state === "retired"
+            ? `artifact present; no class in it — ${r.divergenceReason ? "mapping declared" : "mapping NOT declared"}`
+            : "artifact present, used as provenance only — a live row has no class to map",
       });
       continue;
     }
@@ -268,8 +299,10 @@ export function projectDate(observedDays: number | null, daysNeeded: number | nu
 
 /** D2: the project-level reading is the last GATING live hypothesis's date, and L2
  *  completes when no gating row is live. An accruing-only row cannot extend it — or
- *  L2 would be unreachable by construction. */
-export function projectLevel(readings: LiveReading[]): { date: string | null; withheld: string[]; liveGating: number; complete: boolean } {
+ *  L2 would be unreachable by construction. `abandonedGating` names gating rows that
+ *  were abandoned by decision: L2 with zero live gating rows is COMPLETE only when
+ *  that list is empty — otherwise it is CLOSED, ended by decision, not by verdicts. */
+export function projectLevel(readings: LiveReading[], abandonedGating: string[] = []): { date: string | null; withheld: string[]; liveGating: number; complete: boolean; abandonedGating: string[] } {
   const gating = readings.filter((r) => r.gating);
   const withheld = gating.filter((r) => r.projectedDate == null).map((r) => r.id);
   const dates = gating.map((r) => r.projectedDate).filter((d): d is string => d != null);
@@ -278,6 +311,7 @@ export function projectLevel(readings: LiveReading[]): { date: string | null; wi
     withheld,
     liveGating: gating.length,
     complete: gating.length === 0,
+    abandonedGating,
   };
 }
 
@@ -385,6 +419,7 @@ export async function runNorthStar(
 
   const classes: Record<string, number> = {};
   for (const r of reg.hypotheses) if (r.state === "retired" && r.class) classes[r.class] = (classes[r.class] ?? 0) + 1;
+  const abandonedGating = reg.hypotheses.filter((r) => r.state === "abandoned" && r.clock === "gating").map((r) => r.id);
 
   const broken = schemaErrors.length > 0 || artifacts.some((a) => a.state === "BROKEN");
   return {
@@ -395,7 +430,7 @@ export async function runNorthStar(
     schemaErrors,
     readings,
     supply,
-    project: projectLevel(readings),
+    project: projectLevel(readings, abandonedGating),
     classes,
     verdict: broken ? "BROKEN" : "OK",
   };
@@ -411,29 +446,46 @@ export function renderNorthStar(r: NorthStarReport): string[] {
   const out: string[] = [];
   out.push(`== NORTH STAR — HYPOTHESIS REGISTER == ${r.generatedAt.slice(0, 10)}`);
   out.push("metric: time-to-verdict at pre-registered power · two readings, never conflated (A progress = observation-days ÷ observation-days; B projected date = from MEASURED supply)");
-  out.push(`register: ${r.rows.length} hypotheses · ${r.rows.filter((h) => h.state === "retired").length} retired · ${r.rows.filter((h) => h.state === "live").length} live  (${r.metricDoc})`);
+  out.push(`register: ${r.rows.length} hypotheses · ${r.rows.filter((h) => h.state === "retired").length} retired · ${r.rows.filter((h) => h.state === "live").length} live · ${r.rows.filter((h) => h.state === "abandoned").length} abandoned  (${r.metricDoc})`);
   out.push("");
 
-  out.push(`  ${"hypothesis".padEnd(21)} ${"state".padEnd(8)} ${"clock".padEnd(13)} ${"class".padEnd(20)} progress   projected   basis`);
+  out.push(`  ${"hypothesis".padEnd(21)} ${"state".padEnd(10)} ${"clock".padEnd(13)} ${"class".padEnd(20)} progress   projected   basis`);
   for (const row of r.rows) {
     const rd = r.readings.find((x) => x.id === row.id);
     out.push(
-      `  ${row.id.padEnd(21)} ${row.state.padEnd(8)} ${(row.clock ?? "—").padEnd(13)} ${(row.class ?? "—").padEnd(20)} ` +
+      `  ${row.id.padEnd(21)} ${row.state.padEnd(10)} ${(row.clock ?? "—").padEnd(13)} ${(row.class ?? "—").padEnd(20)} ` +
         `${(rd ? pct(rd.progress) : "—").padStart(8)}   ${(rd?.projectedDate ?? (rd ? "withheld" : "—")).padEnd(11)} ${rd?.basis ?? "—"}`,
     );
   }
   out.push("");
 
-  // L2 — the falsifiable completion condition the metric lock added.
-  out.push(`L2 — It can decide: ${r.project.complete ? "COMPLETE (no gating hypothesis is live)" : `NOT MET — ${r.project.liveGating} gating hypothesis(es) still live`}`);
+  // L2 — the falsifiable completion condition the metric lock added. Zero live
+  // gating rows is COMPLETE only when none was abandoned: abandoning the last
+  // gating hypothesis by decision must never render as the verdicts having
+  // arrived — that is the register's core "cannot claim an unearned verdict" rule.
+  const l2 = !r.project.complete
+    ? `NOT MET — ${r.project.liveGating} gating hypothesis(es) still live`
+    : r.project.abandonedGating.length
+      ? `CLOSED — ${r.project.abandonedGating.join(", ")} abandoned by decision, not by a verdict (no gating hypothesis is live)`
+      : "COMPLETE (no gating hypothesis is live)";
+  out.push(`L2 — It can decide: ${l2}`);
   out.push(
-    `project-level reading (last gating hypothesis): ${r.project.complete ? "—" : (r.project.date ?? "WITHHELD")}` +
-      (r.project.withheld.length ? `  (withheld for: ${r.project.withheld.join(", ")})` : ""),
+    `project-level reading (last gating hypothesis): ${
+      !r.project.complete
+        ? (r.project.date ?? "WITHHELD")
+        : r.project.abandonedGating.length
+          ? "— (the last gating hypothesis was abandoned, so there is no date to project)"
+          : "—"
+    }` + (r.project.withheld.length ? `  (withheld for: ${r.project.withheld.join(", ")})` : ""),
   );
   out.push(
     `supply: ${r.supply ? `${r.supply.perWeek.toFixed(2)} observation-days/week measured ${r.supply.from} → ${r.supply.to}${r.supply.stale ? " · STALE" : ""}` : "not measurable yet — no positive gain in pooled observation-days across the weekly digests (so any projected date would be extrapolation, and Reading B is withheld)"}`,
   );
-  out.push(`classes (retired): ${Object.entries(r.classes).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"}   — published so the metric is not read as \"we are winning\"`);
+  const abandonedCount = r.rows.filter((h) => h.state === "abandoned").length;
+  out.push(
+    `classes (retired): ${Object.entries(r.classes).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"}   — published so the metric is not read as "we are winning"` +
+      (abandonedCount ? ` · abandoned ${abandonedCount} (no class — ended by decision, not by evidence)` : ""),
+  );
   out.push("");
 
   out.push("register integrity (a broken check exits non-zero — L2's completion condition reads this file):");

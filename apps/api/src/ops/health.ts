@@ -143,6 +143,24 @@ export function deepDiveCovers(topN: number, failed: number): boolean {
   return topN === 0 || failed < topN;
 }
 
+/** 2026-09-19: the nightly deep-dive leg was retired by user decision — H2 is
+ *  recorded as `abandoned` in docs/hypothesis-register.json (no class emitted:
+ *  the anti-Goodhart clause allows a clock to stop only on a class at
+ *  pre-registered power, and H2 stood at 0/159 days). Sessions screened on or
+ *  after this date are NOT expected to carry a chain deep-dive, so the verdict
+ *  leg of both guards (this file and ops:catchup) is silent for them; sessions
+ *  before it keep their historical status (all of them were deep-dived).
+ *  The screen leg is unaffected and still gates. Reversal: flip this date
+ *  forward is NOT a reversal — restore the leg in scripts/daily-chain.sh and
+ *  delete the two uses of this constant. */
+export const DEEP_DIVE_RETIRED_AT = "2026-09-19";
+
+/** Whether the verdict leg applies to a screened session: only sessions
+ *  screened before the deep-dive retirement can owe a chain deep-dive. */
+export function verdictLegApplies(sessionDate: string | null): boolean {
+  return sessionDate != null && sessionDate < DEEP_DIVE_RETIRED_AT;
+}
+
 export interface LaneHealth {
   market: "HK" | "US";
   level: HealthLevel;
@@ -419,7 +437,9 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     // Verdict leg: the newest screen must carry a COMPLETE chain-source
     // deep-dive that actually produced verdicts — an ad-hoc run does not count
     // (same policy as ops:catchup), and neither does a chain run whose every
-    // name failed (deepDiveCovers, 2026-09-16).
+    // name failed (deepDiveCovers, 2026-09-16). RETIRED 2026-09-19: the leg is
+    // silent for sessions screened on/after DEEP_DIVE_RETIRED_AT
+    // (verdictLegApplies) — the nightly deep-dive no longer runs by decision.
     const chainDeepDive = screenRun
       ? await prisma.deepDiveRun.findFirst({
           where: { screenRunId: screenRun.id, status: "complete", source: "chain" },
@@ -436,6 +456,7 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
 
     const lastScreened = screenRun?.sessionDate || null;
     const storeThrough = latestBar?.date ?? null;
+    const verdictLeg = verdictLegApplies(lastScreened);
 
     // Pending evenings: the expected screening evening of every completed
     // session the lane has not caught up on — each unscreened store session
@@ -450,7 +471,7 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
       // conservative bound; the "no complete run" alert covers the never-ran.
       pending.add(expectedEvening(market, storeThrough));
     }
-    if (lastScreened && !chainCovers) pending.add(expectedEvening(market, lastScreened));
+    if (verdictLeg && !chainCovers) pending.add(expectedEvening(market, lastScreened!));
     const missed = missedEvenings(market, [...pending], now);
 
     // Rescreenable holes (INFORMATIONAL ONLY — never a reason, never a level):
@@ -466,12 +487,15 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
 
     const reasons: string[] = [];
 
-    if (!run) {
-      reasons.push("no complete deep-dive run on record");
+    if (!run && (lastScreened == null || verdictLeg)) {
+      // lastScreened null means the lane has never recorded a screened session:
+      // the absence of ANY complete run is what is actionable there, not the
+      // retired deep-dive leg specifically.
+      reasons.push(verdictLeg ? "no complete deep-dive run on record" : "no complete run on record");
     } else if (missed >= 2) {
       reasons.push(
         `${missed} guarded evening catch-ups missed — lane still behind ` +
-          `(store through ${storeThrough ?? "—"}, screened through ${lastScreened ?? "—"}; last complete run ${run.runAt.toISOString()})`,
+          `(store through ${storeThrough ?? "—"}, screened through ${lastScreened ?? "—"}; last complete run ${run?.runAt.toISOString() ?? "—"})`,
       );
     }
     if (stale) {
@@ -480,8 +504,9 @@ export async function computeHealth(prisma: PrismaService, opts: HealthOptions =
     // A leg that ran and produced NOTHING is not "one evening late" — it is a
     // failed leg, so it is an alert-level reason of its own rather than riding
     // the missed-evening count. Partial failures stay informational (below) to
-    // avoid a re-run loop on a permanently-failing name.
-    if (chainDeepDive && !chainCovers) {
+    // avoid a re-run loop on a permanently-failing name. Silent for sessions
+    // screened on/after DEEP_DIVE_RETIRED_AT — no retry slot exists anymore.
+    if (verdictLeg && chainDeepDive && !chainCovers) {
       reasons.push(
         `newest chain deep-dive (run ${chainDeepDive.id}) completed with 0 of ${chainDeepDive.topN} verdicts — ` +
           `the verdict leg produced nothing; the next slot will retry it`,

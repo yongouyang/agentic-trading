@@ -56,7 +56,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DataOutcome, sessionClosed, type Market } from "@agentic-trading/quant-core";
 import { getMarketDataDeps } from "../market-data/market-data.deps.js";
-import { deepDiveCovers } from "../ops/health.js";
+import { DEEP_DIVE_RETIRED_AT, deepDiveCovers, verdictLegApplies } from "../ops/health.js";
 import { MarketDataService } from "../market-data/market-data.service.js";
 import { PrismaService } from "../prisma.service.js";
 import { loadUniverse, type Lane } from "./daily-screen.js";
@@ -163,7 +163,10 @@ export function makeExpectedSessionProbe(
  * an empty/unknown value means **run it**, because a duplicate costs a few
  * minutes while a lost observation is unrecoverable. `chainDeepDive` is whether
  * that newest screen run carries a complete chain-source deep-dive; the lane is
- * behind when EITHER leg is. `expectedSession` is the provider probe's answer
+ * behind when EITHER leg is — but the verdict leg applies only to sessions
+ * screened before DEEP_DIVE_RETIRED_AT (2026-09-19): the nightly deep-dive was
+ * retired by decision, so newer sessions owe no deep-dive. `expectedSession` is
+ * the provider probe's answer
  * (check (0), 2026-09-14): when non-null and newer than `lastScreened`, a
  * completed session exists that no run has seen — this fires even when the
  * store is stale or empty, which the store legs below cannot see.
@@ -212,7 +215,7 @@ export function decideLane(
       reason: `store holds ${latestBar}, last screened ${lastScreened} — SCREEN leg one session behind`,
     };
   }
-  if (!chainDeepDive) {
+  if (!chainDeepDive && verdictLegApplies(lastScreened)) {
     return {
       market,
       latestBar,
@@ -230,7 +233,9 @@ export function decideLane(
     lastRunAt,
     expectedSession,
     needsRun: false,
-    reason: `up to date (screened and deep-dived through ${lastScreened}, store holds ${latestBar})`,
+    reason: verdictLegApplies(lastScreened)
+      ? `up to date (screened and deep-dived through ${lastScreened}, store holds ${latestBar})`
+      : `up to date (screened through ${lastScreened}, store holds ${latestBar}; deep-dive leg retired ${DEEP_DIVE_RETIRED_AT})`,
   };
 }
 
@@ -272,7 +277,8 @@ export async function runCatchup(
     const newest = run ?? (await prisma.screenRun.findFirst({ where: { market }, orderBy: { runAt: "desc" } }));
     // Verdict leg: the newest screen run must carry a COMPLETE chain-source
     // deep-dive. An ad-hoc run does not count — the chain's verdicts are the
-    // sample this guard protects.
+    // sample this guard protects. RETIRED 2026-09-19: decideLane only enforces
+    // this for sessions screened before DEEP_DIVE_RETIRED_AT.
     const chainDeepDive = run
       ? await prisma.deepDiveRun.findFirst({
           where: { screenRunId: run.id, status: "complete", source: "chain" },

@@ -1,23 +1,22 @@
 #!/bin/bash
-# Daily chain (locked 2026-09-06): screen:daily then screen:deep-dive for one
-# lane, sequentially — no race between the deterministic gate and the LLM leg.
+# Daily chain: screen:daily for one lane (data ingest + deterministic screen).
 # Invoked by launchd (scripts/launchd/*.plist); logs via launchd
 # StandardOutPath to logs/.
 #
 #   scripts/daily-chain.sh hk|us
 #
-# The deep-dive leg is preceded by a cheap auth preflight — better to skip
-# the deep-dive loudly than fail 20 names × 7 calls. Key source: LLM_API_KEY
-# from .env (Moonshot platform, durable) if set, else the Kimi CLI's ROTATING
-# OAuth token (a 401 then means: run any `kimi` command to refresh, then
-# rerun manually).
+# The deep-dive leg was REMOVED on 2026-09-19 by user decision: H2-deepdive is
+# recorded in the hypothesis register as `abandoned` (docs/hypothesis-register.json),
+# the nightly list carried no alpha claim (K1), and the leg was the only token
+# spend. The screen leg stays: it is free, keeps the store fresh, lets the
+# already-accrued verdicts' 20d labels mature, and keeps Track B accruing.
+# The deep-dive CLI remains for ad-hoc use:
+#   pnpm -C apps/api screen:deep-dive -- --market <lane> [--symbol <ticker>]
 #
-# Exit codes (W1c, docs/ops-hardening-plan.md) — a skipped or broken leg must
-# never look like success. Before this, both preflight-fail paths returned
-# $SCREEN_RC, so a deep-dive that never ran exited 0 and launchd recorded a
-# clean job:
-#   0 clean   2 screen leg failed   3 deep-dive skipped (auth preflight)
-#   4 deep-dive leg failed/partial  5 post-condition health check failed
+# Exit codes (W1c, docs/ops-hardening-plan.md):
+#   0 clean   2 screen leg failed   5 post-condition health check failed
+#   (3 = deep-dive preflight skip and 4 = deep-dive leg failure retired with
+#   the leg on 2026-09-19)
 # NOTE: a killed process reports nothing itself, which is exactly why the
 # post-condition below asks the store what actually got persisted.
 set -u
@@ -41,60 +40,17 @@ pnpm -C apps/api screen:daily -- --market "$LANE"
 SCREEN_RC=$?
 echo "screen:daily exit=$SCREEN_RC"
 
-# --- LLM auth preflight ---
-# Key, endpoint AND probe model all come from .env, so the probe cannot drift
-# from the configured provider. Measured 2026-09-16: this probe hardcoded
-# `"model":"k3-256k"` (plus `reasoning_effort`), so after the deep-dive moved to
-# DeepSeek the probe answered http=400 ("The supported API model names are
-# deepseek-flash, deepseek-v4-pro, but you passed k3-256k.") and the deep-dive
-# leg was skipped EVERY night while the screen leg kept succeeding — H2's accrual
-# clock stops dead, and the skipped-leg path is only a 2-missed-evening health
-# reason. Never hardcode a provider fact here: the chain is provider-agnostic by
-# design (`LLM_*` are env vars), and the stub-curl tests below cannot see the
-# payload, so only a static check keeps this from recurring.
-ENV_KEY=$(grep -E '^LLM_API_KEY=.+' "$ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)
-BASE_URL=$(grep -E '^LLM_BASE_URL=' "$ROOT/.env" | head -1 | cut -d= -f2-)
-PROBE_MODEL=$(grep -E '^LLM_ANALYST_MODEL=' "$ROOT/.env" | head -1 | cut -d= -f2-)
-# k3-256k (the previous profile) 400s on temperature != 1; DeepSeek accepts 1.
-# Read it rather than assume it, defaulting to the value both profiles accept.
-PROBE_TEMP=$(grep -E '^LLM_TEMPERATURE=' "$ROOT/.env" | head -1 | cut -d= -f2-)
-: "${PROBE_TEMP:=1}"
-TOKEN="$ENV_KEY"
-if [ -z "$TOKEN" ]; then
-  echo "PREFLIGHT FAIL: no LLM key — skipping deep-dive (set LLM_API_KEY in .env)"
-  exit 3
-fi
-if [ -z "$PROBE_MODEL" ] || [ -z "$BASE_URL" ]; then
-  echo "PREFLIGHT FAIL: LLM_BASE_URL/LLM_ANALYST_MODEL missing from .env — skipping deep-dive (both are required by cli/deep-dive.ts too)"
-  exit 3
-fi
-HTTP=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$BASE_URL/chat/completions" \
-  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
-  -d "{\"model\":\"$PROBE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"OK\"}],\"max_tokens\":1,\"temperature\":$PROBE_TEMP}")
-if [ "$HTTP" != "200" ]; then
-  echo "PREFLIGHT FAIL: llm auth probe http=$HTTP on model $PROBE_MODEL — skipping deep-dive (check LLM_API_KEY/LLM_BASE_URL/LLM_ANALYST_MODEL in .env, then rerun: pnpm -C apps/api screen:deep-dive -- --market $LANE)"
-  exit 3
-fi
-
-# No --top: the deep-dive defaults to SCREEN_PARAMS.topN per lane (40), which is
-# the MEASUREMENT breadth. The dashboard presents displayTopN (Phase 5 Fork A).
-pnpm -C apps/api screen:deep-dive -- --market "$LANE"
-DD_RC=$?
-echo "screen:deep-dive exit=$DD_RC"
-
 # --- post-condition (W1c) ---
 # The only check that can see a killed process: ask the store whether a complete
-# run exists for this lane. A leg that died mid-pool leaves a 'running' row (W2)
-# and fails here. Scoped to the lane so a stale HK lane never fails the US chain.
+# run exists for this lane. Scoped to the lane so a stale HK lane never fails
+# the US chain. The verdict leg of ops:health is silent for sessions screened
+# after DEEP_DIVE_RETIRED_AT (2026-09-19), so this check is about the screen leg.
 pnpm -C apps/api ops:health -- --lane "$LANE"
 HEALTH_RC=$?
 echo "ops:health exit=$HEALTH_RC"
 
-# Report the WORST outcome. The chain deliberately runs both legs before
-# judging (a degraded screen must not skip the deep-dive).
 RC=0
 [ "$SCREEN_RC" -ne 0 ] && RC=2
-[ "$DD_RC" -ne 0 ] && RC=4
 [ "$HEALTH_RC" -ne 0 ] && RC=5
-echo "daily-chain $LANE worst-exit=$RC (screen=$SCREEN_RC deep-dive=$DD_RC health=$HEALTH_RC)"
+echo "daily-chain $LANE worst-exit=$RC (screen=$SCREEN_RC health=$HEALTH_RC)"
 exit "$RC"

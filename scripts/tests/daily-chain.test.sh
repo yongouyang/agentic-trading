@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # W1c exit-code tests for scripts/daily-chain.sh (docs/ops-hardening-plan.md).
 #
-# The chain's whole job now is to be non-zero when something went wrong. Before
-# 2026-09-10 it returned $SCREEN_RC on a skipped deep-dive, so a run that never
-# happened exited 0 and launchd recorded a clean job.
+# The chain's whole job is to be non-zero when something went wrong. Since
+# 2026-09-19 the chain is ONE leg — screen:daily (ingest + deterministic screen)
+# plus the post-condition health check; the deep-dive leg and its LLM preflight
+# were removed by user decision (H2-deepdive abandoned, docs/hypothesis-register.json).
 #
-# Runs the REAL script against stubbed pnpm/curl. HOME is redirected to a temp
-# dir so the script's PATH prepends resolve to nothing and the stub wins, and so
-# no real Kimi credentials are picked up. The repo's own .env supplies
-# LLM_API_KEY, which is what makes the preflight reachable at all.
+# Runs the REAL script against a stubbed pnpm. HOME is redirected to a temp
+# dir so the script's PATH prepends resolve to nothing and the stub wins.
 #
 #   bash scripts/tests/daily-chain.test.sh
 set -u
@@ -27,34 +26,21 @@ args="$*"
 echo "STUB pnpm: $args" >&2
 case "$args" in
   *screen:daily*)    exit "${STUB_SCREEN_RC:-0}" ;;
-  *screen:deep-dive*) exit "${STUB_DD_RC:-0}" ;;
   *ops:health*)      exit "${STUB_HEALTH_RC:-0}" ;;
   *) echo "stub pnpm: unexpected invocation: $args" >&2; exit 99 ;;
 esac
 STUB
 chmod +x "$TMP/bin/pnpm"
 
-# --- stub curl: the LLM preflight probe ---
-# Records its argv when CURL_ARGS_FILE is set, so a test can assert WHAT the probe
-# asked for. The stub used to fail on nothing but the returned status, which is
-# why a hardcoded `"model":"k3-256k"` survived the DeepSeek switch: every test
-# case here returned 200 regardless of the payload.
-cat > "$TMP/bin/curl" <<'STUB'
-#!/usr/bin/env bash
-[ -n "${CURL_ARGS_FILE:-}" ] && printf '%s\n' "$@" > "$CURL_ARGS_FILE"
-echo "${STUB_HTTP:-200}"
-STUB
-chmod +x "$TMP/bin/curl"
-
 pass=0
 fail=0
 
-# run_case <name> <expected-exit> <screen_rc> <dd_rc> <health_rc> [http]
+# run_case <name> <expected-exit> <screen_rc> <health_rc>
 run_case() {
-  local name="$1" expected="$2" s="$3" d="$4" h="$5" http="${6:-200}"
+  local name="$1" expected="$2" s="$3" h="$4"
   local out rc
   out=$(PATH="$TMP/bin:$PATH" HOME="$TMP/home" \
-        STUB_SCREEN_RC="$s" STUB_DD_RC="$d" STUB_HEALTH_RC="$h" STUB_HTTP="$http" \
+        STUB_SCREEN_RC="$s" STUB_HEALTH_RC="$h" \
         bash "$REPO/scripts/daily-chain.sh" us 2>&1)
   rc=$?
   if [ "$rc" = "$expected" ]; then
@@ -66,64 +52,36 @@ run_case() {
   LAST_OUT="$out"
 }
 
-run_case "clean run"                        0 0 0 0
-run_case "screen leg failed"                2 2 0 0
-run_case "deep-dive leg failed"             4 0 4 0
-run_case "deep-dive partial failure is 4 not 0" 4 0 1 0
-run_case "post-condition health failed"     5 0 0 1
-run_case "auth preflight failed -> 3"       3 0 0 0 500
-run_case "highest code wins (health 5 beats dd 4)" 5 0 4 1
-run_case "degraded screen is non-zero"     2 2 0 0
+run_case "clean run"                        0 0 0
+run_case "screen leg failed"                2 2 0
+run_case "post-condition health failed"     5 0 1
+run_case "highest code wins (health 5 beats screen 2)" 5 2 1
 
-# A degraded screen must NOT skip the deep-dive leg (locked gap decision): the
-# run is marked degraded and the deep-dive still happens.
-if echo "$LAST_OUT" | grep -q "screen:deep-dive"; then
-  pass=$((pass+1)); printf 'ok   %-52s\n' "degraded screen still runs the deep-dive leg"
+# The retired deep-dive leg must stay retired: no EXECUTABLE line may invoke it
+# (comments may mention the ad-hoc CLI). Without this guard a future edit could
+# silently restart the token spend.
+if grep -vE '^[[:space:]]*#' "$REPO/scripts/daily-chain.sh" | grep -q 'screen:deep-dive'; then
+  fail=$((fail+1)); printf 'FAIL %-52s\n' "no screen:deep-dive invocation in the chain"
 else
-  fail=$((fail+1)); printf 'FAIL %-52s\n' "degraded screen still runs the deep-dive leg"
+  pass=$((pass+1)); printf 'ok   %-52s\n' "no screen:deep-dive invocation in the chain"
 fi
 
-# The preflight skip must never be masked by a successful screen (the original
-# silent-failure path).
-PATH="$TMP/bin:$PATH" HOME="$TMP/home" STUB_SCREEN_RC=0 STUB_DD_RC=0 STUB_HEALTH_RC=0 STUB_HTTP=500 \
-  bash "$REPO/scripts/daily-chain.sh" us >"$TMP/skip.log" 2>&1
-skip_rc=$?
-if [ "$skip_rc" = "3" ] && grep -q "PREFLIGHT FAIL" "$TMP/skip.log" && ! grep -q "screen:deep-dive exit=" "$TMP/skip.log"; then
-  pass=$((pass+1)); printf 'ok   %-52s exit=%s\n' "preflight skip is loud and never runs the leg" "$skip_rc"
+# ...and the stub would have failed the run had the leg executed: assert the
+# clean run's output contains no deep-dive line either.
+run_case "clean run for the output check"     0 0 0
+if echo "$LAST_OUT" | grep -q "screen:deep-dive"; then
+  fail=$((fail+1)); printf 'FAIL %-52s\n' "the deep-dive leg does not run"
 else
-  fail=$((fail+1)); printf 'FAIL %-52s exit=%s\n' "preflight skip is loud and never runs the leg" "$skip_rc"
+  pass=$((pass+1)); printf 'ok   %-52s\n' "the deep-dive leg does not run"
 fi
 
 # The post-condition must be scoped to the lane being built.
-PATH="$TMP/bin:$PATH" HOME="$TMP/home" STUB_SCREEN_RC=0 STUB_DD_RC=0 STUB_HEALTH_RC=0 \
+PATH="$TMP/bin:$PATH" HOME="$TMP/home" STUB_SCREEN_RC=0 STUB_HEALTH_RC=0 \
   bash "$REPO/scripts/daily-chain.sh" hk >"$TMP/lane.log" 2>&1
 if grep -q "ops:health -- --lane hk" "$TMP/lane.log"; then
   pass=$((pass+1)); printf 'ok   %-52s\n' "post-condition health check is lane-scoped (hk)"
 else
   fail=$((fail+1)); printf 'FAIL %-52s\n' "post-condition health check is lane-scoped (hk)"
-fi
-
-# The probe must ask for the CONFIGURED model (task 2026-09-16 P0): a hardcoded
-# model literal sends a request the provider rejects with 400, which skips the
-# deep-dive leg while the screen leg keeps working.
-PATH="$TMP/bin:$PATH" HOME="$TMP/home" CURL_ARGS_FILE="$TMP/curl.args" \
-  STUB_SCREEN_RC=0 STUB_DD_RC=0 STUB_HEALTH_RC=0 STUB_HTTP=200 \
-  bash "$REPO/scripts/daily-chain.sh" us >/dev/null 2>&1
-ENV_MODEL=$(grep -E '^LLM_ANALYST_MODEL=' "$REPO/.env" 2>/dev/null | head -1 | cut -d= -f2-)
-if [ -n "$ENV_MODEL" ] && grep -q "\"model\":\"$ENV_MODEL\"" "$TMP/curl.args"; then
-  pass=$((pass+1)); printf 'ok   %-52s\n' "probe asks for the .env model ($ENV_MODEL)"
-else
-  fail=$((fail+1)); printf 'FAIL %-52s\n' "probe asks for the .env model"
-  printf '     payload: %s\n' "$(tr '\n' ' ' <"$TMP/curl.args")"
-fi
-
-# ...and no provider model literal may appear in an EXECUTABLE line (comments may
-# quote the 2026-09-16 400 verbatim). This is the class-level guard: the payload
-# assertion above passes for any hardcoded value that happens to match .env.
-if grep -vE '^[[:space:]]*#' "$REPO/scripts/daily-chain.sh" | grep -qE 'k3-256k|deepseek-(flash|v4-pro)'; then
-  fail=$((fail+1)); printf 'FAIL %-52s\n' "no hardcoded provider model in the chain"
-else
-  pass=$((pass+1)); printf 'ok   %-52s\n' "no hardcoded provider model in the chain"
 fi
 
 echo
