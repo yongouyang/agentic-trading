@@ -5,7 +5,26 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
-## 2026-09-20 (Phase 7 EXECUTED P1–P6 — HK/G2 exploratory-alive; US dead on this window)
+## 2026-09-20 (evening — ETF portfolio research write-up)
+
+Research-only session, no code changes. Scanned 70 US + HK-listed ETFs
+(Yahoo Finance, dividend-adjusted, 2021-09-20 → 2026-09-18) for YTD / 1Y /
+5Y returns, then a 5Y correlation matrix, max drawdowns, and four portfolio
+variants for a low-turnover diversified portfolio. Full findings in
+**`docs/etf-portfolio-research-2026-09-20.md`**. Headlines: GLD is the only
+true diversifier (corr 0.11–0.17, +19.5%/yr); VGT≈VOO (0.92) — don't stack;
+SCHD is the defensive equity leg (−16.8% max DD); 3074.HK is iShares MSCI
+**Taiwan** (+23%/yr, but the same TSMC/AI bet as SMH — low measured
+correlation is partly a trading-hours artifact); HK/China home-market index
+ETFs returned 0–4%/yr over 5Y, consistent with the Phase-7 "HK is a
+stock-picker's market" finding. Suggested skeleton: VOO core + SMH/VGT
+satellite + GLD + SCHD + 3074.HK-or-VXUS.
+
+**Next:** user picks a variant/sizing; the HK/G2 confirmation-path decision
+(prospective accrual vs spending the vendor test half) remains open from the
+morning session.
+
+---
 
 Executed the locked `docs/phase-7-plan.md` top to bottom.
 
