@@ -235,6 +235,110 @@ Variant C beat pure VOO under both methods.
 - Caveats: 5 years = one regime; correlations drift toward 1 in crashes;
   historical drawdowns are a floor for expectations, not a ceiling.
 
+## 7. AI-adoption thematic research (evening session)
+
+Question: which industries will *realize* benefits from AI adoption (not just
+sell the infrastructure), and should the ETF combination tilt toward them?
+
+### What the research houses say
+
+- **Goldman Sachs "Four Phases of AI"**: Phase 1 = NVDA; Phase 2 =
+  infrastructure (hyperscalers, utilities, data centers); Phase 3 =
+  software/platforms with proven AI revenue; Phase 4 = productivity
+  beneficiaries across industries (banks, healthcare, retail first).
+- **Morgan Stanley (Wilson)**: ~40% of AI adopters now cite *quantifiable* AI
+  benefits in earnings calls (vs 21% a year earlier); ~10% average net
+  productivity gain; ~100bps margin expansion forecast by 2027 for adopters
+  with pricing power. Named adopters: Halliburton, BAC, CVS, NextEra.
+- **BlackRock**: another $5–8T AI capex through 2030; theme expanding into
+  power/utilities, materials, robotics, healthcare.
+- **McKinsey**: GenAI value $2.6–4.4T/yr; top industries — banking
+  ($200–340B/yr, #1), high-tech, pharma/life sciences ($60–110B/yr),
+  retail/CPG.
+- **Infrastructure facts (strongest footing)**: IEA — data-center electricity
+  415 TWh (2024) → ~945 TWh (2030); hyperscaler capex guided $700–800B+ for
+  2026 (company guidance); Dell'Oro measured +92% YoY data-center capex in
+  Q2 2026; GE Vernova backlog $176B, Eaton backlogs +33–103% YoY; ~10 GW of
+  signed Big Tech nuclear PPAs (MSFT/Constellation TMI restart 2028 ahead of
+  schedule; AMZN/Talen 1.9 GW; GOOG/Kairos 500 MW SMR; META/Clinton 1.1 GW).
+- **Pharma**: Insilico's AI-discovered drug reached Phase II in 18 months /
+  78 molecules (vs ~4.5yr norm); Lilly–Insilico ~$2.75B, Lilly/Novartis–
+  Isomorphic deals. But AI-drug Phase II success (~40%) matches historical
+  norms — AI compresses discovery cost/time, clinical success unproven.
+  Favor big-pharma adopters over pure-play AI biotech.
+- **Bear case (kept honest)**: Bain — AI needs $2T new annual revenue by
+  2030 to fund committed compute, $800B shortfall; MIT NANDA — 95% of
+  enterprise GenAI pilots no measurable P&L impact; Gartner — >40% of
+  agentic-AI projects cancelled by 2027; Apollo/BIS — valuations extreme,
+  capex debt-financed. Skeptics attack *average* ROI and infra valuations,
+  not the existence of gains at the best adopters.
+
+**Industry ranking by evidence strength**: (1) financial services, (2)
+pharma/life sciences, (3) enterprise software platforms (proven revenue but
+overlaps existing tech exposure), (4) energy/grid/utilities (AI *demand*
+rather than adoption — Phase 2 with the strongest factual footing),
+(5) customer-service-heavy/professional services (best RCT evidence, diffuse
+to invest in).
+
+### Candidate ETF check (5Y data, same method as above)
+
+| ETF | Theme | YTD | 1Y | 5Y | 5Y ann. | Max DD |
+|---|---|---|---|---|---|---|
+| GRID | Grid/electrification | +17.0% | +20.4% | +99.1% | +14.8% | −29.6% |
+| DTCR | Data-center REITs | +33.4% | +40.0% | +72.4% | +11.5% | −39.0% |
+| NLR | Nuclear utilities/fuel | −13.3% | −15.3% | +126.1% | +17.7% | −37.5% |
+| XLF | Financials | +2.9% | +4.8% | +66.0% | +10.7% | −25.8% |
+| XLV | Healthcare | +9.7% | +24.6% | +38.7% | +6.8% | −17.1% |
+
+Correlation vs the current four (daily returns, 5Y):
+
+| | VOO | SMH | GLD | SCHD |
+|---|---|---|---|---|
+| GRID | 0.84 | 0.81 | 0.26 | 0.60 |
+| DTCR | 0.71 | 0.71 | 0.27 | 0.50 |
+| NLR | 0.54 | 0.53 | 0.40 | 0.34 |
+| XLF | 0.79 | 0.48 | 0.04 | 0.81 |
+| XLV | 0.61 | 0.30 | 0.11 | 0.72 |
+
+### Expanded combination tested
+
+Variant E: 35 VOO / 15 SMH / 15 GLD / 10 SCHD / 10 GRID / 5 DTCR / 5 XLF /
+5 XLV vs Variant C (50/20/20/10), same 5Y window, daily-rebalance approx:
+
+| Variant | Ann. | Vol | Sharpe | Max DD |
+|---|---|---|---|---|
+| E (expanded, 8 funds) | 17.8% | 16.6% | 1.07 | −24.6% |
+| F: 40 VOO / 15 SMH / 15 GLD / 10 SCHD / 10 GRID / 5 XLV / 5 NLR | 18.4% | 16.8% | 1.09 | −23.4% |
+| C (concentrated, 4 funds) | 19.7% | 17.1% | 1.14 | −24.8% |
+
+Variant F calendar-year returns: 2021 +9.7%, 2022 −14.0%, 2023 +27.3%,
+2024 +24.1%, 2025 +31.2%, 2026 YTD +18.2%. F sits between E and C on
+return but posts the shallowest max drawdown of the three (−23.4%) — the
+XLV/NLR sleeves replace E's more equity-correlated DTCR/XLF legs.
+
+**E trails C on the trailing window** — expected: SMH and GLD were the two
+best assets, so diluting them dilutes backward-looking return. The case for E
+is *forward-looking robustness*: it holds five distinct AI-economy mechanisms
+(semis, grid, data-center REITs, financial adopters, healthcare adopters)
+instead of one concentrated bet, at equal drawdown. XLV (−17.1% max DD,
+0.30 vs SMH) and XLF (0.04 vs GLD, 0.48 vs SMH) are the genuinely
+diversifying legs; GRID/DTCR are highly correlated to SMH (0.81/0.71) —
+they diversify the *mechanism* (physical infra vs chips) but not the
+*drawdown*.
+
+### ETF landscape caveats found during research
+
+- Broad "AI" funds (AIQ, WTAI, IVES, CHAT) all lead with NVDA/MSFT/GOOGL —
+  they re-import existing exposure. THNQ/ARTY are less mega-cap-skewed.
+- No scaled pure-play exists for: AI power/cooling infra (USAI/IVEP/AIPO are
+  sub-scale), AI drug discovery (ARKG/IDNA are genomics proxies), HK-listed
+  global AI infra (HK thematics are all China/Asia-focused).
+- 3034.HK CSOP Nasdaq-100 has only ~US$10M AUM — closure/liquidity risk;
+  prefer US-listed QQQM if the broker allows.
+- SMR exposure (NUKZ, Oklo/NuScale in NLR/URA) is a 2030s option: UBS
+  downgraded NuScale citing >5-year builds and no firm orders; ~$8,000/kW
+  FOAK costs. Near-term nuclear = restarts/uprates of existing reactors.
+
 *Method: Yahoo Finance v8 chart API, daily adjusted closes; YTD base
 2025-12-31; 1Y base 2025-09-18; 5Y base 2021-09-20 (or first available,
 flagged). DCA sim: fractional units at adjusted close, actual daily USD/HKD,
