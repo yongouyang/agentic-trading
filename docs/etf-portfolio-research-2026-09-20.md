@@ -316,6 +316,14 @@ Variant F calendar-year returns: 2021 +9.7%, 2022 −14.0%, 2023 +27.3%,
 return but posts the shallowest max drawdown of the three (−23.4%) — the
 XLV/NLR sleeves replace E's more equity-correlated DTCR/XLF legs.
 
+**YTD 2026 head-to-head (through 2026-09-18):** Variant C **+20.8%** vs
+Variant F **+18.1%** (buy-and-hold; daily-rebalanced figures identical
+within 0.1pp). The ~2.7pp gap is almost entirely SMH weighting (C 20% vs F
+15% of the year's best performer, +59.1%); F's NLR sleeve is the only
+negative component YTD (−13.3%). Across all three comparisons (5Y, YTD,
+drawdown), C's edge is simply "more SMH" — F's payoff is designed for the
+semis-mean-revert scenario this window doesn't contain.
+
 **E trails C on the trailing window** — expected: SMH and GLD were the two
 best assets, so diluting them dilutes backward-looking return. The case for E
 is *forward-looking robustness*: it holds five distinct AI-economy mechanisms
