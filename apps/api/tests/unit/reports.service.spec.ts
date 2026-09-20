@@ -410,6 +410,12 @@ describe("ReportsService", () => {
       expect(summarizeMetrics("not-json")).toEqual({});
       expect(summarizeMetrics(JSON.stringify({ close: "oops" }))).toEqual({});
     });
+
+    it("summarizeMetrics passes through the Phase-7 gate states (incl. null)", () => {
+      expect(summarizeMetrics(JSON.stringify({ gateG1: true, gateG2: false }))).toEqual({ gateG1: true, gateG2: false });
+      expect(summarizeMetrics(JSON.stringify({ gateG1: null }))).toEqual({ gateG1: null });
+      expect(summarizeMetrics(JSON.stringify({ gateG1: "yes" }))).toEqual({});
+    });
   });
 
   // W2 (docs/ops-hardening-plan.md): a crashed run leaves a "running" row, which

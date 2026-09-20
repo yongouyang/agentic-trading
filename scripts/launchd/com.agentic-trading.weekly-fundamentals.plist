@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Phase 7 (docs/phase-7-plan.md §6): fundamentals + sector refresh,
+     Sun 21:47 HKT — 30 min after the F10 job so the eastmoney datacenter
+     host is never hit back-to-back. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agentic-trading.weekly-fundamentals</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/yongouyang/projects/agentic-trading/scripts/weekly-maintenance.sh</string>
+    <string>fundamentals</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>47</integer></dict>
+  <key>StandardOutPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-fundamentals.log</string>
+  <key>StandardErrorPath</key><string>/Users/yongouyang/projects/agentic-trading/logs/weekly-fundamentals.err.log</string>
+</dict>
+</plist>

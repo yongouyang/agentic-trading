@@ -5,6 +5,202 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-20 (Phase 7 EXECUTED P1–P6 — HK/G2 exploratory-alive; US dead on this window)
+
+Executed the locked `docs/phase-7-plan.md` top to bottom.
+
+- **P1 — PIT fundamentals store.** New `FundamentalPoint` table (migration
+  `20260920000000_fundamental_points`). US = SEC EDGAR companyfacts
+  (per-fact `filed` — truly PIT, restatements coexist); HK = eastmoney F10
+  main indicators (no announcement date exists — E2a probe NEGATIVE —
+  so `filedAt = periodEnd + 90d`, `filedAtSynthetic=1`). Coverage vs the
+  plan's bars, over reporting entities (E1b amendment: ETFs/delisted have no
+  statements by nature and are excluded from the denominator): **US 96.8%**
+  (483/499, ≥8 quarter/annual revenue periods), **HK 100%** (125/125, ≥4
+  semi/annual). Two real findings fixed en route: registrants migrate us-gaap
+  revenue tags (AMD's `Revenues` holds 4 recent quarters, `SalesRevenueNet`
+  the full history → extractor picks the fallback with the MOST points), and
+  banks report `RevenuesNetOfInterestExpense`, not `Revenues`. Known gaps:
+  XOM's current CIK (2115436, ExxonMobil Holdings) holds only post-restructure
+  facts; IFRS 20-F filers (AZN, CCEP, GFS) aren't in us-gaap.
+- **P2 — sectors.** `Instrument.sector`, one shared 12-bucket scheme
+  (`src/fundamentals/sectors.ts`): US from EDGAR SIC (with 6798→Real Estate
+  REIT override), HK from eastmoney `BELONG_INDUSTRY`. Subgroup list frozen
+  as amendment E3 (buckets ≥15 names; US 9, HK 3).
+- **P3 — composite in quant-core** (`fundamentals-composite.ts`): TTM
+  reduction with continuity checks (a skipped filing must not bridge a year),
+  the five declared components, winsorized z-scores, declared weights
+  (US 70/30, HK 60/40), gates G1 (close vs 200d MA, weekly evaluation) and
+  G2 (12M return > 0), both fail-closed. Look-ahead invariant tested.
+- **P4 — backtest.** `simulateQuarterlyCompounder` (quant-core): quarterly
+  re-rank, top-20 EW, bottom-E/P-quintile ceiling, top-40 buffer, gate exit
+  authority at next close, all fills at next session's close, last-mark carry
+  across gap days. `backtest:fundamental` CLI reuses the 6A IC/NW-t/FDR
+  machinery. **Official run** (`apps/api/reports/backtest/fundamental-2026-09-20.*`):
+  US/G1 IC20 0.019 (t 1.72) dead, US/G2 0.018 (t 1.63) dead,
+  HK/G1 0.061 (t 2.20) dead,
+  **HK/G2 IC20 0.099, NW t 3.99, FDR survivor, above the floor → `alive` —
+  exploratory until the pre-registered confirmation.** Portfolio path
+  (falsification-only): gating costs ~2.5 bps/day in HK (t −1.1…−1.3,
+  inconclusive); US/G1 gate adds (166% vs 120% ungated, t 0.41). Exploratory
+  subgroups: HK Financials IC 0.107; US Utilities 0.077–0.084; US
+  Financials/Healthcare negative.
+- **P5 — power floors** recorded before interpretation (amendment P5):
+  2× measured NW SE → US 0.0225, HK 0.0553.
+- **P6 — product wiring.** Nightly screen rows carry `gateG1`/`gateG2`
+  (null = insufficient history) in `metricsJson`; dashboard watchlist has a
+  Gates column; `SCREEN_RULES_CAVEAT` restates the exploratory status;
+  `weekly-fundamentals` launchd job (Sun 21:47 HKT, fundamentals + sector
+  refresh) installed — 6 jobs armed, verify green.
+
+Tests: api 708+1 skipped, quant-core 263, agents 51, web 107, shell 8,
+tsc clean everywhere. Incident handled mid-session: an `rm -rf src/reports`
+meant for misplaced backtest output deleted the real reports module —
+restored via `git checkout`; final state verified clean.
+
+**Next:** prospective accrual of the HK/G2 signal (weekly fundamentals job
+keeps the store fresh); the one pre-registered confirmation path (unspent
+vendor test half or prospective) remains unspent until chosen deliberately.
+
+---
+
+## 2026-09-19 (the next direction is DESIGNED — quality-first compounder framework, Phase-7 plan PROPOSED)
+
+The follow-up conversation the morning session flagged: with no gating
+hypothesis left, what is the platform *for*? User's mandate: low-frequency
+(months-to-years holds), fundamentals + technicals + big-future-growth, US+HK.
+Two research passes (evidence literature; data/tooling inventory) then six
+design decisions, recorded in **`docs/phase-7-plan.md` (PROPOSED — awaits the
+user's lock)**.
+
+**What the evidence settled.** The three legs are a hierarchy, not a blend:
+quality/profitability is the selection base (Novy-Marx 2013, QMJ 2019; slow,
+cheap, transfers to China — Liu-Stambaugh-Yuan 2019); trend/momentum is a GATE
+not an engine (decays in months, crashes — Daniel-Moskowitz 2016; weak-to-absent
+in China-adjacent markets); valuation is a CEILING never a target (E/P, not B/M
+for China; PEG is misspecified — Easton 2004); and "future growth" is NOT a
+factor — growth doesn't persist beyond chance (CKL 2003), growth traps cost
+13%/yr (GMO 2021), ~1-in-10 base rate (Mauboussin), so it lives as a written
+qualitative thesis per survivor (thesis-tracker skill), not a score.
+
+**What the data survey settled.** US fundamentals are PIT-safe and free (SEC
+EDGAR companyfacts, filing-date indexed); HK is near-PIT pending ONE probe for
+an announcement-date column in eastmoney F10 (worst case: period-end + 90d
+declared lag). The store has zero fundamentals tables today, and no sector
+metadata (the reason the sector cap was never wired) — both are build items
+E1–E3. The retired deep-dive's eastmoney F10 provider stays as prompt-context
+tooling. User pushback accepted: the backtest is days not weeks — panels, the
+IC engine, NW t, FDR and the luck benchmark all exist from 6A; the new work is
+the fundamentals store + composite + position simulator (which revives 6B's
+deferred durable half, `simulatePositions` + causality gate).
+
+**The six decisions (user, 2026-09-19).** D1 both systematic-backtest AND
+decision-support modes; D2 the trend gate has EXIT AUTHORITY; D3 HK leans
+quality/valuation with trend demoted; D4 guardrailed exploration (family +
+subgroups declared pre-run, exploratory labels, exactly one pre-registered
+confirmation path on untouched data — the unspent vendor test half or
+prospective accrual); D5 both gate variants tested (200d-MA break; 12M
+momentum ≤ 0), priced in the FDR; D6 quarterly re-rank (HK semi-annual), gate
+evaluated nightly by the existing free screen leg.
+
+**Governance continuity.** No LLM in the evaluation path; labels stay labels
+(alive/reversed/dead); portfolio results falsification-only (6B's ceiling);
+`insufficient_evidence` remains a legitimate outcome; power floors recorded as
+an amendment BEFORE the first full sweep (the 6A pattern, build step P5).
+
+**Tests:** unchanged (design only — api 686, quant-core 233, agents 51, web 107,
+daily-chain shell 8; tsc clean as of this morning's close).
+
+**Next:** the user reviews and locks `docs/phase-7-plan.md`; then fast tier
+executes P1→P6 (probe + ingest, sector metadata, composite + gates with the
+look-ahead invariant test, the backtest CLI, the power-floor amendment, product
+wiring).
+
+---
+
+## 2026-09-19 (H2 ABANDONED by decision, the nightly deep-dive leg is gone, and the register learned to say CLOSED instead of COMPLETE)
+
+The session began as a review question — *"stop the daily job? it wastes tokens and
+generates little useful insight"* — and the live instruments agreed with the
+instinct: `report:cost` read $2.06 of the $10 cap (~$0.42/night both lanes), and
+the register showed the nightly output's only remaining justification was H2's
+accrual clock at **0/159 days**. K1 had already retired the list as an alpha
+claim, so the user's experience ("little useful insight") and the governance
+record said the same thing. User decision (2026-09-19): **stop the deep-dive leg,
+keep the screen leg** — the screen leg is free (no LLM), keeps the store fresh,
+keeps Track B accruing, and keeps feeding the 20d labels of the ~165
+already-accrued verdicts, which mature from price data alone.
+
+**The design fork, and why `abandoned` had to exist.** The register's
+anti-Goodhart clause (locked 09-18) allows a clock to stop only on a class
+emitted at pre-registered power, and H2 had no class — retiring it as
+`insufficient_evidence` would have been a fabricated verdict, exactly what the
+register was built to prevent. And the schema had a second trap: `state` was
+`live|retired`, and L2's completion condition is "no gating row is live" — so
+simply un-living H2 would have rendered **"L2 COMPLETE"**, a success signal for
+a decision to stop. The register now has a third state: **`abandoned`** requires
+`abandonedAt`/`abandonedReason`, keeps the `clock` the row had (so L2 can tell
+the cases apart), must NOT carry a class or an artifact class locator, and gets
+no live reading. L2 renders **"CLOSED — H2-deepdive abandoned by decision, not
+by a verdict"**; the class distribution still shows only the three earned nulls
+(`insufficient_evidence` 2 · `underpowered` 1), with `abandoned 1` published
+beside them rather than inside them. **K4 is resolved by this decision**, ahead
+of its 2027-06-30 horizon; the 2026-11-15 projection-watch checkpoint is moot as
+a trigger, though `verdict:validate` will still read a partial measured SE over
+the ~12 accrued lane-days once labels mature (mid/late Oct — below the 20-day
+watch threshold, and that is stated rather than rounded up).
+
+**The mechanical shutdown, all behind one declared constant.**
+`DEEP_DIVE_RETIRED_AT = "2026-09-19"` in `ops/health.ts` (+`verdictLegApplies`),
+consumed by both guards: sessions screened on/after it owe no chain deep-dive
+(the pending-evening leg, the zero-verdict alert and the catch-up's NEEDS_RUN
+all go silent for them), while pre-retirement sessions keep their historical
+status — every one of them was deep-dived, and the boundary is pinned by test
+both ways. `daily-chain.sh` is now one leg (screen:daily) plus the post-condition
+health check; exit codes 3/4 are retired with the preflight, and the shell
+suite's new guard forbids any executable `screen:deep-dive` line in the chain,
+so the token spend cannot silently restart. The deep-dive CLI itself stays for
+ad-hoc use. The never-ran-lane alert now reads "no complete run on record" when
+no session has ever been screened (the deep-dive-specific wording would be a
+lie post-retirement). `ops:health` on the live store: HEALTHY, exit 0.
+
+**What deliberately did not change.** The weekly sentinel/f10/validation jobs
+(the digest is what makes the maturing labels visible), the dashboard's
+historical deep-dive overlay (frozen at the last run — nothing goes red; the
+web layer has no freshness check on it), the launchd job set (still 5 — the
+catch-up job now runs the screen-only chain), and the store: every verdict,
+including the excluded k3 sub-sample, stays re-scorable.
+
+**Reversal path, recorded in the register row itself:** restore the leg in
+`scripts/daily-chain.sh`, delete the two `DEEP_DIVE_RETIRED_AT` uses, flip the
+row back to `live` — the Phase-5 A7 precedent shows a discontinued era closes
+as an excluded sub-sample rather than being pooled.
+
+**Tests:** api 681 → **686** (+5: the abandoned schema rules incl. the
+no-class/no-locator prohibitions, the L2 CLOSED rendering, the health carve-out
+and its pre-retirement boundary, the catch-up carve-out); the checked-in
+register block now also pins *which* row is abandoned and that it carries no
+class. daily-chain shell suite rewritten for the one-leg chain: 13 → **8**
+cases. quant-core 233, agents 51, web 107; tsc clean. Live-verified:
+`north-star` exit 0 / REGISTER OK / L2 CLOSED; `ops:health` HEALTHY.
+
+**Docs landed with the change:** architecture-v1.md (cadence row, §5.1 table,
+exit codes, health model, the preflight caveat rewritten), project-direction.html
+(§2.4 L2 row IN PROGRESS → CLOSED, K4 resolved-by-decision, K5's re-read trigger
+updated, footer), the register's `_docs`.
+
+**Next:** nothing time-critical — Monday 20:30 is the first screen-only chain
+run (expect HEALTHY with no verdict leg), and mid/late October the maturing
+labels give the partial SE reading for free. Still deferred, unchanged: Phase 6B
+scoping (B1 causality gate + B3 `simulatePositions` — neither depends on the
+daily job), the Stage-2 decision table, the §5.3 residual MEDIUMs. And one
+honest open question the decision raises rather than answers: with no gating
+hypothesis left, the project's next direction is a fresh K5-style choice
+(index-core + monitor, discovery funnel with no capital, or one new
+pre-registered hypothesis) — that is a conversation, not a task.
+
+---
+
 ## 2026-09-19 (the register readout is BUILT — and its own integrity checks failed on the first run, against my register)
 
 `pnpm -C apps/api north-star` + `docs/hypothesis-register.json` + a `northStar` block in the

@@ -47,6 +47,8 @@ import {
   clampOhlc,
   DataOutcome,
   deriveAdjustedBars,
+  gateG1,
+  gateG2,
   runChecks,
   runScreen,
   sessionClosed,
@@ -493,6 +495,22 @@ async function runLane(
 
   // Deterministic screen (phase-1-spec §4) over this lane's eligible set.
   const screen = runScreen(inputs);
+
+  // Phase 7 (docs/phase-7-plan.md §6): trend-gate state per ranked name —
+  // a display column, free, no LLM. G1 = close ≥ 200d MA, G2 = 12M return > 0;
+  // null = insufficient history (the gate cannot attest, not a break).
+  const closesBySymbol = new Map(
+    inputs.map((i) => [
+      i.symbol,
+      i.adjustedBars.map((b) => b.close).filter((c): c is number => c != null && c > 0),
+    ]),
+  );
+  const gateStateOf = (symbol: string): { gateG1: boolean | null; gateG2: boolean | null } => {
+    const closes = closesBySymbol.get(symbol) ?? [];
+    const g1 = gateG1(closes);
+    const g2 = gateG2(closes);
+    return { gateG1: g1.detail === null ? null : g1.pass, gateG2: g2.detail === null ? null : g2.pass };
+  };
   const excludedCounts: Record<string, number> = {};
   for (const e of screen.excluded) excludedCounts[e.reason] = (excludedCounts[e.reason] ?? 0) + 1;
 
@@ -540,6 +558,7 @@ async function runLane(
         adv20: p.adv20,
         mdd252: p.mdd252,
         caDegraded: p.caDegraded,
+        ...gateStateOf(p.symbol),
       }),
     })),
   });

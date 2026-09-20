@@ -20,6 +20,7 @@ DOMAIN="gui/$(id -u)"
 LABELS=(
   com.agentic-trading.weekly-sentinel
   com.agentic-trading.weekly-f10
+  com.agentic-trading.weekly-fundamentals
   com.agentic-trading.weekly-validation
   com.agentic-trading.daily-catchup
   com.agentic-trading.ops-health

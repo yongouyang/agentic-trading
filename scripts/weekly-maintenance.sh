@@ -3,10 +3,11 @@
 #
 #   scripts/weekly-maintenance.sh sentinel   # screen:sentinel -- --eastmoney
 #   scripts/weekly-maintenance.sh f10        # ca:f10-refresh (HK lane)
+#   scripts/weekly-maintenance.sh fundamentals  # fundamentals:refresh + sector:refresh (Phase 7, §6)
 #
 # Sunday evening HKT: sentinel 20:47, f10 21:17 (moved from Sunday morning on
-# 2026-09-15 — the machine is only on in the evening) — the gap keeps the two
-# eastmoney hosts (push2his vs datacenter) from being hit back-to-back.
+# 2026-09-15 — the machine is only on in the evening), fundamentals 21:47 —
+# the gaps keep the eastmoney hosts and SEC from being hit back-to-back.
 # Logs via launchd StandardOutPath to logs/; diff week-over-week.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,11 +22,17 @@ if ! command -v node >/dev/null 2>&1; then
   NODE_VER=$(ls "$HOME"/.nvm/versions/node 2>/dev/null | sed 's/^v//' | sort -V | tail -1)
   [ -n "$NODE_VER" ] && export PATH="$HOME/.nvm/versions/node/v$NODE_VER/bin:$PATH"
 fi
-echo "== weekly-maintenance ${1:?usage: weekly-maintenance.sh sentinel|f10} $(date '+%Y-%m-%d %H:%M:%S %Z') =="
+echo "== weekly-maintenance ${1:?usage: weekly-maintenance.sh sentinel|f10|fundamentals} $(date '+%Y-%m-%d %H:%M:%S %Z') =="
 
 case "$1" in
   sentinel) pnpm -C apps/api screen:sentinel -- --eastmoney ;;
   f10)      pnpm -C apps/api ca:f10-refresh ;;
+  # Phase 7 §6: weekly fundamental refresh keeps the store fresh; the
+  # quarterly re-rank cadence is a property of the evaluation, not the ingest.
+  fundamentals)
+    pnpm -C apps/api fundamentals:refresh -- --market all
+    pnpm -C apps/api sector:refresh -- --market all
+    ;;
   *)        echo "unknown subcommand $1" >&2; exit 2 ;;
 esac
 RC=$?

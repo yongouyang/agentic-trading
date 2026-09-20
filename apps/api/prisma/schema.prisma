@@ -25,6 +25,10 @@ model Instrument {
   // (phase-1-hardening-plan §A.2: rescue rewrite flips to "eastmoney";
   // any later successful Yahoo fetch flips it back to "yahoo").
   dataSource String @default("yahoo")
+  // Phase 7 P2: coarse sector bucket (docs/phase-7-plan.md §E3). US: mapped
+  // from EDGAR SIC; HK: mapped from eastmoney BELONG_INDUSTRY. Null until the
+  // sector:refresh CLI labels the name.
+  sector    String?
 
   bars             Bar[]
   corporateActions CorporateAction[]
@@ -258,4 +262,30 @@ model ChatMessage {
   createdAt    DateTime @default(now())
 
   session ChatSession @relation(fields: [sessionId], references: [id])
+}
+
+// Phase 7 (docs/phase-7-plan.md §2, 2026-09-20): PIT fundamental points.
+// One row per (symbol, source, metric, period, filing) — restatements are NEW
+// filings for the same period and must coexist, because the PIT question is
+// "latest point with filedAt <= T", not "the current value". filedAt is the
+// PIT anchor: EDGAR's filing date (real) or, for HK (eastmoney exposes NO
+// announcement date — probe E2a, 2026-09-20), periodEnd + 90 days with
+// filedAtSynthetic=true so the anchor is never mistaken for a measured date.
+model FundamentalPoint {
+  id               Int      @id @default(autoincrement())
+  symbol           String
+  market           String // "US" | "HK"
+  source           String // "sec-edgar" | "eastmoney-f10"
+  metric           String // canonical: revenue, grossProfit, netIncome, assets, equity, liabilities, epsBasic, sharesOutstanding, operatingCashFlow
+  periodEnd        String // YYYY-MM-DD
+  periodType       String // "annual" | "semi" | "quarter" | "instant"
+  filedAt          String // YYYY-MM-DD — the PIT anchor
+  filedAtSynthetic Boolean  @default(false)
+  value            Float
+  currency         String?
+  accession        String? // EDGAR accession provenance; null for HK rows
+  fetchedAt        DateTime @default(now())
+
+  @@unique([symbol, source, metric, periodEnd, periodType, filedAt])
+  @@index([market, metric])
 }

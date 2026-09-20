@@ -46,6 +46,8 @@ export interface RowMetrics {
   adv20?: number;
   mdd252?: number;
   caDegraded?: boolean;
+  gateG1?: boolean | null;
+  gateG2?: boolean | null;
 }
 
 export interface RowVerdict {

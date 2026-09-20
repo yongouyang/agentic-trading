@@ -35,7 +35,10 @@
     "journal:link": "tsx src/cli/journal-link.ts",
     "backtest:vendor": "tsx src/cli/backtest-vendor.ts",
     "panel:export": "tsx src/cli/panel-export.ts",
-    "backtest:factor": "tsx src/cli/backtest-factor.ts"
+    "backtest:factor": "tsx src/cli/backtest-factor.ts",
+    "fundamentals:refresh": "tsx src/cli/fundamentals-refresh.ts",
+    "sector:refresh": "tsx src/cli/sector-refresh.ts",
+    "backtest:fundamental": "tsx src/cli/backtest-fundamental.ts"
   },
   "dependencies": {
     "@agentic-trading/agents": "workspace:*",

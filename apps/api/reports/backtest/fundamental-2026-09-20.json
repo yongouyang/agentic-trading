@@ -1,0 +1,494 @@
+{
+  "ranAt": "2026-09-20T03:30:33.515Z",
+  "fdrQ": 0.05,
+  "family": [
+    {
+      "market": "US",
+      "gate": "G1",
+      "ic": [
+        {
+          "horizon": 20,
+          "meanIc": 0.0193385188192593,
+          "nwT": 1.7209578496977855,
+          "nwSe": 0.011237067091826394,
+          "days": 983,
+          "meanBreadth": 194.86266531027468,
+          "p": 0.085258472824747
+        },
+        {
+          "horizon": 5,
+          "meanIc": 0.009511179157495647,
+          "nwT": 1.5388635605411425,
+          "nwSe": 0.006180651359468823,
+          "days": 998,
+          "meanBreadth": 195.3997995991984,
+          "p": 0.12383760879230243
+        },
+        {
+          "horizon": 60,
+          "meanIc": 0.027059700698395063,
+          "nwT": 1.5461684491157057,
+          "nwSe": 0.017501133666174094,
+          "days": 943,
+          "meanBreadth": 193.78791092258749,
+          "p": 0.12206389117376923
+        }
+      ],
+      "portfolio": {
+        "gated": {
+          "totalReturn": 1.6596575151010264,
+          "annualizedReturn": 0.21722727428285382,
+          "maxDrawdown": -0.21665682744047288,
+          "trades": 118
+        },
+        "ungated": {
+          "totalReturn": 1.1967283305734249,
+          "annualizedReturn": 0.17133825952433268,
+          "maxDrawdown": -0.29539507598801895,
+          "trades": 65
+        },
+        "diffVsUngated": {
+          "meanDailyBps": 1.2542734744310584,
+          "nwT": 0.4140167668781295
+        },
+        "diffVsBenchmark": {
+          "meanDailyBps": 3.2702856885911253,
+          "nwT": 1.0691571307120573
+        }
+      },
+      "subgroups": [
+        {
+          "sector": "Communication Services",
+          "names": 14,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Consumer Discretionary",
+          "names": 55,
+          "meanIc20": 0.006451419411335082,
+          "days": 973
+        },
+        {
+          "sector": "Consumer Staples",
+          "names": 22,
+          "meanIc20": 0.02187045123726349,
+          "days": 458
+        },
+        {
+          "sector": "Energy",
+          "names": 14,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Financials",
+          "names": 73,
+          "meanIc20": -0.06852923700845735,
+          "days": 983
+        },
+        {
+          "sector": "Healthcare",
+          "names": 41,
+          "meanIc20": -0.058319761906897534,
+          "days": 963
+        },
+        {
+          "sector": "Industrials",
+          "names": 89,
+          "meanIc20": 0.038236691058884,
+          "days": 983
+        },
+        {
+          "sector": "Materials",
+          "names": 35,
+          "meanIc20": 0.024216145069371465,
+          "days": 945
+        },
+        {
+          "sector": "Real Estate",
+          "names": 24,
+          "meanIc20": 0.044659478112464325,
+          "days": 877
+        },
+        {
+          "sector": "Technology",
+          "names": 96,
+          "meanIc20": 0.035649123050185444,
+          "days": 983
+        },
+        {
+          "sector": "Utilities",
+          "names": 38,
+          "meanIc20": 0.07677839689173824,
+          "days": 929
+        }
+      ],
+      "fdrReject": false,
+      "label": "dead"
+    },
+    {
+      "market": "US",
+      "gate": "G2",
+      "ic": [
+        {
+          "horizon": 20,
+          "meanIc": 0.017743481290729397,
+          "nwT": 1.6321027125409233,
+          "nwSe": 0.010871546964777499,
+          "days": 982,
+          "meanBreadth": 197.66598778004072,
+          "p": 0.102657850439345
+        },
+        {
+          "horizon": 5,
+          "meanIc": 0.010073661677336792,
+          "nwT": 1.7203196361126416,
+          "nwSe": 0.005855691852765202,
+          "days": 997,
+          "meanBreadth": 197.8385155466399,
+          "p": 0.08537435603075166
+        },
+        {
+          "horizon": 60,
+          "meanIc": 0.024660134322836914,
+          "nwT": 1.4151004887615262,
+          "nwSe": 0.01742641919685794,
+          "days": 942,
+          "meanBreadth": 197.02547770700636,
+          "p": 0.15703903492828494
+        }
+      ],
+      "portfolio": {
+        "gated": {
+          "totalReturn": 1.0732557054313752,
+          "annualizedReturn": 0.15780012185649617,
+          "maxDrawdown": -0.3420233620019242,
+          "trades": 100
+        },
+        "ungated": {
+          "totalReturn": 1.1967283305734249,
+          "annualizedReturn": 0.17133825952433268,
+          "maxDrawdown": -0.29539507598801895,
+          "trades": 65
+        },
+        "diffVsUngated": {
+          "meanDailyBps": -0.6682013303269502,
+          "nwT": -0.22142533655179228
+        },
+        "diffVsBenchmark": {
+          "meanDailyBps": 1.3478108838331164,
+          "nwT": 0.44240527460410606
+        }
+      },
+      "subgroups": [
+        {
+          "sector": "Communication Services",
+          "names": 14,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Consumer Discretionary",
+          "names": 55,
+          "meanIc20": -0.007415865863836287,
+          "days": 982
+        },
+        {
+          "sector": "Consumer Staples",
+          "names": 22,
+          "meanIc20": 0.01358336845062507,
+          "days": 339
+        },
+        {
+          "sector": "Energy",
+          "names": 14,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Financials",
+          "names": 73,
+          "meanIc20": -0.07319344933400866,
+          "days": 982
+        },
+        {
+          "sector": "Healthcare",
+          "names": 41,
+          "meanIc20": -0.06675130193666327,
+          "days": 959
+        },
+        {
+          "sector": "Industrials",
+          "names": 89,
+          "meanIc20": 0.04174250778691815,
+          "days": 982
+        },
+        {
+          "sector": "Materials",
+          "names": 35,
+          "meanIc20": 0.07073796803138573,
+          "days": 977
+        },
+        {
+          "sector": "Real Estate",
+          "names": 24,
+          "meanIc20": -0.007022727787148966,
+          "days": 791
+        },
+        {
+          "sector": "Technology",
+          "names": 96,
+          "meanIc20": 0.02667660587523727,
+          "days": 982
+        },
+        {
+          "sector": "Utilities",
+          "names": 38,
+          "meanIc20": 0.08358016645732361,
+          "days": 951
+        }
+      ],
+      "fdrReject": false,
+      "label": "dead"
+    },
+    {
+      "market": "HK",
+      "gate": "G1",
+      "ic": [
+        {
+          "horizon": 20,
+          "meanIc": 0.06085078850932805,
+          "nwT": 2.2025924167801367,
+          "nwSe": 0.027626894583739136,
+          "days": 950,
+          "meanBreadth": 55.18736842105263,
+          "p": 0.027623488882032234
+        },
+        {
+          "horizon": 5,
+          "meanIc": 0.03628231441591393,
+          "nwT": 2.630354512546229,
+          "nwSe": 0.013793697481786217,
+          "days": 965,
+          "meanBreadth": 55.1139896373057,
+          "p": 0.00852958695222433
+        },
+        {
+          "horizon": 60,
+          "meanIc": 0.08567295398166924,
+          "nwT": 2.084300785287118,
+          "nwSe": 0.041103930193965535,
+          "days": 910,
+          "meanBreadth": 55.77582417582418,
+          "p": 0.03713281596870856
+        }
+      ],
+      "portfolio": {
+        "gated": {
+          "totalReturn": 0.5880908939492233,
+          "annualizedReturn": 0.09922890742475232,
+          "maxDrawdown": -0.14835071441895287,
+          "trades": 144
+        },
+        "ungated": {
+          "totalReturn": 0.9625127116762178,
+          "annualizedReturn": 0.14787199793508243,
+          "maxDrawdown": -0.2500324459752994,
+          "trades": 58
+        },
+        "diffVsUngated": {
+          "meanDailyBps": -2.518584178202367,
+          "nwT": -1.1238760556712812
+        },
+        "diffVsBenchmark": {
+          "meanDailyBps": -0.7046511007076546,
+          "nwT": -0.23400951374798898
+        }
+      },
+      "subgroups": [
+        {
+          "sector": "Communication Services",
+          "names": 7,
+          "meanIc20": 0.25858662613981803,
+          "days": 282
+        },
+        {
+          "sector": "Consumer Discretionary",
+          "names": 24,
+          "meanIc20": 0.034482635399571034,
+          "days": 705
+        },
+        {
+          "sector": "Energy",
+          "names": 4,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Financials",
+          "names": 15,
+          "meanIc20": 0.10724572917007645,
+          "days": 841
+        },
+        {
+          "sector": "Healthcare",
+          "names": 12,
+          "meanIc20": 0.0555379267386772,
+          "days": 533
+        },
+        {
+          "sector": "Industrials",
+          "names": 9,
+          "meanIc20": 0.10157384987893461,
+          "days": 118
+        },
+        {
+          "sector": "Materials",
+          "names": 4,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Real Estate",
+          "names": 13,
+          "meanIc20": 0.09032169672873189,
+          "days": 398
+        },
+        {
+          "sector": "Technology",
+          "names": 17,
+          "meanIc20": -0.02024728455908319,
+          "days": 732
+        },
+        {
+          "sector": "Utilities",
+          "names": 6,
+          "meanIc20": -0.19627976190476176,
+          "days": 288
+        }
+      ],
+      "fdrReject": false,
+      "label": "dead"
+    },
+    {
+      "market": "HK",
+      "gate": "G2",
+      "ic": [
+        {
+          "horizon": 20,
+          "meanIc": 0.09905207373573967,
+          "nwT": 3.994696175328336,
+          "nwSe": 0.024795896706111393,
+          "days": 954,
+          "meanBreadth": 56.380503144654085,
+          "p": 0.00006477726694489716
+        },
+        {
+          "horizon": 5,
+          "meanIc": 0.05547720023946327,
+          "nwT": 4.207683542387947,
+          "nwSe": 0.013184736846435655,
+          "days": 969,
+          "meanBreadth": 56.31578947368421,
+          "p": 0.000025800182865351286
+        },
+        {
+          "horizon": 60,
+          "meanIc": 0.14858565549223895,
+          "nwT": 4.19547825932761,
+          "nwSe": 0.03541566570197222,
+          "days": 914,
+          "meanBreadth": 56.35776805251641,
+          "p": 0.000027229640582380383
+        }
+      ],
+      "portfolio": {
+        "gated": {
+          "totalReturn": 0.5857847081275,
+          "annualizedReturn": 0.09890220835557484,
+          "maxDrawdown": -0.13113716843753276,
+          "trades": 127
+        },
+        "ungated": {
+          "totalReturn": 0.9625127116762178,
+          "annualizedReturn": 0.14787199793508243,
+          "maxDrawdown": -0.2500324459752994,
+          "trades": 58
+        },
+        "diffVsUngated": {
+          "meanDailyBps": -2.53808550377999,
+          "nwT": -1.2758445363851525
+        },
+        "diffVsBenchmark": {
+          "meanDailyBps": -0.7241524262852755,
+          "nwT": -0.23791336627481172
+        }
+      },
+      "subgroups": [
+        {
+          "sector": "Communication Services",
+          "names": 7,
+          "meanIc20": 0.13912133891213402,
+          "days": 239
+        },
+        {
+          "sector": "Consumer Discretionary",
+          "names": 24,
+          "meanIc20": 0.0035275092569921796,
+          "days": 745
+        },
+        {
+          "sector": "Energy",
+          "names": 4,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Financials",
+          "names": 15,
+          "meanIc20": 0.06554124004830897,
+          "days": 900
+        },
+        {
+          "sector": "Healthcare",
+          "names": 12,
+          "meanIc20": 0.13915365743218747,
+          "days": 517
+        },
+        {
+          "sector": "Industrials",
+          "names": 9,
+          "meanIc20": 0.10469530469530479,
+          "days": 143
+        },
+        {
+          "sector": "Materials",
+          "names": 4,
+          "meanIc20": null,
+          "days": 0
+        },
+        {
+          "sector": "Real Estate",
+          "names": 13,
+          "meanIc20": 0.054968476499576965,
+          "days": 418
+        },
+        {
+          "sector": "Technology",
+          "names": 17,
+          "meanIc20": -0.03065489635257084,
+          "days": 774
+        },
+        {
+          "sector": "Utilities",
+          "names": 6,
+          "meanIc20": -0.15299265794696704,
+          "days": 276
+        }
+      ],
+      "fdrReject": true,
+      "label": "alive"
+    }
+  ]
+}

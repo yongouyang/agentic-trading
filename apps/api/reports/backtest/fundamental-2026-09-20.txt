@@ -1,0 +1,31 @@
+Phase 7 fundamental-compounder backtest — 2026-09-20
+family: {US,HK}×{G1,G2} = 4 variants · FDR q=0.05 · labels are LABELS (exploratory until confirmed)
+
+US/G1  IC20=0.0193 t=1.72 fdrReject=false label=dead  | gated TR 166.0% vs ungated 119.7%  diff 1.25bps/d t=0.41
+    [exploratory] Consumer Discretionary: 55 names, IC20 0.0065 over 973d
+    [exploratory] Consumer Staples: 22 names, IC20 0.0219 over 458d
+    [exploratory] Financials: 73 names, IC20 -0.0685 over 983d
+    [exploratory] Healthcare: 41 names, IC20 -0.0583 over 963d
+    [exploratory] Industrials: 89 names, IC20 0.0382 over 983d
+    [exploratory] Materials: 35 names, IC20 0.0242 over 945d
+    [exploratory] Real Estate: 24 names, IC20 0.0447 over 877d
+    [exploratory] Technology: 96 names, IC20 0.0356 over 983d
+    [exploratory] Utilities: 38 names, IC20 0.0768 over 929d
+US/G2  IC20=0.0177 t=1.63 fdrReject=false label=dead  | gated TR 107.3% vs ungated 119.7%  diff -0.67bps/d t=-0.22
+    [exploratory] Consumer Discretionary: 55 names, IC20 -0.0074 over 982d
+    [exploratory] Consumer Staples: 22 names, IC20 0.0136 over 339d
+    [exploratory] Financials: 73 names, IC20 -0.0732 over 982d
+    [exploratory] Healthcare: 41 names, IC20 -0.0668 over 959d
+    [exploratory] Industrials: 89 names, IC20 0.0417 over 982d
+    [exploratory] Materials: 35 names, IC20 0.0707 over 977d
+    [exploratory] Real Estate: 24 names, IC20 -0.0070 over 791d
+    [exploratory] Technology: 96 names, IC20 0.0267 over 982d
+    [exploratory] Utilities: 38 names, IC20 0.0836 over 951d
+HK/G1  IC20=0.0609 t=2.20 fdrReject=false label=dead  | gated TR 58.8% vs ungated 96.3%  diff -2.52bps/d t=-1.12
+    [exploratory] Consumer Discretionary: 24 names, IC20 0.0345 over 705d
+    [exploratory] Financials: 15 names, IC20 0.1072 over 841d
+    [exploratory] Technology: 17 names, IC20 -0.0202 over 732d
+HK/G2  IC20=0.0991 t=3.99 fdrReject=true label=alive  | gated TR 58.6% vs ungated 96.3%  diff -2.54bps/d t=-1.28
+    [exploratory] Consumer Discretionary: 24 names, IC20 0.0035 over 745d
+    [exploratory] Financials: 15 names, IC20 0.0655 over 900d
+    [exploratory] Technology: 17 names, IC20 -0.0307 over 774d

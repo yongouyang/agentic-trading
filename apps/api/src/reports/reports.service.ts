@@ -66,7 +66,10 @@ export const SCREEN_RULES_CAVEAT =
   "this list is a candidate funnel, not an alpha claim — the ranking rules are RETIRED as an alpha claim " +
   "(K1, 2026-09-18): the pre-registered power bar was out of reach at this lane's breadth, and a 218-alpha " +
   "factor sweep over the same window produced no US name that beat its own noise ceiling " +
-  "(docs/kill-criteria-lock.md, docs/phase-6a-plan.md)";
+  "(docs/kill-criteria-lock.md, docs/phase-6a-plan.md). The G1/G2 columns are Phase-7 trend-gate states " +
+  "(close vs 200d MA; 12M return) for the quality-compounder evaluation — display only, and the HK/G2 " +
+  "signal behind them is an EXPLORATORY label until its pre-registered confirmation runs " +
+  "(docs/phase-7-plan.md §5).";
 
 export interface IntegrityHeader {
   universeSize: number;
@@ -107,6 +110,10 @@ export interface MetricsSummary {
   adv20?: number;
   mdd252?: number;
   caDegraded?: boolean;
+  /** Phase 7 trend gates (docs/phase-7-plan.md §6): G1 = close ≥ 200d MA,
+   *  G2 = 12M return > 0; null = insufficient history. Display only. */
+  gateG1?: boolean | null;
+  gateG2?: boolean | null;
 }
 
 export interface VerdictOverlay {
@@ -295,6 +302,8 @@ export function summarizeMetrics(metricsJson: string): MetricsSummary {
     if (typeof v === "number") (out as Record<string, unknown>)[k] = v;
   }
   if (typeof obj.caDegraded === "boolean") out.caDegraded = obj.caDegraded;
+  if (typeof obj.gateG1 === "boolean" || obj.gateG1 === null) out.gateG1 = obj.gateG1 as boolean | null;
+  if (typeof obj.gateG2 === "boolean" || obj.gateG2 === null) out.gateG2 = obj.gateG2 as boolean | null;
   return out;
 }
 

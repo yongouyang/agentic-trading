@@ -13,3 +13,5 @@ export * from "./verdict-ic.js";
 export * from "./portfolio.js";
 export * from "./backtest.js";
 export * from "./journal.js";
+export * from "./fundamentals-composite.js";
+export * from "./compounder-sim.js";

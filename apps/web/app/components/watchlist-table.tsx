@@ -17,6 +17,7 @@ export function WatchlistTable({ rows, runId }: { rows: WatchlistRow[]; runId: n
           <th>#</th>
           <th>Symbol</th>
           <th>Score</th>
+          <th title="Phase-7 trend gates: G1 close ≥ 200d MA · G2 12M return > 0 (display only)">Gates</th>
           <th>Rating</th>
           <th>Conviction</th>
           <th>Thesis</th>
@@ -33,6 +34,10 @@ export function WatchlistTable({ rows, runId }: { rows: WatchlistRow[]; runId: n
                 {row.metrics.caDegraded && <span title="corporate-action degraded"> ⚠</span>}
               </td>
               <td className="num">{row.score.toFixed(2)}</td>
+              <td className="num" title="G1: close vs 200d MA · G2: 12M return (blank = insufficient history)">
+                {row.metrics.gateG1 == null ? "—" : row.metrics.gateG1 ? "G1✓" : "G1✗"}{" "}
+                {row.metrics.gateG2 == null ? "—" : row.metrics.gateG2 ? "G2✓" : "G2✗"}
+              </td>
               <td>
                 <RatingBadge rating={row.verdict?.rating ?? null} />
               </td>
