@@ -5,6 +5,83 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-22 (evening — ETF doc re-organized + entry-timing TA scan)
+
+Two user-asked items, no product code. (1) Re-organized
+`docs/etf-portfolio-research-2026-09-20.html` newest-first: §16 decision
+summary now opens the document, then the 09-21 sessions (§13–15, §12, §11,
+§10, §8, §9), then the original 09-20 research (§1–7) as background. Section
+numbers kept as original chronological labels so cross-references (§14 etc.)
+still resolve; the .md source remains in chronological order. (2) Entry-timing
+technical scan for the HKD 20k/month plan (script `/tmp/etf/entry_scan.py`,
+Yahoo v8, dividend-adjusted, completed sessions through 2026-09-21): regime is
+a calm bull (VOO −0.3% off 52w high, +8.5% vs 200d, RSI 56, VIX 14.9); SMH is
+the extended sleeve (+22% vs 200d) but mid-consolidation (−11% off high, 3M
+−11%); SCHD technically oversold (RSI 27); GLD below its 200d (−4.3%, RSI 43);
+NLR the only broken chart (−33% off high, below 200d). No technical red flag
+for starting the DCA tranche; nothing here is a validated signal (K1 scope) —
+descriptive only.
+
+**Next:** unchanged — user picks among FG-B / FG-A / 5×20 / FG-C and sets up
+the broker plan.
+
+---
+
+## 2026-09-21 (evening — 7-ETF optimizer scan + merged theme comparison)
+
+Research-only follow-up to yesterday's ETF write-up. Ran long-only
+max-Sharpe / min-variance / risk-parity / equal-weight optimizations over
+YTD, 1Y, 3Y, 5Y on the user's seven-fund set (VOO, QQQM, SMH, SPMO, WQTM,
+QLD, SOXL), then a merged 9-fund set (+ GLD, SCHD) and a cross-theme
+comparison; appended as **§8–10 of `docs/etf-portfolio-research-2026-09-20.md`
+(and the .html)** (scripts `/tmp/etf/opt7.py`, `opt_merged.py`, `dca.py`,
+ephemeral).
+Headlines: the growth-7 set is one bet (pairwise corr 0.71–1.00); **leverage
+drag measured** — SOXL 5Y +194% vs SMH +347% with a −90.5% DD; SPMO is the
+best risk-adjusted line over 3Y/5Y (Sharpe 1.55 / 1.02); with GLD+SCHD in
+the universe the optimizer drops QLD/SOXL/WQTM entirely; **recommended
+candidate: 5×20 = VOO/SMH/SPMO/GLD/SCHD** — Sharpe 1.21–1.82 across all
+windows, 2022 −13.3% vs −45.4% for the all-growth equal weight. §11 then
+ran the §5 DCA sim (HKD 20k/month) across all six themes: G7-EW wins on
+terminal value (+169%, XIRR 41%) by buying the 2022 crash monthly, but
+troughed −26.8% on invested; Merged 5×20 is the best middle (+103%, XIRR
+28.7%, trough −11.9%) and beats Variant C on every column in both windows;
+Variant C reproduces §5 within 0.4pp (validation). §12 added a
+rolling-start robustness sweep (61 start months Jan 2021 → Jan 2026,
+G7-EW vs 5×20): G7-EW wins 61/61 on terminal value — but only because
+every start ends in the same AI bull; its edge is DCA-harvesting the 2022
+crash (decays from +61pp for Jan-2021 starts to +6pp for Jan-2026) and
+costs −28% on-invested troughs vs 5×20's worst of −12.1% (shallower in
+58/61 starts). §13–14 (deep-tier): built three forward-growth portfolios
+(buildout / full-stack / adopter, all unlevered) on GRID/DTCR/NLR/XLV/XLF;
+key structural find: **XLV correlation to SMH went negative (−0.16 YTD)**
+and the optimizer keeps choosing the SMH+XLV barbell. FG-B "full-stack"
+(SMH 30 / XLV 20 / QQQM 15 / SPMO 15 / DTCR 10 / WQTM 10) beats 5×20 in
+61/61 rolling starts with worst trough −16.5%. Bear-case stress: DCA-into-
+QQQ dot-com analog (Jan-2000 start: −52% trough, underwater to 2009-07,
+still +42% by 2010 / +169% by 2016 — bear costs time, not ruin) and a
+scenario haircut matrix (G7-EW −58% vs FG-B −42.5% vs FG-C/5×20 −27/−28%).
+**Synthesis: FG-B is the pick under the user's no-leverage/long-horizon
+premise; FG-C or 5×20 if the Bain/MIT bear case is weighted >50%; nothing
+argues for keeping QLD/SOXL.** §15: tested "VOO as defensive sleeve" on
+FG-B — rejected: 20% VOO buys only 1–1.5pp of bear protection and costs
+return in 61/61 starts (VOO is 0.90-correlated diluted offense); 20% GLD
+buys 5–9.5pp at lower cost and halves the median trough. FG-B already
+holds the growth-universe diversifier (XLV). §16 decision summary: four
+final candidates (FG-B ★ / FG-A / 5×20 / FG-C) mapped to P(bear case),
+plus six standing rules (no QLD/SOXL, no ritual VOO, quarterly rebalance,
+WQTM ≤10%, bear-trigger watchlist).
+
+**Next:** user picks a portfolio and sets it up with the broker.
+return in 61/61 starts (VOO is 0.90-correlated diluted offense); 20% GLD
+buys 5–9.5pp at lower cost and halves the median trough. FG-B already
+holds the growth-universe diversifier (XLV).
+
+**Next:** user decides on allocation; if adopted, fold into the DCA plan
+from §5 (HKD 20k/month) and pick the rebalance rule (quarterly vs ±10%).
+
+---
+
 ## 2026-09-20 (evening — ETF portfolio research write-up)
 
 Research-only session, no code changes. Scanned 70 US + HK-listed ETFs
