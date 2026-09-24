@@ -49,6 +49,22 @@ pnpm -C apps/api ops:health -- --lane "$LANE"
 HEALTH_RC=$?
 echo "ops:health exit=$HEALTH_RC"
 
+# --- Futu enrichment (Phase A+B, 2026-09-24) ---
+# Deterministic per-symbol enrichment (capital flow, short volume, earnings,
+# analyst consensus, Morningstar) + server-side discovery lane, written to
+# logs/futu/enrich-<date>-<lane>.json. Requires OpenD running; degrades to
+# status=unavailable otherwise. NEVER affects the chain's exit code.
+if [ "$SCREEN_RC" -eq 0 ] && [ -x ".venv/bin/python" ]; then
+  LANE_UP=$(echo "$LANE" | tr '[:lower:]' '[:upper:]')
+  REPORT=$(ls -t apps/api/reports/*-"$LANE_UP".json 2>/dev/null | head -1)
+  if [ -n "$REPORT" ]; then
+    .venv/bin/python -u scripts/futu/enrich.py --report "$REPORT" --out logs/futu/ \
+      && echo "enrich ok ($REPORT)" || echo "enrich failed (non-fatal)"
+  else
+    echo "enrich skipped: no report found for $LANE_UP"
+  fi
+fi
+
 RC=0
 [ "$SCREEN_RC" -ne 0 ] && RC=2
 [ "$HEALTH_RC" -ne 0 ] && RC=5

@@ -62,6 +62,35 @@ Portfolio snapshot — `scripts/futu/snapshot.py` (read-only, no unlock):
 Snapshot JSON: account, accinfo (USD + HKD), positions with live quotes,
 open orders, recent fills.
 
+Screen enrichment — `scripts/futu/enrich.py` (read-only, no unlock). Wired
+into `scripts/daily-chain.sh` after a successful screen leg (non-fatal):
+
+```
+.venv/bin/python scripts/futu/enrich.py --report apps/api/reports/2026-09-24-US.json
+```
+
+Reads the screen report's shortlist and writes `logs/futu/enrich-<date>-<lane>.json`:
+per-symbol capital flow (5d net main inflow), daily short ratio + 5d avg,
+earnings within 30d (flagged if ≤ 7d), analyst consensus, Morningstar
+stars/fair value (both null for ETFs), plus a **discovery lane** —
+server-side `get_stock_filter` (float mcap ≥ $2B + volume ratio ≥ 2 +
+MA bullish alignment 3d) diffed against the quant-core shortlist.
+
+Gotchas learned 2026-09-24:
+
+- **Rate limit: 30 calls/endpoint per 30 s** — the script throttles with a
+  per-endpoint sliding window; don't parallelize it.
+- `SimpleFilter` needs `is_no_filter = False` or min/max are silently ignored.
+- `get_stock_filter` returns `(last_page, count, [FilterStockData])` — records
+  stringify as `key:value  key:value`; parse `str(rec)`.
+- `StockField.CUR_PRICE_TO_HIGHEST52_WEEKS_RATIO` is broken for US (top
+  "matches" were OTC ADRs at nonsense values) — do not use it.
+- A dead OpenD makes SDK queries block forever; enrich.py probes via a
+  subprocess with a hard timeout (must call `ctx.close()` before exit or the
+  SDK network thread hangs the probe process).
+- `FUTU_HOST` / `FUTU_PORT` env vars override the default gateway address.
+
+
 ## API notes (if writing new code)
 
 - SDK: `futu-api` v10.11 in `.venv/`. Use

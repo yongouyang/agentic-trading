@@ -34,6 +34,27 @@ no; enrichment sidecar: now viable).
 shortlist (deterministic fields, zero LLM tokens) vs. server-side discovery
 lane; Futubull-AI-as-analyst is dead via API (app-only).
 
+## 2026-09-24 (late evening — Futu enrichment Phase A+B shipped)
+
+Built **`scripts/futu/enrich.py`** and wired it into `scripts/daily-chain.sh`
+(non-fatal, after a successful screen leg): per shortlist symbol — 5-day net
+main capital flow, daily short ratio + 5d avg, earnings ≤30d (flag ≤7d),
+analyst consensus, Morningstar stars/fair value — plus the **discovery lane**
+(server-side `get_stock_filter`: float mcap ≥$2B + volume ratio ≥2 + MA
+bullish alignment 3d, diffed vs the quant-core shortlist). Live-verified
+end-to-end on today's real reports: **US 40/40 symbols, 0 errors (~35s); HK
+26/26, 0 errors**; dead-OpenD degrade verified (status=unavailable, exit 0).
+Gotchas encoded: 30-calls/30s per-endpoint rate limit (sliding-window
+throttle), `SimpleFilter.is_no_filter=False` required (else min/max silently
+ignored), `get_stock_filter` returns stringified records,
+52w-high-ratio field broken for US (rejected), dead-gateway SDK queries block
+forever → subprocess probe with hard timeout + mandatory `ctx.close()`.
+Also today: DTCR 3@27.80 filled (position 14 sh); WQTM 2@30.80 still working.
+
+**Next:** observe enrichment + discovery output over coming sessions; Phase C
+(wire research endpoints into ad-hoc `screen:deep-dive` to cut tokens)
+unscheduled.
+
 ---
 
 ## 2026-09-23 (evening — Futu OpenAPI integration + first live API orders)
