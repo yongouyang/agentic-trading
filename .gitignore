@@ -40,3 +40,9 @@ knowledge-base/
 apps/api/reports/*
 !apps/api/reports/backtest/
 __pycache__/
+
+# Python (Futu OpenAPI SDK)
+.venv/
+
+# Local SQLite backups
+apps/api/prisma/dev.db.bak-*

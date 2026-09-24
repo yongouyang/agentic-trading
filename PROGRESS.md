@@ -5,6 +5,102 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-24 (evening — portfolio snapshot, ladder tuning, Futu data survey)
+
+Pulled the daily snapshot (`logs/futu/snapshot-20260924-203014.json`): total
+$5,007, unrealized −$57; 6 of 9 GTD ladder rungs from 09-23 filled (SMH
+1@596.50, QQQM 1@304.50, WQTM 3@32.25 + 2@31.85, DTCR 3@28.15). TA scan of
+the 6 holdings from Futu daily klines (script `/tmp/futu_ta_scan.py`): regime
+intact (all above 200d, RSI 49–63), SMH most extended (+22.5% vs 200d, ATR
+2.7%). Support-checked the 3 remaining rungs: DTCR 27.80/27.25 well placed
+(27.25 on the Sep double-bottom + 200d); **modified WQTM 2@31.20 → 30.80**
+(order FH1D2E97CBE02E8000, live) to sit inside the 30.6–30.9 confluence (Sep
+pivot lows + 200d). SMH ladder idea (576/565/550) **set aside** pending
+fresh-capital decision.
+
+Surveyed the full Futu OpenAPI surface under the new **VIP v1** entitlements:
+US quote rights **LV3** (real TotalView depth, 40+ levels, verified),
+server-side `get_stock_filter` (133 StockFields, no kline-quota cost),
+capital flow, daily short volume, short interest, earnings/dividend
+calendars, analyst consensus, **Morningstar star rating + fair value +
+thesis**, FedWatch probabilities + dot plot, macro indicator series, ARK
+holdings, insider trades, pre/post/overnight session ranks. **Not available
+via API: Futubull AI chat** (app-only), ETF constituents. Documented the
+surface in `.agents/skills/futu/SKILL.md` and added a 2026-09-24 addendum to
+`docs/research-broker-market-data.md` revising its verdict (bulk feed: still
+no; enrichment sidecar: now viable).
+
+**Next:** plan under discussion — Futu enrichment layer on the daily screen
+shortlist (deterministic fields, zero LLM tokens) vs. server-side discovery
+lane; Futubull-AI-as-analyst is dead via API (app-only).
+
+---
+
+## 2026-09-23 (evening — Futu OpenAPI integration + first live API orders)
+
+Integrated the user's Futubull HK account locally. Installed **Futu OpenD**
+(GUI version, user logged in) and the **futu-api Python SDK v10.11** into a
+project `.venv/` (added to `.gitignore`). Verified the read path end-to-end:
+account list (1 REAL margin acct + 1 US paper acct), USD/HKD accinfo, US
+positions (6 ETFs: XLV, WQTM, SPMO, SMH, QQQM, DTCR), history orders/deals
+reconciling exactly with positions. Key API notes: SDK v10.11 uses
+`OpenSecTradeContext(filter_trdmarket=TrdMarket.US, security_firm=FUTUSECURITIES)`;
+**GUI OpenD disables `unlock_trade` via API** — user must click Unlock in the
+OpenD window once per session before real orders; cancel is
+`modify_order(ModifyOrderOp.CANCEL, ...)`. Built **`scripts/futu/order.py`**
+CLI: `buy|sell <code> <qty> --price X [--live|--sim]`, `cancel <id>`, `list`;
+dry-run by default, `--live` required for real orders. Verified
+place→cancel on the paper account, then placed the user's **first 5 real
+limit orders** via API (SMH 1@595.80, WQTM 7@32.30, DTCR 8@28.30, SPMO
+3@151.60, QQQM 1@304.20; ~$1,807 of $2,738 USD cash): SPMO filled
+immediately, other four resting as day orders. Then placed a GTD XLV
+1@169.60 (exp 2026-10-23, filled same session), added `modify`
+(qty/price via ModifyOrderOp.NORMAL, verified on paper) to order.py, and
+built **`scripts/futu/snapshot.py`** — read-only JSON snapshot (accinfo
+USD/HKD, positions with live quotes, open orders, N-day fills) to stdout
+or `--out dir`. SDK INFO logging silenced in both scripts for clean
+stdout.
+
+**Next:** optional portfolio-snapshot module (positions/fills → JSON);
+possible wiring into the daily chain; order modify command if needed.
+
+---
+
+## 2026-09-24 (past-midnight — order tooling hardening + staggered dip ladders)
+
+Continued the Futu integration. Created **`.agents/skills/futu/SKILL.md`**
+(project skill: prerequisites, dry-run/`--live` safety protocol, command
+reference, API gotchas). Then a series of `order.py` improvements, all
+verified on paper and/or can't-fill real probes:
+
+- **Session default = ETH** (RTH + pre/post-market) via `--session`.
+  Discovered `ALL` includes the overnight session and is rejected until
+  the user accepts a risk disclosure in-app — so ETH is the right
+  default; `OVERNIGHT` alone is night-only.
+- **Live-price validation**: buy/sell/modify fetch the live quote first
+  and reject BUY limits at/above market and SELL limits at/below market
+  (passive orders only); refuse the order if no valid quote.
+- **Quote freshness display**: prices shown as e.g. `305.25 (5s ago)`,
+  with a stale-quote warning when > 15 min old.
+
+Order management: cancelled the 4 resting day orders (unfilled) and
+re-placed as **GTD exp 2026-10-23**, then replaced WQTM/DTCR with
+**staggered ladders** (WQTM 3@32.25/2@31.85/2@31.20; DTCR 3@28.15/
+3@27.80/2@27.25); SMH 1@595.80 and QQQM 1@304.20 left as singles; added
+XLV 1@168.80 GTD (filled — position now 5 shares). Portfolio at close of
+session: ~$5,050 total, 38% cash, SPMO 18% / XLV 17% / SMH 12% the
+largest sleeves; 9 working GTD orders reserving ~$1,345.
+
+Surveyed Futu quote API for ETF data: works — capital flow/distribution
+by order size, dividend history, keyword news search; **not available —
+ETF constituents/holdings (no endpoint; needs issuer CSVs), valuation
+ratios, sector mapping, institutional holders for ETFs**.
+
+**Next:** possibly wire capital-flow + news into snapshot.py; source ETF
+holdings externally if wanted; monitor GTD ladder fills via app.
+
+---
+
 ## 2026-09-22 (evening — ETF doc re-organized + entry-timing TA scan)
 
 Two user-asked items, no product code. (1) Re-organized

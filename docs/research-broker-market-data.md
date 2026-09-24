@@ -48,3 +48,33 @@ Source: [Authorities and Quota](https://openapi.futunn.com/futu-api-doc/en/intro
 None. "Free" ends at Yahoo regardless. When the broker era arrives: **Futu =
 quota-capped repair source (HK/US only); IBKR = the only true primary
 candidate (all lanes), at the cost of monthly per-exchange subscriptions.**
+
+## Addendum 2026-09-24 — account integrated, verdict partially revised
+
+The user's Futubull HK account is now integrated locally (OpenD + Python SDK
+in `.venv/`, see `.agents/skills/futu/SKILL.md`) for **trading and portfolio
+snapshots** — Blocker 3 (stack friction) is now a sunk cost: OpenD runs
+anyway, and the repo already uses the Python-sidecar-writes-JSON pattern
+(`scripts/futu/snapshot.py` → `logs/futu/`).
+
+Account reality vs. the assumptions above: VIP v1, **US quote rights LV3**
+(verified: real TotalView order-book depth), kline quota at the 300
+tickers/7d tier. Two findings change the picture:
+
+1. **`get_stock_filter` is a server-side screener** (133 `StockField`s — MAs,
+   RSI, MACD/KDJ/BOLL, 52w ratios, volume ratio, PE/PB/ROE/growth) that does
+   **not** consume the kline quota. Blocker 1 applied to per-ticker history
+   pulls, not to screening.
+2. A large **enrichment surface** (capital flow, daily short volume, short
+   interest, earnings calendar, analyst consensus, Morningstar reports,
+   FedWatch, macro series — full map in the SKILL.md) is per-ticker or global
+   and likewise quota-free.
+
+**Revised verdict:** Futu as the bulk OHLCV feed — unchanged, still no
+(quota, no-LSE, Yahoo invariants in §4.2 stand). Futu as an **enrichment
+sidecar** for the daily screen (deterministic fields on the topN shortlist:
+capital flow, short ratio, earnings proximity, analyst consensus) — now
+viable and cheap. Any use of Futu fundamental fields as *screen factors* is
+a new hypothesis and must go through the hypothesis register, not slide in
+as plumbing.
+
