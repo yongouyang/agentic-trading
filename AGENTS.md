@@ -9,6 +9,35 @@ Agentic trading platform for personal investing. v1 is a stock picker
 The authoritative design is `docs/architecture-v1.md`; session history is in
 `PROGRESS.md` (newest entries on top — update it after every work session).
 
+## Scripts and scratch files
+
+**Session and analysis scripts live under `./scripts/<area>/` and are tracked in
+git.** Existing areas: `scripts/futu/`, `scripts/databento/`, `scripts/launchd/`,
+`scripts/tests/`. Currently 52/52 files under `scripts/` are tracked — keep it
+that way, and commit the script in the same session that wrote it.
+
+The rule exists because of a real failure: the 2026-09-25 session wrote five
+near-duplicate probe scripts as untracked scratch, and by the time the gap was
+noticed they had been deleted — so that session's method survives only in
+`SKILL.md` and gitignored `logs/`. A script written to `/tmp` is gone; an
+untracked script in a package root is worse, it shows up in `git status` forever
+or escapes the ignore rules entirely (the `apps/reports/` incident).
+
+- **Where a script goes:** `./scripts/<area>/` for session/analysis/ops
+  scripts. Product CLIs stay in `apps/api/src/cli/` with a `package.json`
+  script — those are product code, not scratch. `apps/api/scripts/` holds the
+  pre-existing alpha-bridge analysis; new session scripts do not go there.
+- **Extend, don't duplicate.** One script that takes flags beats five probes
+  that each hardcode a symbol list. If an area already has a script that covers
+  the job, add a flag to it.
+- **Tracked or deliberately deleted — never dangling.** If a script was truly
+  throwaway, delete it in the same session that wrote it and record the finding
+  in `PROGRESS.md`. Leaving it untracked is the outcome this rule prevents.
+- **Never write session scripts to `/tmp`, the repo root, or a package root.**
+  `spike/` is gitignored scratch by design — do not add new material there.
+- **Check:** `git ls-files --others --exclude-standard scripts/` must print
+  nothing.
+
 ## Model usage policy (all harnesses)
 
 Two working modes, two model tiers — the pattern is the same regardless of
