@@ -5,6 +5,61 @@ Each entry: what was done, key decisions, and what's next.
 
 ---
 
+## 2026-09-25 (HK/US theme research → the NLR position; entry reconstructed 2026-09-26)
+
+**Written after the fact.** This session produced no PROGRESS entry when it ran —
+the gap was found the next day while auditing the repo, and this entry is
+reconstructed from the surviving artifacts in `logs/futu/*20260925*.json`. The
+five ad-hoc probe scripts it used were untracked scratch and have since been
+deleted; the endpoint capability they established is recorded in
+`.agents/skills/futu/SKILL.md`, and the raw pulls survive only in the
+(gitignored) `logs/` directory. That is the whole trace left of the session.
+
+The arc was a research sweep that became a position. Started from the
+portfolio snapshot (`logs/futu/snapshot-20260925-185212.json`, 6 positions) and
+a broad news pull across six themes, then attempted analyst consensus +
+Morningstar for the held ETFs — **which returned nothing for all nine codes
+tried** (`XLV WQTM SPMO SMH QQQM DTCR XLE USO TAN`): *"Only stocks and REITs are
+supported; other security types are not supported."* That negative result is the
+one still load-bearing today: **Futu carries no sell-side or Morningstar view of
+an ETF**, so "which ETF is worth holding" is not a question the broker's API
+answers. Short interest / daily short volume *do* work for the ETFs (5 rows each;
+`WQTM` has 0 short-interest rows).
+
+Pivoted to energy (analyst consensus on the majors — XOM BUY avg 171.69 across 16
+analysts, CVX BUY 223.25/17, COP, EOG, SLB, VLO, plus CEG and NEE), then to
+**nuclear / uranium / grid / utilities**: eight ETFs surveyed (NLR 105.56, URA
+40.73, URNM 48.75, NUKZ 61.25, XLU 39.37, VPU 170.66, GRID 178.25, IDU 100.79 —
+all flat on the day), consensus on ten power/nuclear names, and Morningstar +
+insider (Form 4/144) pulls on five of them.
+
+**The one genuine tension in that data, and it was bearish:** sell-side was
+uniformly bullish (VST BUY, 14 analysts, avg PT 222.46, 100% buy; TLN BUY 458.33;
+CCJ BUY 125.64; ETR BUY 126.54 at 100% buy) while **Morningstar was not** —
+VST **2 stars, fair value 106** with High uncertainty, ETR **2 stars, fv 91**,
+CCJ 3★ fv 86.21 (wide moat), TLN 3★ fv 299.31, OKLO 3★ fv 44.26. Analysts
+bullish + Morningstar tepid is a divergence the session noted and did not act on.
+
+**Outcome: NLR bought — 1 @ 105.50, filled 2026-09-25 14:21** (order
+`FH1D3137762BC78000`), the only fill that day. Twenty-four hours later it is the
+book's weakest position by every trend measure: the only holding **below its
+200d (−18.4%)**, RSI 38.2, −35.65% off its 52-week high, 20d −15.4%, with Futu's
+own signals showing VR/RSI/CCI/PSY oversold and MA10<MA60 and MA20<MA30 death
+crosses, and options put/call at the **100th percentile** of the past year while
+IV sits at the **3rd**. Nothing in this entry is a validated signal (K1 scope) —
+it is recorded because the research-to-position path should be auditable, and
+because it is the cleanest instance of the pattern the 2026-09-26 review found:
+**the four core sleeves are above their 200d and bullish-stacked while all three
+theme satellites are the weak trends.**
+
+**Next:** the nuclear/energy theme work stands as research only — no further NLP
+or theme position was taken. If the theme is revisited, the divergence above
+(consensus bullish vs Morningstar 2★) is the thing to resolve first, and the
+`get_research_morningstar_report` + `us_review.py` tooling now does it in one
+pass instead of four ad-hoc probes.
+
+---
+
 ## 2026-09-24 (evening — portfolio snapshot, ladder tuning, Futu data survey)
 
 Pulled the daily snapshot (`logs/futu/snapshot-20260924-203014.json`): total
