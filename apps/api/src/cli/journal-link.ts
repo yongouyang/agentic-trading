@@ -42,7 +42,10 @@ import {
 } from "@agentic-trading/quant-core";
 import { PrismaService } from "../prisma.service.js";
 
-const PKG_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)), "..", "..");
+// Every other CLI resolves the package root as URL(".") plus two ".." — this one
+// used URL(".."), one level too high, so its artifacts landed in apps/reports/
+// (outside the `apps/api/reports/*` ignore rule, and one of them got committed).
+const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 
 export interface JournalArgs {
   file: string;
