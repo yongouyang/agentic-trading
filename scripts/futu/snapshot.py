@@ -8,6 +8,8 @@ Examples:
   snapshot.py                          # JSON to stdout
   snapshot.py --out logs/futu/         # writes snapshot-YYYYMMDD-HHMMSS.json
   snapshot.py --days 30                # include fills from the last 30 days
+  snapshot.py --days 30 --journal-csv logs/futu/trades.csv
+                                       # normalized trade CSV for `journal:link`
 """
 import argparse
 import json
@@ -43,6 +45,10 @@ def main():
     p = argparse.ArgumentParser(description="Futu portfolio snapshot via OpenD")
     p.add_argument("--out", help="directory to write snapshot JSON into")
     p.add_argument("--days", type=int, default=7, help="fill history window (default 7)")
+    p.add_argument("--journal-csv", metavar="PATH",
+                   help="also write the fills as the normalized trade CSV that "
+                        "`pnpm -C apps/api journal:link --file <PATH>` reads "
+                        "(date,symbol,side,quantity,price)")
     args = p.parse_args()
 
     trd = OpenSecTradeContext(
@@ -102,6 +108,45 @@ def main():
             snap["fills"] = records(deals)
     finally:
         trd.close()
+
+    # Asset taxonomy. "Fund" is overloaded here and the two senses must not be
+    # conflated: an ETF position IS a fund but sits in `securities_assets` and
+    # has a position row, while the money-market / mutual-fund class
+    # (`fund_assets`) is separate and has NO position listing at all — verified
+    # 2026-09-26: every TrdMarket filter (USFUND/HKFUND/NONE) returns 0 rows for
+    # it, deal_list_query on those markets returns 0, and futu-api v10.11 ships
+    # no fund context. Only its aggregate value is reachable via the API.
+    acc = snap.get("accinfo", {}).get(Currency.USD)
+    if acc:
+        def amt(key):
+            v = acc.get(key)
+            return None if v in (None, "N/A") else round(float(v), 2)
+
+        snap["asset_mix"] = {
+            "eq_etf_positions_usd": round(
+                sum(float(p.get("market_val") or 0) for p in snap.get("positions", [])), 2),
+            "cash_usd": amt("cash"),
+            "money_market_fund_usd": amt("fund_assets"),
+            "securities_assets_usd": amt("securities_assets"),
+            "total_assets_usd": amt("total_assets"),
+        }
+
+    if args.journal_csv:
+        rows = ["date,symbol,side,quantity,price"]
+        for d in sorted(snap.get("fills", []), key=lambda d: d["create_time"]):
+            if d.get("status") != "OK":                    # a rejected deal is not a trade
+                continue
+            qty = d["qty"]
+            rows.append(",".join([
+                str(d["create_time"])[:10],
+                str(d["code"]),
+                str(d["trd_side"]).lower(),
+                str(int(qty)) if float(qty).is_integer() else str(qty),
+                str(d["price"]),
+            ]))
+        with open(args.journal_csv, "w") as f:
+            f.write("\n".join(rows) + "\n")
+        print(f"{args.journal_csv} ({len(rows) - 1} fills)", file=sys.stderr)
 
     out = json.dumps(snap, ensure_ascii=False, indent=2)
     if args.out:
